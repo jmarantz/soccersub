@@ -2,6 +2,8 @@
 <html> <head>
 <title></title>
 
+<link rel=stylesheet href=soccersub.css />
+
 <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase.js"></script>
 <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-auth.js"></script>
@@ -37,22 +39,22 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
-<body style='font-family: sans-serif; font-size: large;'>
+<body>
 <h1></h1>
 
-<style>
-  .row { text-align: center; }
-  .player { width: 100% }
-  .left { margin-right: 30px; }
-  .right { margin-left: 30px; }
-</style>
 <div class=row>
   <span id='keeper' class=player><b>K:</b></span>
 </div>
-<table class=row>
-  <body style='width:100%'>
-    <tr><td id='left_back' style='width:50%'></td><td id='right_back'></td></tr>
-    <tr><td id='left_wing' style='width:50%'></td><td id='right_wing'></td></tr>
+<table class=row style='width:100%'>
+  <body>
+    <tr>
+      <td id='left_back' style='width:50%'></td>
+      <td id='right_back' style='width:50%'></td>
+    </tr>
+    <tr>
+      <td id='left_wing' style='width:50%'></td>
+      <td id='right_wing' style='width:50%'></td>
+    </tr>
   </body>
 </table>
 <table>

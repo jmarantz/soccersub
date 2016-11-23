@@ -49,6 +49,7 @@ var Position = function(name, index, headRow, game) {
     // for player assignment, and we will write the player in there
     // when assigned.
     this.element = document.getElementById(name);
+    this.element.style.lineHeight = 'normal';
     this.render();
     handleTouch(this.element, game.assignPosition.bind(game, this));
     
@@ -60,11 +61,11 @@ var Position = function(name, index, headRow, game) {
 };
 
 Position.prototype.render = function() {
-    var text = '<b>' + this.name + ':</b>';
+    var text = '<b>' + this.name + ':</b><br/>';
     if (this.currentPlayer) {
-        text += ' ' + this.currentPlayer.renderAtPosition();
+        text += '' + this.currentPlayer.renderAtPosition();
     } else {
-        text += ' <i><b>NEEDS PLAYER</b></i>';
+        text += '<i><b>NEEDS PLAYER</b></i>';
     }
     this.element.innerHTML = text;
 }
