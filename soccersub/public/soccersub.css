@@ -1,13 +1,16 @@
 .row { text-align: center; }
 .player { width: 100% }
-.left { margin-right: 30px; }
-.right { margin-left: 30px; }
+/* assume viewport is 414 x 736 */
+
 body { 
-    line-height: 40px;
+    line-height: 30px;
     font-family: sans-serif;
-    font-size: x-large;
+    font-size: large;
 }
 table { 
-    line-height: 30px;
-    font-size: x-large;
+    line-height: 20px;
+    font-size: large;
+}
+.player {
+    width: 207px;
 }

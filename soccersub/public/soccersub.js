@@ -19,6 +19,8 @@ var positionNames = [
     'right_wing'
 ];
 
+var SHOW_TIMES_AT_POSITION = false;
+
 function handleTouch(element, func) {
     element.addEventListener('touchstart', func, {passive: true});
 }
@@ -55,9 +57,11 @@ var Position = function(name, index, headRow, game) {
     
     // Now the table header entry, which we are just going to automatically
     // populate, and don't need to reference it after that.
-    var th = document.createElement('th');
-    th.textContent = name;
-    headRow.appendChild(th);
+    if (SHOW_TIMES_AT_POSITION) {
+        var th = document.createElement('th');
+        th.textContent = name;
+        headRow.appendChild(th);
+    }
 };
 
 Position.prototype.render = function() {
@@ -96,7 +100,9 @@ var Player = function(name, tableBody, game) {
     this.timeInGameMs = 0;
     this.timeInShiftMs = 0;
     this.timeAtPositionMs = {};
-    this.elementAtPosition = {};
+    if (SHOW_TIMES_AT_POSITION) {
+        this.elementAtPosition = {};
+    }
     this.currentPosition = null;
     this.selected = false;
     var row = document.createElement('tr');
@@ -110,9 +116,11 @@ var Player = function(name, tableBody, game) {
     for (var i = 0; i < positionNames.length; ++i) {
         var positionName = positionNames[i];
         this.timeAtPositionMs[positionName] = 0;
-        var td = document.createElement('td');
-        row.appendChild(td);
-        this.elementAtPosition[positionName] = td;
+        if (SHOW_TIMES_AT_POSITION) {
+            var td = document.createElement('td');
+            row.appendChild(td);
+            this.elementAtPosition[positionName] = td;
+        }
     }
     tableBody.appendChild(row);
 };
@@ -148,9 +156,12 @@ Player.prototype.addTimeToShift = function(timeMs) {
     this.timeInShiftMs += timeMs;
     this.timeInGameMs += timeMs;
     this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
-    var positionMs = this.timeAtPositionMs[this.currentPosition.name] += timeMs;
-    var elt = this.elementAtPosition[this.currentPosition.name];
-    elt.textContent = formatTime(positionMs);
+    this.timeAtPositionMs[this.currentPosition.name] += timeMs;
+    if (SHOW_TIMES_AT_POSITION) {
+        //var positionMs = ...;
+        var elt = this.elementAtPosition[this.currentPosition.name];
+        elt.textContent = formatTime(positionMs);
+    }
 };
 
 Player.prototype.render = function() {

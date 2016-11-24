@@ -36,24 +36,33 @@
 </script>
 <script src='soccersub.js'></script>
   
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+<!--
+    Trying to set a virtual width/height whose aspect ration is roughly
+    that of an iPhone.  All the pixel values in the CSS file are based on
+    this virtual viewport.  Note that these are not necessarily physical
+    pixels.
+  -->
+<meta name="viewport" content="width=414, height=736, initial-scale=1">
+
+
 </head>
 
 <body>
 <h1></h1>
 
 <div class=row>
-  <span id='keeper' class=player><b>K:</b></span>
+  <span id='keeper' class=player></span>
 </div>
 <table class=row style='width:100%'>
   <body>
     <tr>
-      <td id='left_back' style='width:50%'></td>
-      <td id='right_back' style='width:50%'></td>
+      <td id='left_back' class=player></td>
+      <td id='right_back' class=player></td>
     </tr>
     <tr>
-      <td id='left_wing' style='width:50%'></td>
-      <td id='right_wing' style='width:50%'></td>
+      <td id='left_wing' class=player>/td>
+      <td id='right_wing' class=player></td>
     </tr>
   </body>
 </table>
