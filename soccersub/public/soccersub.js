@@ -72,7 +72,7 @@ Position.prototype.render = function() {
     text += '<i><b>NEEDS PLAYER</b></i>';
   }
   this.element.innerHTML = text;
-}
+};
 
 Position.prototype.setPlayer = function(player) {
   if (this.currentPlayer != player) {
@@ -93,9 +93,9 @@ Position.prototype.addTimeToShift = function(timeMs) {
   }
 };
 
-var Player = function(name, tableBody, game) {
+var Player = function(name, game) {
   this.name = name;
-  //this.game = game;
+  this.game = game;
   this.available = false;
   this.timeInGameMs = 0;
   this.timeInShiftMs = 0;
@@ -105,23 +105,57 @@ var Player = function(name, tableBody, game) {
   }
   this.currentPosition = null;
   this.selected = false;
-  var row = document.createElement('tr');
-  this.nameElement = document.createElement('td');
-  handleTouch(this.nameElement, game.selectPlayer.bind(game, this));
-  this.nameElement.textContent = name;
-  row.appendChild(this.nameElement);
-  this.gameTimeElement = document.createElement('td');
-  this.gameTimeElement.textContent = formatTime(0);
-  row.appendChild(this.gameTimeElement);
   for (var i = 0; i < positionNames.length; ++i) {
     var positionName = positionNames[i];
     this.timeAtPositionMs[positionName] = 0;
-    if (SHOW_TIMES_AT_POSITION) {
+  }
+};
+
+Player.prototype.isPlaying = function() {
+  return this.currentPosition != null;
+};
+
+// Compare two players in terms of play-time, returning the difference
+// in milliseconds between the amount the two players have played in the
+// game.  If the game-times are equal, return the difference beween the
+// shift-times in milliseconds.
+Player.comparePlayingTimeMs = function(player1, player2) {
+  if (player1.timeInGameMs != player2.timeInGameMs) {
+    return player1.timeInGameMs - player2.timeInGameMs;
+  }
+  return player1.timeInShiftMs - player2.timeInShiftMs;
+};
+
+Player.compare = function(player1, player2) {
+  var cmp = Player.comparePlayingTimeMs(player1, player2);
+  if (cmp == 0) {
+    if (player1.name < player2.name) {
+      cmp = -1;
+    } else if (player1.name > player2.name) {
+      cmp = 1;
+    }
+  }
+  return cmp;
+};
+
+Player.prototype.render = function(tableBody) {
+  var row = document.createElement('tr');
+  this.nameElement = document.createElement('td');
+  handleTouch(this.nameElement, this.game.selectPlayer.bind(this.game, this));
+  this.nameElement.textContent = this.name;
+  row.appendChild(this.nameElement);
+  this.gameTimeElement = document.createElement('td');
+  this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
+  row.appendChild(this.gameTimeElement);
+  if (SHOW_TIMES_AT_POSITION) {
+    for (var i = 0; i < positionNames.length; ++i) {
+      var positionName = positionNames[i];
       var td = document.createElement('td');
       row.appendChild(td);
       this.elementAtPosition[positionName] = td;
     }
   }
+  this.updateColor();
   tableBody.appendChild(row);
 };
 
@@ -131,6 +165,8 @@ Player.prototype.setPosition = function(position) {
       var oldPos = this.currentPosition;
       this.currentPosition = null;
       oldPos.setPlayer(null);
+    } else {
+      this.timeInShiftMs = 0;
     }
     this.currentPosition = position;
     this.timeInShift = 0;
@@ -164,10 +200,6 @@ Player.prototype.addTimeToShift = function(timeMs) {
   }
 };
 
-Player.prototype.render = function() {
-  var text = this.name + ' ';
-};
-
 Player.prototype.unselect = function() {
   this.selected = false;
   this.updateColor();
@@ -189,10 +221,11 @@ var Game = function() {
     this.positions.push(new Position(positionNames[i], i, headRow, this));
   }
   this.players = [];
-  var tableBody = document.getElementById('table-body');
   for (var i = 0; i < playerNames.length; ++i) {
-    this.players.push(new Player(playerNames[i], tableBody, this));
+    var player = new Player(playerNames[i], this);
+    this.players.push(player);
   }
+  this.sortAndRenderPlayers();
   this.gameClockElement = document.getElementById('game_clock');
   //handleTouch(this.gameClockElement, this.toggleClock.bind(this));
   this.toggleClockButton = document.getElementById('clock_toggle');
@@ -202,6 +235,26 @@ var Game = function() {
 
   this.update();
 };    
+
+Game.prototype.sortAndRenderPlayers = function() {
+  this.players.sort(Player.compare);
+  var tableBody = document.getElementById('table-body');
+  tableBody.innerHTML = '';
+  for (var i = 0; i < this.players.length; ++i) {
+    var player = this.players[i];
+    player.render(tableBody);
+  }
+  this.sortDelayMs = 0;
+  for (var i = 1; i < this.players.length; ++i) {
+    if (this.players[i - 1].isPlaying() && !this.players[i].isPlaying()) {
+      var delayMs = Player.comparePlayingTimeMs(this.players[i], this.players[i - 1]);
+      this.sortDelayMs = Math.max(this.sortDelayMs, delayMs);
+    }
+  }
+  if (this.sortDelayMs == 0) {
+    this.sortDelayMs = Number.MAX_VALUE;
+  }
+};
 
 Game.prototype.toggleClock = function() {
   this.timeRunning = !this.timeRunning;
@@ -242,6 +295,7 @@ Game.prototype.assignPosition = function(position) {
     // Unselect the player so we are less likely to double-assign.
     this.selectPlayer(null);
   }
+  this.sortAndRenderPlayers();
 };
 
 Game.prototype.writeStatus = function(text) {
@@ -260,7 +314,17 @@ Game.prototype.update = function() {
     for (var i = 0; i < this.positions.length; ++i) {
       this.positions[i].addTimeToShift(timeSinceLastUpdate);
     }
-
+    if (this.sortDelayMs == Number.MAX_VALUE) {
+      this.writeStatus('no re-sort will occur');
+    } else {
+      this.sortDelayMs -= timeSinceLastUpdate;
+      if (this.sortDelayMs <= 0) {
+        this.writeStatus('resorting...');
+        this.sortAndRenderPlayers();
+      } else {
+        this.writeStatus('next sort in ' + this.sortDelayMs / 1000 + ' sec');
+      }
+    }
     window.setTimeout(this.update.bind(this), 1000);
   }
   if ((this.statusBarWriteMs != 0) &&
