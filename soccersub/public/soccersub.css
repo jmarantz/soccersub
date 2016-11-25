@@ -14,3 +14,6 @@ table {
 .player {
     width: 207px;
 }
+.inline-button {
+    font-size: medium;
+}
