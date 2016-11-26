@@ -120,10 +120,11 @@ Player.prototype.isPlaying = function() {
 // game.  If the game-times are equal, return the difference beween the
 // shift-times in milliseconds.
 Player.comparePlayingTimeMs = function(player1, player2) {
-  if (player1.timeInGameMs != player2.timeInGameMs) {
-    return player1.timeInGameMs - player2.timeInGameMs;
+  var cmp = player1.timeInGameMs - player2.timeInGameMs;
+  if (cmp == 0) {
+    cmp = player1.timeInShiftMs - player2.timeInShiftMs;
   }
-  return player1.timeInShiftMs - player2.timeInShiftMs;
+  return cmp;
 }
 
 Player.compare = function(player1, player2) {
@@ -233,6 +234,7 @@ var Game = function() {
   this.statusBar = document.getElementById('status_bar');
   this.statusBarWriteMs = 0;
 
+  this.login();
   this.update();
 };    
 
@@ -246,7 +248,7 @@ Game.prototype.sortAndRenderPlayers = function() {
   }
   this.sortDelayMs = Number.MAX_VALUE;
   for (var i = 1; i < this.players.length; ++i) {
-    if (true /*this.players[i].isPlaying() != this.players[i - 1].isPlaying()*/) {
+    if (!this.players[i].isPlaying() && this.players[i - 1].isPlaying()) {
       var delayMs = Player.comparePlayingTimeMs(this.players[i], this.players[i - 1]);
       this.sortDelayMs = Math.min(this.sortDelayMs, delayMs);
     }
