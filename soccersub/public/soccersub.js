@@ -74,6 +74,10 @@ Position.prototype.render = function() {
   this.element.innerHTML = text;
 };
 
+Position.prototype.setBackgroundColor = function(color) {
+  this.element.style.backgroundColor = color;
+};
+
 Position.prototype.setPlayer = function(player) {
   if (this.currentPlayer != player) {
     if (this.currentPlayer != null) {
@@ -234,7 +238,7 @@ var Game = function() {
   this.statusBar = document.getElementById('status_bar');
   this.statusBarWriteMs = 0;
 
-  this.login();
+  //this.login();
   this.update();
 };    
 
@@ -280,6 +284,29 @@ Game.prototype.selectPlayer = function(player) {
     this.selectedPlayer = player;
     if (player != null) {
       player.select();
+    }
+  }
+};
+
+Game.prototype.highlightPositionWithLongestShift = function() {
+  var longestShift = null;
+  for (var i = 0; i < this.positions.length; ++i) {
+    var position = this.positions[i];
+    if ((position.name != 'keeper') && (position.currentPlayer != null)) {
+      if ((longestShift == null) ||
+          (position.currentPlayer.timeInShiftMs >
+           longestShift.currentPlayer.timeInShiftMs)) {
+        longestShift = position;
+      }
+    }
+  }
+  
+  for (var i = 0; i < this.positions.length; ++i) {
+    var position = this.positions[i];
+    if (position == longestShift) {
+      position.setBackgroundColor('orange');
+    } else {
+      position.setBackgroundColor('white');
     }
   }
 };
@@ -331,6 +358,7 @@ Game.prototype.update = function() {
     this.statusBar.textContent = '';
     this.statusBarWriteMs = 0;
   }
+  this.highlightPositionWithLongestShift();
 };
 
 var game;
