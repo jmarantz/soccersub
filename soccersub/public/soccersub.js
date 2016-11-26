@@ -109,7 +109,7 @@ var Player = function(name, game) {
     var positionName = positionNames[i];
     this.timeAtPositionMs[positionName] = 0;
   }
-};
+}
 
 Player.prototype.isPlaying = function() {
   return this.currentPosition != null;
@@ -124,7 +124,7 @@ Player.comparePlayingTimeMs = function(player1, player2) {
     return player1.timeInGameMs - player2.timeInGameMs;
   }
   return player1.timeInShiftMs - player2.timeInShiftMs;
-};
+}
 
 Player.compare = function(player1, player2) {
   var cmp = Player.comparePlayingTimeMs(player1, player2);
@@ -136,7 +136,7 @@ Player.compare = function(player1, player2) {
     }
   }
   return cmp;
-};
+}
 
 Player.prototype.render = function(tableBody) {
   var row = document.createElement('tr');
@@ -244,17 +244,14 @@ Game.prototype.sortAndRenderPlayers = function() {
     var player = this.players[i];
     player.render(tableBody);
   }
-  this.sortDelayMs = 0;
+  this.sortDelayMs = Number.MAX_VALUE;
   for (var i = 1; i < this.players.length; ++i) {
-    if (this.players[i - 1].isPlaying() && !this.players[i].isPlaying()) {
+    if (true /*this.players[i].isPlaying() != this.players[i - 1].isPlaying()*/) {
       var delayMs = Player.comparePlayingTimeMs(this.players[i], this.players[i - 1]);
-      this.sortDelayMs = Math.max(this.sortDelayMs, delayMs);
+      this.sortDelayMs = Math.min(this.sortDelayMs, delayMs);
     }
   }
-  if (this.sortDelayMs == 0) {
-    this.sortDelayMs = Number.MAX_VALUE;
-  }
-};
+}
 
 Game.prototype.toggleClock = function() {
   this.timeRunning = !this.timeRunning;
