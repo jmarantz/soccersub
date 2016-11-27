@@ -283,7 +283,16 @@ Player.prototype.setPosition = function(position) {
 Player.prototype.updateColor = function() {
   var color = 'white';
   if (this.currentPosition != null) {
-    color = this.selected ? 'red' : 'yellow';
+    if (this.selected) {
+      color = 'red';
+      this.currentPosition.setBackgroundColor('red');
+    } else if (this.currentPosition == this.game.positionWithLongestShift) {
+      color = 'orange';
+      this.currentPosition.setBackgroundColor('orange');
+    } else {
+      color = 'yellow';
+      this.currentPosition.setBackgroundColor('white');
+    }
   } else if (this.selected) {
     color = 'blue';
   }
@@ -331,6 +340,10 @@ var Game = function() {
   this.toggleClockButton = 
     /** @type {!Element} */ (document.getElementById('clock_toggle'));
   handleTouch(this.toggleClockButton, this.toggleClock.bind(this));
+
+  /** @type {?Position} */
+  this.positionWithLongestShift = null;
+
   this.statusBar = document.getElementById('status_bar');
   this.statusBarWriteMs = 0;
   var resetTag = /** @type {!Element} */ (document.getElementById('reset'));
@@ -428,6 +441,7 @@ Game.prototype.save = function() {
 };
 
 Game.prototype.sortAndRenderPlayers = function() {
+  this.computePositionWithLongestShift();
   this.players.sort(Player.compare);
   var tableBody = document.getElementById('table-body');
   tableBody.innerHTML = '';
@@ -481,22 +495,26 @@ Game.prototype.selectPlayer = function(player) {
   }
 };
 
-Game.prototype.highlightPositionWithLongestShift = function() {
-  var longestShift = null;
+Game.prototype.computePositionWithLongestShift = function() {
+  this.positionWithLongestShift = null;
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
     if ((position.name != 'keeper') && (position.currentPlayer != null)) {
-      if ((longestShift == null) ||
+      if ((this.positionWithLongestShift == null) ||
           (position.currentPlayer.timeInShiftMs >
-           longestShift.currentPlayer.timeInShiftMs)) {
-        longestShift = position;
+           this.positionWithLongestShift.currentPlayer.timeInShiftMs)) {
+        this.positionWithLongestShift = position;
       }
     }
   }
   
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
-    if (position == longestShift) {
+    if (position.currentPlayer == null) {
+      position.setBackgroundColor('yellow');
+    } else if (position.currentPlayer.selected) {
+      position.setBackgroundColor('red');
+    } else if (position == this.positionWithLongestShift) {
       position.setBackgroundColor('orange');
     } else {
       position.setBackgroundColor('white');
@@ -557,7 +575,6 @@ Game.prototype.update = function() {
     this.statusBar.textContent = '';
     this.statusBarWriteMs = 0;
   }
-  this.highlightPositionWithLongestShift();
   this.redrawClock();
   this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
     formatTime(this.elapsedTimeMs);
