@@ -109,11 +109,11 @@ Position.prototype.setStorage = function(field, value) {
   localStorage['Position:' + this.name + ':' + field] = value;
 };
 
-Position.prototype.saveToLocalStorage = function() {
+Position.prototype.save = function() {
   this.
 };
 
-Position.prototype.loadFromLocalStorage = function() {
+Position.prototype.restore = function() {
 };*/
 
 Position.prototype.render = function() {
@@ -179,7 +179,7 @@ Player.prototype.setStorage = function(field, value) {
   window.localStorage['Player:' + this.name + ':' + field] = value;
 };
 
-Player.prototype.loadFromLocalStorage = function() {
+Player.prototype.restore = function() {
   this.timeInGameMs = parseInt(this.getStorage('timeInGameMs'), 10);
   this.timeInShiftMs = parseInt(this.getStorage('timeInShiftMs'), 10);
   // timeAtPositionMs ...
@@ -189,7 +189,7 @@ Player.prototype.loadFromLocalStorage = function() {
   }
 };
 
-Player.prototype.saveToLocalStorage = function() {
+Player.prototype.save = function() {
   this.setStorage('timeInGameMs', '' + this.timeInGameMs);
   this.setStorage('timeInShiftMs', '' + this.timeInShiftMs);
   this.setStorage('currentPosition', this.currentPosition ? 
@@ -257,7 +257,7 @@ Player.prototype.setPosition = function(position) {
     this.currentPosition = position;
     this.timeInShift = 0;
     this.updateColor();
-    this.saveToLocalStorage();
+    this.save();
   }
 };
 
@@ -311,7 +311,7 @@ var Game = function() {
   var resetTag = /** @type {!Element} */ (document.getElementById('reset'));
   handleTouch(resetTag, this.reset.bind(this));
 
-  if (!this.loadFromLocalStorage()) {
+  if (!this.restore()) {
     this.reset();
   }
 };    
@@ -328,7 +328,6 @@ Game.prototype.reset = function() {
   window.localStorage.positionNames = this.positionNames.join(',');
   this.sortAndRenderPlayers();
   this.timeRunning = false;
-  this.redrawClock();
   this.update();
 };
 
@@ -345,7 +344,7 @@ Game.prototype.constructPlayersAndPositions = function() {
   }
 };
 
-Game.prototype.loadFromLocalStorage = function() {
+Game.prototype.restore = function() {
   if (!storageAvailable('localStorage') || 
       !window.localStorage.playerNames || 
       !window.localStorage.positionNames) {
@@ -359,12 +358,12 @@ Game.prototype.loadFromLocalStorage = function() {
   this.constructPlayersAndPositions();
   for (var i = 0; i < this.players.length; ++i) {
     var player = this.players[i];
-    player.loadFromLocalStorage();
+    player.restore();
   }
 /*
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.position[i];
-    position.loadFromLocalStorage();
+    position.restore();
   }
 */
   this.elapsedTimeMs = parseInt(window.localStorage.elapsedTimeMs, 10);
@@ -375,7 +374,6 @@ Game.prototype.loadFromLocalStorage = function() {
     var player = this.players[i];
     player.updateColor();
   }
-  this.redrawClock();
   this.update();
   return true;
 };
@@ -390,13 +388,13 @@ Game.prototype.findPosition = function(name) {
   return null;
 }
 
-Game.prototype.saveToLocalStorage = function() {
+Game.prototype.save = function() {
   window.localStorage.elapsedTimeMs = '' + this.elapsedTimeMs;
   window.localStorage.timeRunning = this.timeRunning ? 'true' : 'false';
   window.localStorage.timeOfLastUpdateMs = '' + this.timeOfLastUpdateMs;
   for (var i = 0; i < this.players.length; ++i) {
     var player = this.players[i];
-    player.saveToLocalStorage();
+    player.save();
   }
 };
 
@@ -419,7 +417,6 @@ Game.prototype.sortAndRenderPlayers = function() {
 
 Game.prototype.toggleClock = function() {
   this.timeRunning = !this.timeRunning;
-  this.redrawClock();
   this.update();
 };
 
@@ -493,14 +490,18 @@ Game.prototype.writeStatus = function(text) {
   this.statusBarWriteMs = currentTimeMs();
 };
 
+Game.prototype.showCurrentTime = function() {
+  this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
+    formatTime(this.elapsedTimeMs);
+};
+
 Game.prototype.update = function() {
   if (this.timeRunning) {
     var timeMs = currentTimeMs();
     var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
     this.elapsedTimeMs += timeSinceLastUpdate;
     this.timeOfLastUpdateMs = timeMs;
-    this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
-      formatTime(this.elapsedTimeMs);
+    this.showCurrentTime();
     for (var i = 0; i < this.positions.length; ++i) {
       this.positions[i].addTimeToShift(timeSinceLastUpdate);
     }
@@ -523,7 +524,9 @@ Game.prototype.update = function() {
     this.statusBarWriteMs = 0;
   }
   this.highlightPositionWithLongestShift();
-  this.saveToLocalStorage();
+  this.redrawClock();
+  this.showCurrentTime();
+  this.save();
 };
 
 var game;
