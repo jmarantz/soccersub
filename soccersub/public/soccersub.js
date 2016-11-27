@@ -1,4 +1,4 @@
-var playerNames = [
+var defaultPlayerNames = [
   'ryan',
   'ellis',
   'fredrik',
@@ -11,7 +11,7 @@ var playerNames = [
   'luca'
 ];
 
-var positionNames = [
+var defaultPositionNames = [
   'keeper',
   'left_back',
   'right_back',
@@ -21,14 +21,38 @@ var positionNames = [
 
 var SHOW_TIMES_AT_POSITION = false;
 
-function handleTouch(element, func) {
-  element.addEventListener('touchstart', func, {passive: true});
+/** @param {string} type */
+function storageAvailable(type) {
+  try {
+    var storage = window[type],
+	x = '__storage_test__';
+    storage.setItem(x, x);
+    storage.removeItem(x);
+    return true;
+  }
+  catch(e) {
+    return false;
+  }
 }
 
+/**
+ * @param {!Element} element
+ * @param {function()} func
+ */
+function handleTouch(element, func) {
+  element.addEventListener('touchstart', func, 
+                           /** @type {boolean} */ ({'passive': true}));
+}
+
+/** @return {number} */
 function currentTimeMs() {
   return new Date().getTime() + 0;
 }
 
+/**
+ * @param {number} timeMs
+ * @return {string}
+ */
 function formatTime(timeMs) {
   var timeSec = Math.floor(timeMs / 1000);
   var minutes = Math.floor(timeSec / 60);
@@ -39,10 +63,15 @@ function formatTime(timeMs) {
   return '' + minutes + ':' + seconds;
 }
 
-var Position = function(name, index, headRow, game) {
+/**
+ * @param {string} name
+ * @param {!Element} headRow
+ * @param {!Game} game
+ * @constructor 
+ */
+var Position = function(name, headRow, game) {
   this.name = name;
   this.currentPlayer = null;
-  this.index = index;
 
   // The position shows up twice in the DOM, once in the field
   // layout, and once as a table header for the players, so we 
@@ -50,7 +79,15 @@ var Position = function(name, index, headRow, game) {
   // the field layout, which will be sensitive to touch events
   // for player assignment, and we will write the player in there
   // when assigned.
-  this.element = document.getElementById(name);
+  var element = document.getElementById(name);
+
+  // Rebuild the element in case this is a 'reset' and the HTML element
+  // already has a touch handler.
+  this.element = element.cloneNode(true);
+  var parent = element.parentNode;
+  parent.removeChild(element);
+  parent.appendChild(this.element);
+
   this.element.style.lineHeight = 'normal';
   this.render();
   handleTouch(this.element, game.assignPosition.bind(game, this));
@@ -63,6 +100,21 @@ var Position = function(name, index, headRow, game) {
     headRow.appendChild(th);
   }
 };
+
+/*Position.prototype.getStorage = function(field) {
+  return localStorage['Position:' + this.name + ':' + field];
+};
+
+Position.prototype.setStorage = function(field, value) {
+  localStorage['Position:' + this.name + ':' + field] = value;
+};
+
+Position.prototype.saveToLocalStorage = function() {
+  this.
+};
+
+Position.prototype.loadFromLocalStorage = function() {
+};*/
 
 Position.prototype.render = function() {
   var text = '<b>' + this.name + ':</b><br/>';
@@ -78,6 +130,11 @@ Position.prototype.setBackgroundColor = function(color) {
   this.element.style.backgroundColor = color;
 };
 
+Position.prototype.restorePlayer = function(player) {
+  this.currentPlayer = player;
+  this.render();
+};
+
 Position.prototype.setPlayer = function(player) {
   if (this.currentPlayer != player) {
     if (this.currentPlayer != null) {
@@ -85,8 +142,7 @@ Position.prototype.setPlayer = function(player) {
       this.currentPlayer = null;
       oldPlayer.setPosition(null);
     }
-    this.currentPlayer = player;
-    this.render();
+    this.restorePlayer(player);
   }
 };
 
@@ -97,10 +153,10 @@ Position.prototype.addTimeToShift = function(timeMs) {
   }
 };
 
+/** @constructor */
 var Player = function(name, game) {
   this.name = name;
   this.game = game;
-  this.available = false;
   this.timeInGameMs = 0;
   this.timeInShiftMs = 0;
   this.timeAtPositionMs = {};
@@ -109,11 +165,36 @@ var Player = function(name, game) {
   }
   this.currentPosition = null;
   this.selected = false;
-  for (var i = 0; i < positionNames.length; ++i) {
-    var positionName = positionNames[i];
+  for (var i = 0; i < defaultPositionNames.length; ++i) {
+    var positionName = defaultPositionNames[i];
     this.timeAtPositionMs[positionName] = 0;
   }
-}
+};
+
+Player.prototype.getStorage = function(field) {
+  return window.localStorage['Player:' + this.name + ':' + field];
+};
+
+Player.prototype.setStorage = function(field, value) {
+  window.localStorage['Player:' + this.name + ':' + field] = value;
+};
+
+Player.prototype.loadFromLocalStorage = function() {
+  this.timeInGameMs = parseInt(this.getStorage('timeInGameMs'), 10);
+  this.timeInShiftMs = parseInt(this.getStorage('timeInShiftMs'), 10);
+  // timeAtPositionMs ...
+  this.currentPosition = this.game.findPosition(this.getStorage('currentPosition'));
+  if (this.currentPosition != null) {
+    this.currentPosition.restorePlayer(this);
+  }
+};
+
+Player.prototype.saveToLocalStorage = function() {
+  this.setStorage('timeInGameMs', '' + this.timeInGameMs);
+  this.setStorage('timeInShiftMs', '' + this.timeInShiftMs);
+  this.setStorage('currentPosition', this.currentPosition ? 
+                  this.currentPosition.name : '');
+};
 
 Player.prototype.isPlaying = function() {
   return this.currentPosition != null;
@@ -153,8 +234,8 @@ Player.prototype.render = function(tableBody) {
   this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
   row.appendChild(this.gameTimeElement);
   if (SHOW_TIMES_AT_POSITION) {
-    for (var i = 0; i < positionNames.length; ++i) {
-      var positionName = positionNames[i];
+    for (var i = 0; i < this.game.positionNames.length; ++i) {
+      var positionName = this.game.positionNames[i];
       var td = document.createElement('td');
       row.appendChild(td);
       this.elementAtPosition[positionName] = td;
@@ -176,6 +257,7 @@ Player.prototype.setPosition = function(position) {
     this.currentPosition = position;
     this.timeInShift = 0;
     this.updateColor();
+    this.saveToLocalStorage();
   }
 };
 
@@ -198,11 +280,11 @@ Player.prototype.addTimeToShift = function(timeMs) {
   this.timeInGameMs += timeMs;
   this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
   this.timeAtPositionMs[this.currentPosition.name] += timeMs;
-  if (SHOW_TIMES_AT_POSITION) {
+  //if (SHOW_TIMES_AT_POSITION) {
     //var positionMs = ...;
-    var elt = this.elementAtPosition[this.currentPosition.name];
-    elt.textContent = formatTime(positionMs);
-  }
+    //var elt = this.elementAtPosition[this.currentPosition.name];
+    //elt.textContent = formatTime(positionMs);
+  //}
 };
 
 Player.prototype.unselect = function() {
@@ -215,32 +297,108 @@ Player.prototype.select = function() {
   this.updateColor();
 };
 
+/** @constructor */
 var Game = function() {
-  this.elapsedTimeMs = 0;
-  this.timeRunning = false;
-  this.timeOfLastUpdateMs = 0;
-  this.positions = [];
-  this.selectedPlayer = null;
-  var headRow = document.getElementById('table-head-row');
-  for (var i = 0; i < positionNames.length; ++i) {
-    this.positions.push(new Position(positionNames[i], i, headRow, this));
-  }
-  this.players = [];
-  for (var i = 0; i < playerNames.length; ++i) {
-    var player = new Player(playerNames[i], this);
-    this.players.push(player);
-  }
-  this.sortAndRenderPlayers();
+  // Set up HTML element connections & handlers.
   this.gameClockElement = document.getElementById('game_clock');
   //handleTouch(this.gameClockElement, this.toggleClock.bind(this));
-  this.toggleClockButton = document.getElementById('clock_toggle');
+  /** @type {!Element} */
+  this.toggleClockButton = 
+    /** @type {!Element} */ (document.getElementById('clock_toggle'));
   handleTouch(this.toggleClockButton, this.toggleClock.bind(this));
   this.statusBar = document.getElementById('status_bar');
   this.statusBarWriteMs = 0;
+  var resetTag = /** @type {!Element} */ (document.getElementById('reset'));
+  handleTouch(resetTag, this.reset.bind(this));
 
-  //this.login();
-  this.update();
+  if (!this.loadFromLocalStorage()) {
+    this.reset();
+  }
 };    
+
+Game.prototype.reset = function() {
+  this.elapsedTimeMs = 0;
+  this.timeOfLastUpdateMs = 0;
+  this.positions = [];
+  this.selectedPlayer = null;
+  this.positionNames = defaultPositionNames;
+  this.playerNames = defaultPlayerNames;
+  this.constructPlayersAndPositions();
+  window.localStorage.playerNames = this.playerNames.join(',');
+  window.localStorage.positionNames = this.positionNames.join(',');
+  this.sortAndRenderPlayers();
+  this.timeRunning = false;
+  this.redrawClock();
+  this.update();
+};
+
+Game.prototype.constructPlayersAndPositions = function() {
+  var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
+  this.positions = [];
+  for (var i = 0; i < this.positionNames.length; ++i) {
+    this.positions.push(new Position(this.positionNames[i], headRow, this));
+  }
+  this.players = [];
+  for (var i = 0; i < this.playerNames.length; ++i) {
+    var player = new Player(this.playerNames[i], this);
+    this.players.push(player);
+  }
+};
+
+Game.prototype.loadFromLocalStorage = function() {
+  if (!storageAvailable('localStorage') || 
+      !window.localStorage.playerNames || 
+      !window.localStorage.positionNames) {
+    return false;
+  }
+  this.playerNames = window.localStorage.playerNames.split(',');
+  this.positionNames = window.localStorage.positionNames.split(',');
+  if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
+    return false;
+  }
+  this.constructPlayersAndPositions();
+  for (var i = 0; i < this.players.length; ++i) {
+    var player = this.players[i];
+    player.loadFromLocalStorage();
+  }
+/*
+  for (var i = 0; i < this.positions.length; ++i) {
+    var position = this.position[i];
+    position.loadFromLocalStorage();
+  }
+*/
+  this.elapsedTimeMs = parseInt(window.localStorage.elapsedTimeMs, 10);
+  this.timeRunning = window.localStorage.timeRunning != 'false';
+  this.timeOfLastUpdateMs = parseInt(window.localStorage.timeOfLastUpdateMs, 10);
+  this.sortAndRenderPlayers();
+  for (var i = 0; i < this.players.length; ++i) {
+    var player = this.players[i];
+    player.updateColor();
+  }
+  this.redrawClock();
+  this.update();
+  return true;
+};
+
+Game.prototype.findPosition = function(name) {
+  for (var i = 0; i < this.positions.length; ++i) {
+    var position = this.positions[i];
+    if (position.name == name) {
+      return position;
+    }
+  }
+  return null;
+}
+
+Game.prototype.saveToLocalStorage = function() {
+  window.localStorage.elapsedTimeMs = '' + this.elapsedTimeMs;
+  window.localStorage.timeRunning = this.timeRunning ? 'true' : 'false';
+  window.localStorage.timeOfLastUpdateMs = '' + this.timeOfLastUpdateMs;
+  for (var i = 0; i < this.players.length; ++i) {
+    var player = this.players[i];
+    player.saveToLocalStorage();
+  }
+};
 
 Game.prototype.sortAndRenderPlayers = function() {
   this.players.sort(Player.compare);
@@ -261,6 +419,11 @@ Game.prototype.sortAndRenderPlayers = function() {
 
 Game.prototype.toggleClock = function() {
   this.timeRunning = !this.timeRunning;
+  this.redrawClock();
+  this.update();
+};
+
+Game.prototype.redrawClock = function() {
   if (this.timeRunning) {
     this.timeOfLastUpdateMs = currentTimeMs();
     this.gameClockElement.style.backgroundColor = 'green';
@@ -269,7 +432,6 @@ Game.prototype.toggleClock = function() {
     this.gameClockElement.style.backgroundColor = 'red';
     this.toggleClockButton.textContent = 'Resume Clock';
   }
-  this.update();
 };
 
 Game.prototype.selectPlayer = function(player) {
@@ -316,8 +478,10 @@ Game.prototype.assignPosition = function(position) {
     this.writeStatus('Select a player before assigning a position');
   } else {
     this.selectedPlayer.setPosition(position);
-    position.setPlayer(this.selectedPlayer);
-
+    if (position != null) {
+      position.setPlayer(this.selectedPlayer);
+    }
+    
     // Unselect the player so we are less likely to double-assign.
     this.selectPlayer(null);
   }
@@ -359,6 +523,7 @@ Game.prototype.update = function() {
     this.statusBarWriteMs = 0;
   }
   this.highlightPositionWithLongestShift();
+  this.saveToLocalStorage();
 };
 
 var game;
