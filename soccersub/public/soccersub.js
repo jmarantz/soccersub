@@ -101,21 +101,6 @@ var Position = function(name, headRow, game) {
   }
 };
 
-/*Position.prototype.getStorage = function(field) {
-  return localStorage['Position:' + this.name + ':' + field];
-};
-
-Position.prototype.setStorage = function(field, value) {
-  localStorage['Position:' + this.name + ':' + field] = value;
-};
-
-Position.prototype.save = function() {
-  this.
-};
-
-Position.prototype.restore = function() {
-};*/
-
 Position.prototype.render = function() {
   var text = '<b>' + this.name + ':</b><br/>';
   if (this.currentPlayer) {
@@ -126,15 +111,18 @@ Position.prototype.render = function() {
   this.element.innerHTML = text;
 };
 
+/** @param {string} color */
 Position.prototype.setBackgroundColor = function(color) {
   this.element.style.backgroundColor = color;
 };
 
+/** @param {?Player} player */
 Position.prototype.restorePlayer = function(player) {
   this.currentPlayer = player;
   this.render();
 };
 
+/** @param {?Player} player */
 Position.prototype.setPlayer = function(player) {
   if (this.currentPlayer != player) {
     if (this.currentPlayer != null) {
@@ -146,6 +134,7 @@ Position.prototype.setPlayer = function(player) {
   }
 };
 
+/** @param {number} timeMs */
 Position.prototype.addTimeToShift = function(timeMs) {
   if (this.currentPlayer != null) {
     this.currentPlayer.addTimeToShift(timeMs);
@@ -153,7 +142,11 @@ Position.prototype.addTimeToShift = function(timeMs) {
   }
 };
 
-/** @constructor */
+/**
+ * @param {string} name
+ * @param {Game} game
+ * @constructor 
+ */
 var Player = function(name, game) {
   this.name = name;
   this.game = game;
@@ -171,10 +164,18 @@ var Player = function(name, game) {
   }
 };
 
+/**
+ * @param {string} field
+ * @return {string}
+ */
 Player.prototype.getStorage = function(field) {
   return window.localStorage['Player:' + this.name + ':' + field];
 };
 
+/**
+ * @param {string} field
+ * @param {string} value
+ */
 Player.prototype.setStorage = function(field, value) {
   window.localStorage['Player:' + this.name + ':' + field] = value;
 };
@@ -196,14 +197,21 @@ Player.prototype.save = function() {
                   this.currentPosition.name : '');
 };
 
+/** @return {boolean} */
 Player.prototype.isPlaying = function() {
   return this.currentPosition != null;
 };
 
-// Compare two players in terms of play-time, returning the difference
-// in milliseconds between the amount the two players have played in the
-// game.  If the game-times are equal, return the difference beween the
-// shift-times in milliseconds.
+/**
+ * Compare two players in terms of play-time, returning the difference
+ * in milliseconds between the amount the two players have played in the
+ * game.  If the game-times are equal, return the difference beween the
+ * shift-times in milliseconds.
+ *
+ * @param {!Player} player1
+ * @param {!Player} player2
+ * @return {number}
+ */
 Player.comparePlayingTimeMs = function(player1, player2) {
   var cmp = player1.timeInGameMs - player2.timeInGameMs;
   if (cmp == 0) {
@@ -212,6 +220,11 @@ Player.comparePlayingTimeMs = function(player1, player2) {
   return cmp;
 }
 
+/**
+ * @param {!Player} player1
+ * @param {!Player} player2
+ * @return {number}
+ */
 Player.compare = function(player1, player2) {
   var cmp = Player.comparePlayingTimeMs(player1, player2);
   if (cmp == 0) {
@@ -224,6 +237,9 @@ Player.compare = function(player1, player2) {
   return cmp;
 }
 
+/**
+ * @param {!Element} tableBody
+ */
 Player.prototype.render = function(tableBody) {
   var row = document.createElement('tr');
   this.nameElement = document.createElement('td');
@@ -245,6 +261,9 @@ Player.prototype.render = function(tableBody) {
   tableBody.appendChild(row);
 };
 
+/**
+ * @param {Position} position
+ */
 Player.prototype.setPosition = function(position) {
   if (this.currentPosition != position) {
     if (this.currentPosition != null) {
@@ -275,6 +294,9 @@ Player.prototype.renderAtPosition = function() {
   return this.name + ' ' + formatTime(this.timeInShiftMs);
 };
 
+/**
+ * @param {number} timeMs
+ */
 Player.prototype.addTimeToShift = function(timeMs) {
   this.timeInShiftMs += timeMs;
   this.timeInGameMs += timeMs;
@@ -287,6 +309,9 @@ Player.prototype.addTimeToShift = function(timeMs) {
   //}
 };
 
+/**
+ * unselects player
+ */
 Player.prototype.unselect = function() {
   this.selected = false;
   this.updateColor();
@@ -378,6 +403,10 @@ Game.prototype.restore = function() {
   return true;
 };
 
+/**
+ * @param {string} name
+ * @return {?Position}
+ */
 Game.prototype.findPosition = function(name) {
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
@@ -422,7 +451,6 @@ Game.prototype.toggleClock = function() {
 
 Game.prototype.redrawClock = function() {
   if (this.timeRunning) {
-    this.timeOfLastUpdateMs = currentTimeMs();
     this.gameClockElement.style.backgroundColor = 'green';
     this.toggleClockButton.textContent = 'Stop Clock';
   } else {
@@ -431,11 +459,17 @@ Game.prototype.redrawClock = function() {
   }
 };
 
+
+/**
+ * @param {?Player} player
+ */
 Game.prototype.selectPlayer = function(player) {
   if (this.selectedPlayer == player) {
     // If current player is selected, simply unselect.
     this.selectedPlayer = null;
-    player.unselect();
+    if (player != null) {
+      player.unselect();
+    }
   } else {
     if (this.selectedPlayer != null) {
       this.selectedPlayer.unselect();
@@ -470,6 +504,9 @@ Game.prototype.highlightPositionWithLongestShift = function() {
   }
 };
 
+/**
+ * @param {?Position} position
+ */
 Game.prototype.assignPosition = function(position) {
   if (this.selectedPlayer == null) {
     this.writeStatus('Select a player before assigning a position');
@@ -485,14 +522,12 @@ Game.prototype.assignPosition = function(position) {
   this.sortAndRenderPlayers();
 };
 
+/**
+ * @param {string} text
+ */
 Game.prototype.writeStatus = function(text) {
   this.statusBar.textContent = text;
   this.statusBarWriteMs = currentTimeMs();
-};
-
-Game.prototype.showCurrentTime = function() {
-  this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
-    formatTime(this.elapsedTimeMs);
 };
 
 Game.prototype.update = function() {
@@ -501,7 +536,6 @@ Game.prototype.update = function() {
     var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
     this.elapsedTimeMs += timeSinceLastUpdate;
     this.timeOfLastUpdateMs = timeMs;
-    this.showCurrentTime();
     for (var i = 0; i < this.positions.length; ++i) {
       this.positions[i].addTimeToShift(timeSinceLastUpdate);
     }
@@ -525,7 +559,8 @@ Game.prototype.update = function() {
   }
   this.highlightPositionWithLongestShift();
   this.redrawClock();
-  this.showCurrentTime();
+  this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
+    formatTime(this.elapsedTimeMs);
   this.save();
 };
 
