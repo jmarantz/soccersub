@@ -101,6 +101,9 @@ var Position = function(name, headRow, game) {
   }
 };
 
+/**
+ * @return {void}
+ */
 Position.prototype.render = function() {
   var text = '<b>' + this.name + ':</b><br/>';
   if (this.currentPlayer) {
@@ -180,6 +183,9 @@ Player.prototype.setStorage = function(field, value) {
   window.localStorage['Player:' + this.name + ':' + field] = value;
 };
 
+/**
+ * @return {void}
+ */
 Player.prototype.restore = function() {
   this.timeInGameMs = parseInt(this.getStorage('timeInGameMs'), 10);
   this.timeInShiftMs = parseInt(this.getStorage('timeInShiftMs'), 10);
@@ -190,6 +196,9 @@ Player.prototype.restore = function() {
   }
 };
 
+/**
+ * @return {void}
+ */
 Player.prototype.save = function() {
   this.setStorage('timeInGameMs', '' + this.timeInGameMs);
   this.setStorage('timeInShiftMs', '' + this.timeInShiftMs);
@@ -280,6 +289,9 @@ Player.prototype.setPosition = function(position) {
   }
 };
 
+/**
+ * @return {void}
+ */
 Player.prototype.updateColor = function() {
   var color = 'white';
   if (this.currentPosition != null) {
@@ -299,6 +311,9 @@ Player.prototype.updateColor = function() {
   this.nameElement.style.backgroundColor = color;
 };
 
+/**
+ * @return {string}
+ */
 Player.prototype.renderAtPosition = function() {
   return this.name + ' ' + formatTime(this.timeInShiftMs);
 };
@@ -326,6 +341,9 @@ Player.prototype.unselect = function() {
   this.updateColor();
 };
 
+/**
+ * @return {void}
+ */
 Player.prototype.select = function() {
   this.selected = true;
   this.updateColor();
@@ -341,7 +359,7 @@ var Game = function() {
     /** @type {!Element} */ (document.getElementById('clock_toggle'));
   handleTouch(this.toggleClockButton, this.toggleClock.bind(this));
 
-  /** @type {?Position} */
+  /** @type {Position} */
   this.positionWithLongestShift = null;
 
   this.statusBar = document.getElementById('status_bar');
@@ -354,6 +372,9 @@ var Game = function() {
   }
 };    
 
+/**
+ * @return {void}
+ */
 Game.prototype.reset = function() {
   this.elapsedTimeMs = 0;
   this.timeOfLastUpdateMs = 0;
@@ -369,6 +390,9 @@ Game.prototype.reset = function() {
   this.update();
 };
 
+/**
+ * @return {void}
+ */
 Game.prototype.constructPlayersAndPositions = function() {
   var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
   this.positions = [];
@@ -382,6 +406,9 @@ Game.prototype.constructPlayersAndPositions = function() {
   }
 };
 
+/**
+ * @return {boolean}
+ */
 Game.prototype.restore = function() {
   if (!storageAvailable('localStorage') || 
       !window.localStorage.playerNames || 
@@ -430,6 +457,9 @@ Game.prototype.findPosition = function(name) {
   return null;
 }
 
+/**
+ * @return {void}
+ */
 Game.prototype.save = function() {
   window.localStorage.elapsedTimeMs = '' + this.elapsedTimeMs;
   window.localStorage.timeRunning = this.timeRunning ? 'true' : 'false';
@@ -440,6 +470,9 @@ Game.prototype.save = function() {
   }
 };
 
+/**
+ * @return {void}
+ */
 Game.prototype.sortAndRenderPlayers = function() {
   this.computePositionWithLongestShift();
   this.players.sort(Player.compare);
@@ -458,11 +491,18 @@ Game.prototype.sortAndRenderPlayers = function() {
   }
 }
 
+/**
+ * @return {void}
+ */
 Game.prototype.toggleClock = function() {
   this.timeRunning = !this.timeRunning;
+  this.timeOfLastUpdateMs = currentTimeMs();
   this.update();
 };
 
+/**
+ * @return {void}
+ */
 Game.prototype.redrawClock = function() {
   if (this.timeRunning) {
     this.gameClockElement.style.backgroundColor = 'green';
@@ -495,18 +535,21 @@ Game.prototype.selectPlayer = function(player) {
   }
 };
 
+/**
+ * @return {void}
+ */
 Game.prototype.computePositionWithLongestShift = function() {
-  this.positionWithLongestShift = null;
+  var pos = null;
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
     if ((position.name != 'keeper') && (position.currentPlayer != null)) {
-      if ((this.positionWithLongestShift == null) ||
-          (position.currentPlayer.timeInShiftMs >
-           this.positionWithLongestShift.currentPlayer.timeInShiftMs)) {
-        this.positionWithLongestShift = position;
+      if ((pos == null) || 
+          (position.currentPlayer.timeInShiftMs > pos.currentPlayer.timeInShiftMs)) {
+        pos = position;
       }
     }
   }
+  this.positionWithLongestShift = pos;
   
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
@@ -548,6 +591,9 @@ Game.prototype.writeStatus = function(text) {
   this.statusBarWriteMs = currentTimeMs();
 };
 
+/**
+ * @return {void}
+ */
 Game.prototype.update = function() {
   if (this.timeRunning) {
     var timeMs = currentTimeMs();
