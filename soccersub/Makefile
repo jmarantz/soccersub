@@ -5,6 +5,7 @@
 #   npm
 #   firebase
 
+export PATH := /usr/local/bin:$(PATH)
 deploy : deploy.timestamp
 compile : public/soccersub.min.js
 

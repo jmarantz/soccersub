@@ -40,8 +40,18 @@ function storageAvailable(type) {
  * @param {function()} func
  */
 function handleTouch(element, func) {
-  element.addEventListener('touchstart', func, 
-                           /** @type {boolean} */ ({'passive': true}));
+  /**
+   * @param {!Event} event
+   */
+  function handler(event) {
+    func();
+    event.preventDefault();
+  }
+
+  element.addEventListener('touchstart', handler);
+                           ///** @type {boolean} */ ({'passive': true}));
+  element.addEventListener('click', handler);
+                           ///** @type {boolean} */ ({'passive': true}));
 }
 
 /** @return {number} */
@@ -509,7 +519,8 @@ Game.prototype.redrawClock = function() {
     this.toggleClockButton.textContent = 'Stop Clock';
   } else {
     this.gameClockElement.style.backgroundColor = 'red';
-    this.toggleClockButton.textContent = 'Resume Clock';
+    this.toggleClockButton.textContent =
+      (this.elapsedTimeMs == 0) ? 'Start Clock': 'Resume Clock';
   }
 };
 
