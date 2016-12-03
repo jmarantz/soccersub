@@ -455,7 +455,7 @@ Game.prototype.bind = function(func, ...optArgs) {
         result = func.apply(game);
       }
     } catch (err) {
-      game.writeStatus(err);
+      game.writeStatus('ERROR: ' + err + '\n' + err.stack);
     }
     return result;
   }
@@ -638,10 +638,10 @@ Game.prototype.togglePlayerUnavailable = function() {
         position.render();
       }
     }
+    this.selectedPlayer.writeStatus();
     this.updateAvailableButton();
     this.sortAndRenderPlayers();
     this.redrawPositions();
-    this.selectedPlayer.writeStatus();
     this.selectedPlayer.save();
   }
 };
@@ -735,7 +735,11 @@ Game.prototype.redrawPositions = function() {
  */
 Game.prototype.assignPosition = function(position) {
   if (this.selectedPlayer == null) {
-    this.writeStatus('Select a player before assigning a position');
+    if (position.currentPlayer != null) {
+      this.selectPlayer(position.currentPlayer);
+    } else {
+      this.writeStatus('Select a player before assigning a position');
+    }
   } else if (this.selectedPlayer.availableForGame) {
     this.selectedPlayer.setPosition(position);
     if (position != null) {
@@ -744,10 +748,10 @@ Game.prototype.assignPosition = function(position) {
     
     // Unselect the player so we are less likely to double-assign.
     this.selectPlayer(null);
+    this.sortAndRenderPlayers();
+    this.started = true;
+    this.update();
   }
-  this.sortAndRenderPlayers();
-  this.started = true;
-  this.update();
 };
 
 /**
