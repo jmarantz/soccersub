@@ -104,7 +104,7 @@ var Position = function(name, headRow, game) {
 
   this.element.style.lineHeight = 'normal';
   this.render();
-  handleTouch(this.element, game.assignPosition.bind(game, this));
+  handleTouch(this.element, game.bind(game.assignPosition, this));
   
   // Now the table header entry, which we are just going to automatically
   // populate, and don't need to reference it after that.
@@ -300,7 +300,7 @@ Player.compare = function(player1, player2) {
 Player.prototype.render = function(tableBody) {
   var row = document.createElement('tr');
   this.nameElement = document.createElement('td');
-  handleTouch(this.nameElement, this.game.selectPlayer.bind(this.game, this));
+  handleTouch(this.nameElement, this.game.bind(this.game.selectPlayer, this));
   this.nameElement.textContent = this.name;
   row.appendChild(this.nameElement);
   this.gameTimeElement = document.createElement('td');
@@ -412,11 +412,10 @@ Player.prototype.select = function() {
 var Game = function() {
   // Set up HTML element connections & handlers.
   this.gameClockElement = document.getElementById('game_clock');
-  //handleTouch(this.gameClockElement, this.toggleClock.bind(this));
   /** @type {!Element} */
   this.toggleClockButton = 
     /** @type {!Element} */ (document.getElementById('clock_toggle'));
-  handleTouch(this.toggleClockButton, this.toggleClock.bind(this));
+  handleTouch(this.toggleClockButton, this.bind(this.toggleClock));
 
   /** @type {Position} */
   this.positionWithLongestShift = null;
@@ -426,17 +425,17 @@ var Game = function() {
   /** @type {boolean} */
   this.timeoutPending = false;
   this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
-  handleTouch(this.resetTag, this.confirmAndReset.bind(this));
+  handleTouch(this.resetTag, this.bind(this.confirmAndReset));
   this.started = false;
   this.unavailableButton = /** @type {!Element} */ 
       (document.getElementById('unavailable'));
-  handleTouch(this.unavailableButton, this.togglePlayerUnavailable.bind(this));
+  handleTouch(this.unavailableButton, this.bind(this.togglePlayerUnavailable));
   this.lightbox =  /** @type {!Element} */
       (document.getElementById('confirm'));
   handleTouch(/** @type {!Element} */ (document.getElementById('ok')), 
-              this.reset.bind(this));
+              this.bind(this.reset));
   handleTouch(/** @type {!Element} */ (document.getElementById('cancel')),
-              this.cancelReset.bind(this));
+              this.bind(this.cancelReset));
 
   if (!this.restore()) {
     this.reset();
@@ -445,17 +444,18 @@ var Game = function() {
 
 
 Game.prototype.bind = function(func, ...optArgs) {
+  var game = this;
   return function(...laterArgs) {
     var args = optArgs.concat(laterArgs);
     var result = null;
     try {
       if (args.length) {
-        result = func.apply(this, args);
+        result = func.apply(game, args);
       } else {
-        result = func.apply(this);
+        result = func.apply(game);
       }
     } catch (err) {
-      this.writeStatus(err);
+      game.writeStatus(err);
     }
     return result;
   }
@@ -794,7 +794,7 @@ Game.prototype.update = function() {
     }
     if (!this.timeoutPending) {
       this.timeoutPending = true;
-      window.setTimeout(this.updateTimer.bind(this), 1000);
+      window.setTimeout(this.bind(this.updateTimer), 1000);
     }
   }
   /*if ((this.statusBarWriteMs != 0) &&
