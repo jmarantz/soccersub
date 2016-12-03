@@ -9,7 +9,7 @@ var defaultPlayerNames = [
   'owen',
   'hunter',
   'luca',
-  'tom',
+  'tommy',
   'josh'
 ];
 
@@ -24,6 +24,9 @@ var defaultPositionNames = [
 var SHOW_TIMES_AT_POSITION = false;
 var DEBUG_SORTING = false;
 
+
+rt.Utils.centrifugeBind = 
+};
 /** @param {string} type */
 function storageAvailable(type) {
   try {
@@ -174,6 +177,7 @@ var Player = function(name, game) {
   if (SHOW_TIMES_AT_POSITION) {
     this.elementAtPosition = {};
   }
+  /** @type {?Position} */
   this.currentPosition = null;
   this.selected = false;
   for (var i = 0; i < defaultPositionNames.length; ++i) {
@@ -186,7 +190,15 @@ var Player = function(name, game) {
  * @return {void}
  */
 Player.prototype.writeStatus = function() {
-  var msg = this.name + ': ' + (this.availableForGame ? "[available]" : "[unavailable]");
+  var msg = this.name + ': [';
+  if (this.currentPosition != null) {
+    msg += this.currentPosition.name;
+  } else if (this.availableForGame) {
+    msg += 'available';
+  } else { 
+    msg += 'unavailable';
+  }
+  msg += ']';
   for (var i = 0; i < defaultPositionNames.length; ++i) {
     var positionName = defaultPositionNames[i];
     var timeMs = this.timeAtPositionMs[positionName];
@@ -323,6 +335,7 @@ Player.prototype.setPosition = function(position) {
     this.currentPosition = position;
     this.timeInShift = 0;
     this.updateColor();
+    this.writeStatus();
     this.save();
   }
 };
@@ -420,26 +433,54 @@ var Game = function() {
   this.unavailableButton = /** @type {!Element} */ 
       (document.getElementById('unavailable'));
   handleTouch(this.unavailableButton, this.togglePlayerUnavailable.bind(this));
+  this.lightbox =  /** @type {!Element} */
+      (document.getElementById('confirm'));
+  handleTouch(/** @type {!Element} */ (document.getElementById('ok')), 
+              this.reset.bind(this));
+  handleTouch(/** @type {!Element} */ (document.getElementById('cancel')),
+              this.cancelReset.bind(this));
 
   if (!this.restore()) {
     this.reset();
   }
 };    
 
+
+Game.prototype.bind(func, ...optArgs) {
+  return function(...laterArgs) {
+    var args = optArgs.concat(laterArgs);
+    var result = null;
+    try {
+      if (args.length) {
+        result = func.apply(this, args);
+      } else {
+        result = func.apply(this);
+      }
+    } catch (err) {
+      this.writeStatus(err);
+    }
+    return result;
+  }
+};
+
 /**
  * @return {void}
  */
 Game.prototype.confirmAndReset = function() {
-  if (this.started && window.confirm("Reset game state completely?")) {
-    this.reset();
+  if (this.started) {
+    this.lightbox.style.display = 'block';
   }
 };
-    
+
+Game.prototype.cancelReset = function() {
+  this.lightbox.style.display = 'none';
+}
 
 /**
  * @return {void}
  */
 Game.prototype.reset = function() {
+  this.lightbox.style.display = 'none';
   this.elapsedTimeMs = 0;
   this.timeOfLastUpdateMs = 0;
   this.positions = [];
@@ -602,6 +643,8 @@ Game.prototype.togglePlayerUnavailable = function() {
     this.updateAvailableButton();
     this.sortAndRenderPlayers();
     this.redrawPositions();
+    this.selectedPlayer.writeStatus();
+    this.selectedPlayer.save();
   }
 };
 
