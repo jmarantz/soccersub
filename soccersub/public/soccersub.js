@@ -25,8 +25,6 @@ var SHOW_TIMES_AT_POSITION = false;
 var DEBUG_SORTING = false;
 
 
-rt.Utils.centrifugeBind = 
-};
 /** @param {string} type */
 function storageAvailable(type) {
   try {
@@ -446,7 +444,7 @@ var Game = function() {
 };    
 
 
-Game.prototype.bind(func, ...optArgs) {
+Game.prototype.bind = function(func, ...optArgs) {
   return function(...laterArgs) {
     var args = optArgs.concat(laterArgs);
     var result = null;
