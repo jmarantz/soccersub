@@ -17,3 +17,6 @@ table {
 .inline-button {
     font-size: medium;
 }
+.futsal-floor {
+    background-image: url(futsal_floor.png)
+}

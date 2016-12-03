@@ -52,13 +52,20 @@
 </head>
 
 <body>
+<div>
+  <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
+  <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
+  <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
+</div>
+
 <h1></h1>
 
-<div class=row>
-  <span id='keeper' class=player></span>
-</div>
-<table class=row style='width:100%'>
-  <body>
+<div> <!-- class=futsal-floor -->
+  <div class=row>
+    <span id='keeper' class=player></span>
+  </div>
+  <table class=row style='width:100%'>
+    <body>
     <tr>
       <td id='left_back' class=player></td>
       <td id='right_back' class=player></td>
@@ -67,26 +74,26 @@
       <td id='left_wing' class=player>/td>
       <td id='right_wing' class=player></td>
     </tr>
-  </body>
-</table>
-<table>
+    </body>
+  </table>
+</div>
+<table style="display:inline-block">
   <thead>
     <tr id='table-head-row'>
       <th>Player</th><th>Game Time</th>
     </tr>
-  </thead>
+    </thead>
   <tbody id='table-body'>
   </tbody>
 </table>
-<div>
-  <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
-  <span id='game_clock'><b>Game Clock:</b></span>
+<div style="display:inline-block">
+  <div>
+    <button type="button" class=inline-button id="unavailable"
+            style="margin-bottom:30px;">Make Available</button>
+  </div>
+  <div>
+    <button type="button" class=inline-button id="reset">Reset Game</button>
+  </div>
 </div>
-<!--
-<div>
-  <span id='remaining_in_half'><b>Remaining in Half:</b></span>
-</div>
--->
 <div id='status_bar'; style='font-size: medium;'></div>
-<button type="button" class=inline-button id="reset">Reset</button>
 </body> </html>

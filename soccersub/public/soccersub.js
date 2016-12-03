@@ -8,7 +8,9 @@ var defaultPlayerNames = [
   'elias',
   'owen',
   'hunter',
-  'luca'
+  'luca',
+  'tom',
+  'josh'
 ];
 
 var defaultPositionNames = [
@@ -20,6 +22,7 @@ var defaultPositionNames = [
 ];
 
 var SHOW_TIMES_AT_POSITION = false;
+var DEBUG_SORTING = false;
 
 /** @param {string} type */
 function storageAvailable(type) {
@@ -127,6 +130,7 @@ Position.prototype.render = function() {
 /** @param {string} color */
 Position.prototype.setBackgroundColor = function(color) {
   this.element.style.backgroundColor = color;
+  // this.element.style.opacity = 0.5;
 };
 
 /** @param {?Player} player */
@@ -165,6 +169,7 @@ var Player = function(name, game) {
   this.game = game;
   this.timeInGameMs = 0;
   this.timeInShiftMs = 0;
+  this.availableForGame = true;  
   this.timeAtPositionMs = {};
   if (SHOW_TIMES_AT_POSITION) {
     this.elementAtPosition = {};
@@ -176,6 +181,22 @@ var Player = function(name, game) {
     this.timeAtPositionMs[positionName] = 0;
   }
 };
+
+/**
+ * @return {void}
+ */
+Player.prototype.writeStatus = function() {
+  var msg = this.name + ': ' + (this.availableForGame ? "[available]" : "[unavailable]");
+  for (var i = 0; i < defaultPositionNames.length; ++i) {
+    var positionName = defaultPositionNames[i];
+    var timeMs = this.timeAtPositionMs[positionName];
+    if (timeMs != 0) {
+      msg += " " + positionName + ": " + formatTime(timeMs);
+    }
+  }
+  this.game.writeStatus(msg);
+};
+
 
 /**
  * @param {string} field
@@ -199,6 +220,7 @@ Player.prototype.setStorage = function(field, value) {
 Player.prototype.restore = function() {
   this.timeInGameMs = parseInt(this.getStorage('timeInGameMs'), 10);
   this.timeInShiftMs = parseInt(this.getStorage('timeInShiftMs'), 10);
+  this.availableForGame = this.getStorage('availableForGame') != 'false';
   // timeAtPositionMs ...
   this.currentPosition = this.game.findPosition(this.getStorage('currentPosition'));
   if (this.currentPosition != null) {
@@ -212,6 +234,7 @@ Player.prototype.restore = function() {
 Player.prototype.save = function() {
   this.setStorage('timeInGameMs', '' + this.timeInGameMs);
   this.setStorage('timeInShiftMs', '' + this.timeInShiftMs);
+  this.setStorage('availableForGame', this.availableForGame ? 'true' : 'false');
   this.setStorage('currentPosition', this.currentPosition ? 
                   this.currentPosition.name : '');
 };
@@ -245,6 +268,11 @@ Player.comparePlayingTimeMs = function(player1, player2) {
  * @return {number}
  */
 Player.compare = function(player1, player2) {
+  if (player1.availableForGame && !player2.availableForGame) {
+    return -1;
+  } else if (player2.availableForGame && !player1.availableForGame) {
+    return 1;
+  }
   var cmp = Player.comparePlayingTimeMs(player1, player2);
   if (cmp == 0) {
     if (player1.name < player2.name) {
@@ -304,21 +332,31 @@ Player.prototype.setPosition = function(position) {
  */
 Player.prototype.updateColor = function() {
   var color = 'white';
-  if (this.currentPosition != null) {
-    if (this.selected) {
-      color = 'red';
-      this.currentPosition.setBackgroundColor('red');
-    } else if (this.currentPosition == this.game.positionWithLongestShift) {
+  if (!this.availableForGame) {
+    color = 'lightblue';
+  } else if (this.currentPosition != null) {
+    if (this.currentPosition == this.game.positionWithLongestShift) {
       color = 'orange';
-      this.currentPosition.setBackgroundColor('orange');
+      //this.currentPosition.setBackgroundColor('orange');
     } else {
       color = 'yellow';
-      this.currentPosition.setBackgroundColor('white');
+      //this.currentPosition.setBackgroundColor('white');
     }
-  } else if (this.selected) {
-    color = 'blue';
+/*
+    if (this.selected) {
+      background = 'pink';
+      this.currentPosition.setBackgroundColor('pink');
+    }
+*/
   }
-  this.nameElement.style.backgroundColor = color;
+  
+  if (this.selected) {
+    this.nameElement.style.backgroundColor = 'black';
+    this.nameElement.style.color = color;
+  } else {
+    this.nameElement.style.backgroundColor = color;
+    this.nameElement.style.color = 'black';
+  }
 };
 
 /**
@@ -373,14 +411,30 @@ var Game = function() {
   this.positionWithLongestShift = null;
 
   this.statusBar = document.getElementById('status_bar');
-  this.statusBarWriteMs = 0;
-  var resetTag = /** @type {!Element} */ (document.getElementById('reset'));
-  handleTouch(resetTag, this.reset.bind(this));
+  //this.statusBarWriteMs = 0;
+  /** @type {boolean} */
+  this.timeoutPending = false;
+  this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
+  handleTouch(this.resetTag, this.confirmAndReset.bind(this));
+  this.started = false;
+  this.unavailableButton = /** @type {!Element} */ 
+      (document.getElementById('unavailable'));
+  handleTouch(this.unavailableButton, this.togglePlayerUnavailable.bind(this));
 
   if (!this.restore()) {
     this.reset();
   }
 };    
+
+/**
+ * @return {void}
+ */
+Game.prototype.confirmAndReset = function() {
+  if (this.started && window.confirm("Reset game state completely?")) {
+    this.reset();
+  }
+};
+    
 
 /**
  * @return {void}
@@ -397,7 +451,9 @@ Game.prototype.reset = function() {
   window.localStorage.positionNames = this.positionNames.join(',');
   this.sortAndRenderPlayers();
   this.timeRunning = false;
+  this.started = false;
   this.update();
+  this.updateAvailableButton();
 };
 
 /**
@@ -443,6 +499,7 @@ Game.prototype.restore = function() {
 */
   this.elapsedTimeMs = parseInt(window.localStorage.elapsedTimeMs, 10);
   this.timeRunning = window.localStorage.timeRunning != 'false';
+  this.started = window.localStorage.started != 'false';
   this.timeOfLastUpdateMs = parseInt(window.localStorage.timeOfLastUpdateMs, 10);
   this.sortAndRenderPlayers();
   for (var i = 0; i < this.players.length; ++i) {
@@ -450,6 +507,7 @@ Game.prototype.restore = function() {
     player.updateColor();
   }
   this.update();
+  this.updateAvailableButton();
   return true;
 };
 
@@ -473,6 +531,7 @@ Game.prototype.findPosition = function(name) {
 Game.prototype.save = function() {
   window.localStorage.elapsedTimeMs = '' + this.elapsedTimeMs;
   window.localStorage.timeRunning = this.timeRunning ? 'true' : 'false';
+  window.localStorage.started = '' + this.started ? 'true' : 'false';
   window.localStorage.timeOfLastUpdateMs = '' + this.timeOfLastUpdateMs;
   for (var i = 0; i < this.players.length; ++i) {
     var player = this.players[i];
@@ -493,11 +552,15 @@ Game.prototype.sortAndRenderPlayers = function() {
     player.render(tableBody);
   }
   this.sortDelayMs = Number.MAX_VALUE;
+  var lastPlayer = this.players[0];
   for (var i = 1; i < this.players.length; ++i) {
-    if (!this.players[i].isPlaying() && this.players[i - 1].isPlaying()) {
-      var delayMs = Player.comparePlayingTimeMs(this.players[i], this.players[i - 1]);
+    var thisPlayer = this.players[i];
+    if (thisPlayer.availableForGame &&
+        !thisPlayer.isPlaying() && lastPlayer.isPlaying()) {
+      var delayMs = Player.comparePlayingTimeMs(thisPlayer, lastPlayer);
       this.sortDelayMs = Math.min(this.sortDelayMs, delayMs);
     }
+    lastPlayer = thisPlayer;
   }
 }
 
@@ -505,6 +568,7 @@ Game.prototype.sortAndRenderPlayers = function() {
  * @return {void}
  */
 Game.prototype.toggleClock = function() {
+  this.started = true;
   this.timeRunning = !this.timeRunning;
   this.timeOfLastUpdateMs = currentTimeMs();
   this.update();
@@ -515,15 +579,31 @@ Game.prototype.toggleClock = function() {
  */
 Game.prototype.redrawClock = function() {
   if (this.timeRunning) {
-    this.gameClockElement.style.backgroundColor = 'green';
+    this.gameClockElement.style.backgroundColor = 'lightgreen';
     this.toggleClockButton.textContent = 'Stop Clock';
   } else {
-    this.gameClockElement.style.backgroundColor = 'red';
+    this.gameClockElement.style.backgroundColor = 'pink';
     this.toggleClockButton.textContent =
       (this.elapsedTimeMs == 0) ? 'Start Clock': 'Resume Clock';
   }
 };
 
+
+Game.prototype.togglePlayerUnavailable = function() {
+  if (this.selectedPlayer != null) {
+    this.selectedPlayer.availableForGame = !this.selectedPlayer.availableForGame;
+    if (!this.selectedPlayer.availableForGame) {
+      var position = this.selectedPlayer.currentPosition;
+      if (position != null) {
+        position.setPlayer(null);
+        position.render();
+      }
+    }
+    this.updateAvailableButton();
+    this.sortAndRenderPlayers();
+    this.redrawPositions();
+  }
+};
 
 /**
  * @param {?Player} player
@@ -544,6 +624,28 @@ Game.prototype.selectPlayer = function(player) {
       player.select();
     }
   }
+  if (this.selectedPlayer == null) {
+    this.writeStatus(' ');
+  } else {
+    this.selectedPlayer.writeStatus();
+  }
+  this.updateAvailableButton();
+  this.redrawPositions();
+};
+
+Game.prototype.updateAvailableButton = function() {
+  if (this.selectedPlayer) {
+    if (this.selectedPlayer.availableForGame) {
+      this.unavailableButton.style.backgroundColor = 'white';
+      this.unavailableButton.textContent = 'Make Unavailable';
+    } else {
+      this.unavailableButton.style.backgroundColor = 'lightgreen';
+      this.unavailableButton.textContent = 'Make Available';
+    }
+  } else {
+    this.unavailableButton.style.backgroundColor = 'lightgray';
+    this.unavailableButton.textContent = 'Make Unavailable';
+  }
 };
 
 /**
@@ -561,17 +663,28 @@ Game.prototype.computePositionWithLongestShift = function() {
     }
   }
   this.positionWithLongestShift = pos;
-  
+  this.redrawPositions();
+}
+
+/**
+ * @return {void}
+ */
+Game.prototype.redrawPositions = function() {
+  var unavailable = (this.selectedPlayer != null) && !this.selectedPlayer.availableForGame;
   for (var i = 0; i < this.positions.length; ++i) {
     var position = this.positions[i];
-    if (position.currentPlayer == null) {
-      position.setBackgroundColor('yellow');
-    } else if (position.currentPlayer.selected) {
-      position.setBackgroundColor('red');
-    } else if (position == this.positionWithLongestShift) {
-      position.setBackgroundColor('orange');
+    if (unavailable) {
+      position.setBackgroundColor('lightgray');
     } else {
-      position.setBackgroundColor('white');
+      if (position.currentPlayer == null) {
+        position.setBackgroundColor('yellow');
+      } else if (position.currentPlayer.selected) {
+        position.setBackgroundColor('pink');
+      } else if (position == this.positionWithLongestShift) {
+        position.setBackgroundColor('orange');
+      } else {
+        position.setBackgroundColor('white');
+      }
     }
   }
 };
@@ -582,7 +695,7 @@ Game.prototype.computePositionWithLongestShift = function() {
 Game.prototype.assignPosition = function(position) {
   if (this.selectedPlayer == null) {
     this.writeStatus('Select a player before assigning a position');
-  } else {
+  } else if (this.selectedPlayer.availableForGame) {
     this.selectedPlayer.setPosition(position);
     if (position != null) {
       position.setPlayer(this.selectedPlayer);
@@ -592,6 +705,8 @@ Game.prototype.assignPosition = function(position) {
     this.selectPlayer(null);
   }
   this.sortAndRenderPlayers();
+  this.started = true;
+  this.update();
 };
 
 /**
@@ -599,7 +714,12 @@ Game.prototype.assignPosition = function(position) {
  */
 Game.prototype.writeStatus = function(text) {
   this.statusBar.textContent = text;
-  this.statusBarWriteMs = currentTimeMs();
+  //this.statusBarWriteMs = currentTimeMs();
+};
+
+Game.prototype.updateTimer = function() {
+  this.timeoutPending = false;
+  this.update();
 };
 
 /**
@@ -609,33 +729,43 @@ Game.prototype.update = function() {
   if (this.timeRunning) {
     var timeMs = currentTimeMs();
     var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
-    this.elapsedTimeMs += timeSinceLastUpdate;
-    this.timeOfLastUpdateMs = timeMs;
-    for (var i = 0; i < this.positions.length; ++i) {
-      this.positions[i].addTimeToShift(timeSinceLastUpdate);
-    }
-    if (this.sortDelayMs == Number.MAX_VALUE) {
-      this.writeStatus('no re-sort will occur');
-    } else {
-      this.sortDelayMs -= timeSinceLastUpdate;
-      if (this.sortDelayMs <= 0) {
-        this.writeStatus('resorting...');
-        this.sortAndRenderPlayers();
+    if (timeSinceLastUpdate > 0) {
+      this.elapsedTimeMs += timeSinceLastUpdate;
+      this.timeOfLastUpdateMs = timeMs;
+      for (var i = 0; i < this.positions.length; ++i) {
+        this.positions[i].addTimeToShift(timeSinceLastUpdate);
+      }
+      if (this.sortDelayMs == Number.MAX_VALUE) {
+        if (DEBUG_SORTING) {
+          this.writeStatus('no re-sort will occur');
+        }
       } else {
-        this.writeStatus('next sort in ' + this.sortDelayMs / 1000 + ' sec');
+        this.sortDelayMs -= timeSinceLastUpdate;
+        if (this.sortDelayMs <= 0) {
+          if (DEBUG_SORTING) {
+            this.writeStatus('resorting...');
+          }
+          this.sortAndRenderPlayers();
+        } else if (DEBUG_SORTING) {
+          this.writeStatus('next sort in ' + formatTime(this.sortDelayMs));
+        }
       }
     }
-    window.setTimeout(this.update.bind(this), 1000);
+    if (!this.timeoutPending) {
+      this.timeoutPending = true;
+      window.setTimeout(this.updateTimer.bind(this), 1000);
+    }
   }
-  if ((this.statusBarWriteMs != 0) &&
+  /*if ((this.statusBarWriteMs != 0) &&
       (timeMs - this.statusBarWriteMs) > 5000) {
-    this.statusBar.textContent = '';
+    this.statusBar.textContent = ' ';
     this.statusBarWriteMs = 0;
-  }
+  }*/
   this.redrawClock();
   this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
     formatTime(this.elapsedTimeMs);
   this.save();
+  this.resetTag.style.backgroundColor = this.started ? 'white': 'lightgray';
 };
 
 var game;

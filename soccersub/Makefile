@@ -17,7 +17,10 @@ public/soccersub.min.js : public/soccersub.js Makefile
 		--warning_level=VERBOSE \
 		--js $< --js_output_file $@
 
-deploy.timestamp : public/soccersub.min.js public/soccersub.css public/soccersub.html
+SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
+	public/futsal_floor.png
+
+deploy.timestamp : $(SRCS)
 	/usr/local/bin/firebase deploy --only hosting
 	touch $@
 
