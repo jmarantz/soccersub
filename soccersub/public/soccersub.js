@@ -1,4 +1,4 @@
-var defaultPlayerNames = [
+var bencosnersPlayerNames = [
   'ryan',
   'ellis',
   'fredrik',
@@ -12,6 +12,35 @@ var defaultPlayerNames = [
   'tommy',
   'josh'
 ];
+
+var chscPlayerNames = [
+  'Elizabeth F',
+  'Gwyneth M',
+  'Hannah K',
+  'Hannah S',
+  'India S',
+  'Kaesha M',
+  'Magdalena G',
+  'Netta',
+  'Rossella G',
+  'Sarah S',
+  'Sophia F',
+  'Sophie N'
+];
+
+var santosRedPlayerNames = [
+  'Levi',
+  'Eli G',
+  'Jeremy',
+  'Griffen',
+  'Ethan',
+  'Declan',
+  'Eli T',
+  'Dante',
+  'Goalie'
+];
+
+var defaultPlayerNames = santosRedPlayerNames;
 
 var defaultPositionNames = [
   'keeper',
@@ -178,8 +207,8 @@ var Player = function(name, game) {
   /** @type {?Position} */
   this.currentPosition = null;
   this.selected = false;
-  for (var i = 0; i < defaultPositionNames.length; ++i) {
-    var positionName = defaultPositionNames[i];
+  for (var i = 0; i < game.positionNames.length; ++i) {
+    var positionName = game.positionNames[i];
     this.timeAtPositionMs[positionName] = 0;
   }
 };
@@ -197,10 +226,10 @@ Player.prototype.writeStatus = function() {
     msg += 'unavailable';
   }
   msg += ']';
-  for (var i = 0; i < defaultPositionNames.length; ++i) {
-    var positionName = defaultPositionNames[i];
+  for (var i = 0; i < this.game.positionNames.length; ++i) {
+    var positionName = this.game.positionNames[i];
     var timeMs = this.timeAtPositionMs[positionName];
-    if (timeMs != 0) {
+    if (timeMs && (timeMs != 0)) {
       msg += " " + positionName + ": " + formatTime(timeMs);
     }
   }
@@ -236,6 +265,15 @@ Player.prototype.restore = function() {
   if (this.currentPosition != null) {
     this.currentPosition.restorePlayer(this);
   }
+  this.timeAtPositionMs = {};
+  for (var i = 0; i < this.game.positionNames.length; ++i) {
+    var positionName = this.game.positionNames[i];
+    var timeString = this.getStorage(positionName);
+    if (timeString) {
+      var timeMs = parseInt(timeString, 10);
+      this.timeAtPositionMs[positionName] = timeMs;
+    }
+  }
 };
 
 /**
@@ -247,6 +285,15 @@ Player.prototype.save = function() {
   this.setStorage('availableForGame', this.availableForGame ? 'true' : 'false');
   this.setStorage('currentPosition', this.currentPosition ? 
                   this.currentPosition.name : '');
+  for (var i = 0; i < this.game.positionNames.length; ++i) {
+    var positionName = this.game.positionNames[i];
+    var timeMs = this.timeAtPositionMs[positionName];
+    if (timeMs && (timeMs != 0)) {
+      this.setStorage(positionName, timeMs);
+    } else {
+      this.setStorage(positionName, '');
+    }
+  }
 };
 
 /** @return {boolean} */
