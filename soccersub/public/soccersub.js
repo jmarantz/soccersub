@@ -197,6 +197,10 @@ Position.prototype.addTimeToShift = function(timeMs) {
 var Player = function(name, game) {
   this.name = name;
   this.game = game;
+  this.reset();
+};
+
+Player.prototype.reset = function() {
   this.timeInGameMs = 0;
   this.timeInShiftMs = 0;
   this.availableForGame = true;  
@@ -207,8 +211,8 @@ var Player = function(name, game) {
   /** @type {?Position} */
   this.currentPosition = null;
   this.selected = false;
-  for (var i = 0; i < game.positionNames.length; ++i) {
-    var positionName = game.positionNames[i];
+  for (var i = 0; i < this.game.positionNames.length; ++i) {
+    var positionName = this.game.positionNames[i];
     this.timeAtPositionMs[positionName] = 0;
   }
 };
@@ -239,59 +243,65 @@ Player.prototype.writeStatus = function() {
 
 /**
  * @param {string} field
+ * @param {Object.<string, string>} storage
  * @return {string}
  */
-Player.prototype.getStorage = function(field) {
-  return window.localStorage['Player:' + this.name + ':' + field];
+Player.prototype.getStorage = function(field, storage) {
+  return storage['Player:' + this.name + ':' + field];
 };
 
 /**
  * @param {string} field
  * @param {string} value
+ * @param {Object.<string, string>} storage
  */
-Player.prototype.setStorage = function(field, value) {
-  window.localStorage['Player:' + this.name + ':' + field] = value;
+Player.prototype.setStorage = function(field, value, storage) {
+  storage['Player:' + this.name + ':' + field] = value;
 };
 
 /**
+ * @param {Object} gameMap
  * @return {void}
  */
-Player.prototype.restore = function() {
-  this.timeInGameMs = parseInt(this.getStorage('timeInGameMs'), 10);
-  this.timeInShiftMs = parseInt(this.getStorage('timeInShiftMs'), 10);
-  this.availableForGame = this.getStorage('availableForGame') != 'false';
+Player.prototype.restore = function(gameMap) {
+  var playerMap = gameMap[this.name];
+  if (!playerMap) {
+    this.reset();
+    return;
+  }
+  this.timeInGameMs = playerMap.timeInGameMs;
+  this.timeInShiftMs = playerMap.timeInShiftMs;
+  this.availableForGame = playerMap.availableForGame;
   // timeAtPositionMs ...
-  this.currentPosition = this.game.findPosition(this.getStorage('currentPosition'));
+  this.currentPosition = this.game.findPosition(playerMap.currentPosition);
   if (this.currentPosition != null) {
     this.currentPosition.restorePlayer(this);
   }
   this.timeAtPositionMs = {};
   for (var i = 0; i < this.game.positionNames.length; ++i) {
     var positionName = this.game.positionNames[i];
-    var timeString = this.getStorage(positionName);
-    if (timeString) {
-      var timeMs = parseInt(timeString, 10);
-      this.timeAtPositionMs[positionName] = timeMs;
-    }
+    var timeMs = playerMap[positionName];
+    this.timeAtPositionMs[positionName] = timeMs ? timeMs : 0;
   }
 };
 
 /**
+ * @param {Object} gameMap
  * @return {void}
  */
-Player.prototype.save = function() {
-  this.setStorage('timeInGameMs', '' + this.timeInGameMs);
-  this.setStorage('timeInShiftMs', '' + this.timeInShiftMs);
-  this.setStorage('availableForGame', this.availableForGame ? 'true' : 'false');
-  this.setStorage('currentPosition', this.currentPosition ? 
-                  this.currentPosition.name : '');
+Player.prototype.save = function(gameMap) {
+  var playerMap = {};
+  gameMap[this.name] = playerMap;
+  playerMap.timeInGameMs = this.timeInGameMs;
+  playerMap.timeInShiftMs = this.timeInShiftMs;
+  playerMap.availableForGame = this.availableForGame;
+  playerMap.currentPosition = this.currentPosition
+    ? this.currentPosition.name : null;
   for (var i = 0; i < this.game.positionNames.length; ++i) {
     var positionName = this.game.positionNames[i];
     var timeMs = this.timeAtPositionMs[positionName];
-    if (timeMs && (timeMs != 0)) {
-      this.setStorage(positionName, timeMs);
-    } else {
-      this.setStorage(positionName, '');
+    if (timeMs) {
+      playerMap[positionName] = timeMs;
     }
   }
 };
@@ -381,7 +391,7 @@ Player.prototype.setPosition = function(position) {
     this.timeInShift = 0;
     this.updateColor();
     this.writeStatus();
-    this.save();
+    //this.save();
   }
 };
 
@@ -533,8 +543,6 @@ Game.prototype.reset = function() {
   this.positionNames = defaultPositionNames;
   this.playerNames = defaultPlayerNames;
   this.constructPlayersAndPositions();
-  window.localStorage.playerNames = this.playerNames.join(',');
-  window.localStorage.positionNames = this.positionNames.join(',');
   this.sortAndRenderPlayers();
   this.timeRunning = false;
   this.started = false;
@@ -562,39 +570,48 @@ Game.prototype.constructPlayersAndPositions = function() {
  * @return {boolean}
  */
 Game.prototype.restore = function() {
-  if (!storageAvailable('localStorage') || 
-      !window.localStorage.playerNames || 
-      !window.localStorage.positionNames) {
+  if (!storageAvailable('localStorage')) {
     return false;
   }
-  this.playerNames = window.localStorage.playerNames.split(',');
-  this.positionNames = window.localStorage.positionNames.split(',');
-  if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
+
+  try {
+    var storedGame = window.localStorage.game;
+    if (!storedGame) {
+      return false;
+    }
+    var map = JSON.parse(storedGame);
+
+    this.playerNames = map.playerNames;
+    this.positionNames = map.positionNames;
+    if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
+      return false;
+    }
+    this.constructPlayersAndPositions();
+    for (var i = 0; i < this.players.length; ++i) {
+      var player = this.players[i];
+      player.restore(map);
+    }
+    /*
+      for (var i = 0; i < this.positions.length; ++i) {
+      var position = this.position[i];
+      position.restore();
+      }
+    */
+    this.elapsedTimeMs = map.elapsedTimeMs;
+    this.timeRunning = map.timeRunning;
+    this.started = map.started;
+    this.timeOfLastUpdateMs = map.timeOfLastUpdateMs;
+    this.sortAndRenderPlayers();
+    for (var i = 0; i < this.players.length; ++i) {
+      var player = this.players[i];
+      player.updateColor();
+    }
+    this.update();
+    this.updateAvailableButton();
+    return true;
+  } catch (err) {
     return false;
   }
-  this.constructPlayersAndPositions();
-  for (var i = 0; i < this.players.length; ++i) {
-    var player = this.players[i];
-    player.restore();
-  }
-/*
-  for (var i = 0; i < this.positions.length; ++i) {
-    var position = this.position[i];
-    position.restore();
-  }
-*/
-  this.elapsedTimeMs = parseInt(window.localStorage.elapsedTimeMs, 10);
-  this.timeRunning = window.localStorage.timeRunning != 'false';
-  this.started = window.localStorage.started != 'false';
-  this.timeOfLastUpdateMs = parseInt(window.localStorage.timeOfLastUpdateMs, 10);
-  this.sortAndRenderPlayers();
-  for (var i = 0; i < this.players.length; ++i) {
-    var player = this.players[i];
-    player.updateColor();
-  }
-  this.update();
-  this.updateAvailableButton();
-  return true;
 };
 
 /**
@@ -615,14 +632,18 @@ Game.prototype.findPosition = function(name) {
  * @return {void}
  */
 Game.prototype.save = function() {
-  window.localStorage.elapsedTimeMs = '' + this.elapsedTimeMs;
-  window.localStorage.timeRunning = this.timeRunning ? 'true' : 'false';
-  window.localStorage.started = '' + this.started ? 'true' : 'false';
-  window.localStorage.timeOfLastUpdateMs = '' + this.timeOfLastUpdateMs;
+  var map = {};
+  map.elapsedTimeMs = this.elapsedTimeMs;
+  map.timeRunning = this.timeRunning;
+  map.started = this.started;
+  map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
+  map.playerNames = this.playerNames;
+  map.positionNames = this.positionNames;
   for (var i = 0; i < this.players.length; ++i) {
     var player = this.players[i];
-    player.save();
+    player.save(map);
   }
+  window.localStorage.game = JSON.stringify(map);
 };
 
 /**
