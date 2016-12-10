@@ -721,14 +721,21 @@ Game.prototype.toggleClock = function() {
  * @return {void}
  */
 Game.prototype.redrawClock = function() {
+  var background = 'white';
   if (this.timeRunning) {
     this.gameClockElement.style.backgroundColor = 'lightgreen';
     this.toggleClockButton.textContent = 'Stop Clock';
   } else {
     this.gameClockElement.style.backgroundColor = 'pink';
-    this.toggleClockButton.textContent =
-      (this.elapsedTimeMs == 0) ? 'Start Clock': 'Resume Clock';
+    if (this.elapsedTimeMs == 0) {
+      this.toggleClockButton.textContent = 'Start Clock';
+    } else {
+      this.toggleClockButton.textContent = 'Resume Clock';
+      this.toggleClockButton.style.backgroundColor = 'white';
+      background = 'red';
+    }
   }
+  document.body.style.backgroundColor = background;
 };
 
 
