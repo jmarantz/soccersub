@@ -40,7 +40,8 @@ var santosRedPlayerNames = [
   'Goalie'
 ];
 
-var defaultPlayerNames = santosRedPlayerNames;
+//var defaultPlayerNames = santosRedPlayerNames;
+var defaultPlayerNames = bencosnersPlayerNames;
 
 var defaultPositionNames = [
   'keeper',
@@ -105,6 +106,18 @@ function formatTime(timeMs) {
   }
   return '' + minutes + ':' + seconds;
 }
+
+/**
+ * @constructor
+ * @param {string} name
+ */
+var Team = function(name) {
+  this.name = name;
+  this.playerNames = [];
+  this.playerEntry = document.getElementById('player-entry');
+};
+
+var teamList = [];
 
 /**
  * @param {string} name
@@ -405,17 +418,9 @@ Player.prototype.updateColor = function() {
   } else if (this.currentPosition != null) {
     if (this.currentPosition == this.game.positionWithLongestShift) {
       color = 'orange';
-      //this.currentPosition.setBackgroundColor('orange');
     } else {
       color = 'yellow';
-      //this.currentPosition.setBackgroundColor('white');
     }
-/*
-    if (this.selected) {
-      background = 'pink';
-      this.currentPosition.setBackgroundColor('pink');
-    }
-*/
   }
   
   if (this.selected) {
@@ -710,7 +715,7 @@ Game.prototype.togglePlayerUnavailable = function() {
     this.updateAvailableButton();
     this.sortAndRenderPlayers();
     this.redrawPositions();
-    this.selectedPlayer.save();
+    this.update();
   }
 };
 
