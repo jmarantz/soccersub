@@ -230,13 +230,26 @@ Player.prototype.reset = function() {
   }
 };
 
+Player.prototype.computePercentageInGameNotKeeper = function() {
+  var timeAsKeeperMs = this.timeAtPositionMs['keeper'];
+  var totalInGameWhenThisPlayerWasNotKeeperMs = this.game.elapsedTimeMs -
+      timeAsKeeperMs;
+  if (!totalInGameWhenThisPlayerWasNotKeeperMs) {
+    return 0;
+  }
+  var playtimeTimeWhileNotKeeper = this.timeInGameMs - timeAsKeeperMs;
+  return 100 * playtimeTimeWhileNotKeeper /
+    totalInGameWhenThisPlayerWasNotKeeperMs;
+};
+
 /**
  * @return {void}
  */
 Player.prototype.writeStatus = function() {
   var msg = this.name + ': [';
   if (this.currentPosition != null) {
-    msg += this.currentPosition.name;
+    msg += this.currentPosition.name + ': ' +
+      formatTime(this.timeAtPositionMs[this.currentPosition.name]);
   } else if (this.availableForGame) {
     msg += 'available';
   } else { 
@@ -245,9 +258,12 @@ Player.prototype.writeStatus = function() {
   msg += ']';
   for (var i = 0; i < this.game.positionNames.length; ++i) {
     var positionName = this.game.positionNames[i];
-    var timeMs = this.timeAtPositionMs[positionName];
-    if (timeMs && (timeMs != 0)) {
-      msg += " " + positionName + ": " + formatTime(timeMs);
+    if ((this.currentPosition == null) ||
+        (this.currentPosition.name != positionName)) {
+      var timeMs = this.timeAtPositionMs[positionName];
+      if (timeMs && (timeMs != 0)) {
+        msg += " " + positionName + ": " + formatTime(timeMs);
+      }
     }
   }
   this.game.writeStatus(msg);
@@ -335,9 +351,13 @@ Player.prototype.isPlaying = function() {
  * @return {number}
  */
 Player.comparePlayingTimeMs = function(player1, player2) {
-  var cmp = player1.timeInGameMs - player2.timeInGameMs;
+  var cmp = player1.computePercentageInGameNotKeeper() -
+      player2.computePercentageInGameNotKeeper();
   if (cmp == 0) {
-    cmp = player1.timeInShiftMs - player2.timeInShiftMs;
+    cmp = player1.timeInGameMs - player2.timeInGameMs;
+    if (cmp == 0) {
+      cmp = player1.timeInShiftMs - player2.timeInShiftMs;
+    }
   }
   return cmp;
 }
@@ -374,7 +394,7 @@ Player.prototype.render = function(tableBody) {
   this.nameElement.textContent = this.name;
   row.appendChild(this.nameElement);
   this.gameTimeElement = document.createElement('td');
-  this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
+  this.renderGameTime();
   row.appendChild(this.gameTimeElement);
   if (SHOW_TIMES_AT_POSITION) {
     for (var i = 0; i < this.game.positionNames.length; ++i) {
@@ -418,8 +438,10 @@ Player.prototype.updateColor = function() {
   } else if (this.currentPosition != null) {
     if (this.currentPosition == this.game.positionWithLongestShift) {
       color = 'orange';
+    } else if (this.currentPosition.name == 'keeper') {
+      color = 'bisque';
     } else {
-      color = 'yellow';
+      color = 'aquamarine';
     }
   }
   
@@ -436,7 +458,15 @@ Player.prototype.updateColor = function() {
  * @return {string}
  */
 Player.prototype.renderAtPosition = function() {
+  if (this.selected) {
+    this.writeStatus();
+  }
   return this.name + ' ' + formatTime(this.timeInShiftMs);
+};
+
+Player.prototype.renderGameTime = function() {
+  this.gameTimeElement.textContent = formatTime(this.timeInGameMs) + ' ('
+    + Math.round(this.computePercentageInGameNotKeeper()) + '%)';
 };
 
 /**
@@ -445,8 +475,8 @@ Player.prototype.renderAtPosition = function() {
 Player.prototype.addTimeToShift = function(timeMs) {
   this.timeInShiftMs += timeMs;
   this.timeInGameMs += timeMs;
-  this.gameTimeElement.textContent = formatTime(this.timeInGameMs);
   this.timeAtPositionMs[this.currentPosition.name] += timeMs;
+  this.renderGameTime();
   //if (SHOW_TIMES_AT_POSITION) {
     //var positionMs = ...;
     //var elt = this.elementAtPosition[this.currentPosition.name];
@@ -656,23 +686,20 @@ Game.prototype.save = function() {
  */
 Game.prototype.sortAndRenderPlayers = function() {
   this.computePositionWithLongestShift();
-  this.players.sort(Player.compare);
-  var tableBody = document.getElementById('table-body');
-  tableBody.innerHTML = '';
-  for (var i = 0; i < this.players.length; ++i) {
-    var player = this.players[i];
-    player.render(tableBody);
+  var players = this.players.slice(0);
+  players.sort(Player.compare);
+  var changed = false;
+  for (var i = 0; !changed && (i < players.length); ++i) {
+    changed = players[i] != this.players[i];
   }
-  this.sortDelayMs = Number.MAX_VALUE;
-  var lastPlayer = this.players[0];
-  for (var i = 1; i < this.players.length; ++i) {
-    var thisPlayer = this.players[i];
-    if (thisPlayer.availableForGame &&
-        !thisPlayer.isPlaying() && lastPlayer.isPlaying()) {
-      var delayMs = Player.comparePlayingTimeMs(thisPlayer, lastPlayer);
-      this.sortDelayMs = Math.min(this.sortDelayMs, delayMs);
+  if (changed) {
+    this.players = players;
+    var tableBody = document.getElementById('table-body');
+    tableBody.innerHTML = '';
+    for (var i = 0; i < this.players.length; ++i) {
+      var player = this.players[i];
+      player.render(tableBody);
     }
-    lastPlayer = thisPlayer;
   }
 }
 
@@ -853,21 +880,7 @@ Game.prototype.update = function() {
       for (var i = 0; i < this.positions.length; ++i) {
         this.positions[i].addTimeToShift(timeSinceLastUpdate);
       }
-      if (this.sortDelayMs == Number.MAX_VALUE) {
-        if (DEBUG_SORTING) {
-          this.writeStatus('no re-sort will occur');
-        }
-      } else {
-        this.sortDelayMs -= timeSinceLastUpdate;
-        if (this.sortDelayMs <= 0) {
-          if (DEBUG_SORTING) {
-            this.writeStatus('resorting...');
-          }
-          this.sortAndRenderPlayers();
-        } else if (DEBUG_SORTING) {
-          this.writeStatus('next sort in ' + formatTime(this.sortDelayMs));
-        }
-      }
+      this.sortAndRenderPlayers();
     }
     if (!this.timeoutPending) {
       this.timeoutPending = true;
