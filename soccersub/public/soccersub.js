@@ -42,6 +42,7 @@ var santosRedPlayerNames = [
 
 //var defaultPlayerNames = santosRedPlayerNames;
 var defaultPlayerNames = bencosnersPlayerNames;
+//var defaultPlayerNames = chscPlayerNames;
 
 var defaultPositionNames = [
   'keeper',
@@ -573,6 +574,7 @@ Game.prototype.reset = function() {
   this.lightbox.style.display = 'none';
   this.elapsedTimeMs = 0;
   this.timeOfLastUpdateMs = 0;
+  this.rendered = false;
   this.positions = [];
   this.selectedPlayer = null;
   this.positionNames = defaultPositionNames;
@@ -616,6 +618,7 @@ Game.prototype.restore = function() {
     }
     var map = JSON.parse(storedGame);
 
+    this.rendered = false;
     this.playerNames = map.playerNames;
     this.positionNames = map.positionNames;
     if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
@@ -688,11 +691,12 @@ Game.prototype.sortAndRenderPlayers = function() {
   this.computePositionWithLongestShift();
   var players = this.players.slice(0);
   players.sort(Player.compare);
-  var changed = false;
+  var changed = !this.rendered;
   for (var i = 0; !changed && (i < players.length); ++i) {
     changed = players[i] != this.players[i];
   }
   if (changed) {
+    this.rendered = true;
     this.players = players;
     var tableBody = document.getElementById('table-body');
     tableBody.innerHTML = '';
