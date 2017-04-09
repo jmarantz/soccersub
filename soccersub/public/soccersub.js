@@ -1,3 +1,17 @@
+var cosmosPlayerNames = [
+  'ander',
+  'andrew',
+  'dylan',
+  'fredrik',
+  'jonas',
+  'josh',
+  'kenneth',
+  'ryan',
+  'spencer',
+  'tommy',
+  'will',
+];
+
 var bencosnersPlayerNames = [
   'ryan',
   'ellis',
@@ -41,15 +55,18 @@ var santosRedPlayerNames = [
 ];
 
 //var defaultPlayerNames = santosRedPlayerNames;
-var defaultPlayerNames = bencosnersPlayerNames;
+//var defaultPlayerNames = bencosnersPlayerNames;
 //var defaultPlayerNames = chscPlayerNames;
+var defaultPlayerNames = cosmosPlayerNames;
 
 var defaultPositionNames = [
   'keeper',
   'left_back',
   'right_back',
-  'left_wing',
-  'right_wing'
+  'left_mid',
+  'center_mid',
+  'right_mid',
+  'striker',
 ];
 
 var SHOW_TIMES_AT_POSITION = false;
