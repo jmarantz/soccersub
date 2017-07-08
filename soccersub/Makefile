@@ -9,13 +9,22 @@ export PATH := /usr/local/bin:$(PATH)
 deploy : deploy.timestamp
 compile : public/soccersub.min.js
 
-.PHONY: deploy compile
+.PHONY: deploy compile jsopts
 
-public/soccersub.min.js : public/soccersub.js Makefile
+JSFILES = public/position.js public/game.js public/player.js public/main.js public/util.js
+
+jsopts : $(JSFILES) Makefile
+	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
+
+public/soccersub.min.js : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar \
+		--dependency_mode=LOOSE \
+		--output_manifest=outfiles.list \
 		--compilation_level=ADVANCED_OPTIMIZATIONS \
 		--warning_level=VERBOSE \
-		--js $< --js_output_file $@
+		--js $(JSFILES) --js_output_file $@
+	sed -e s@public/@@g <outfiles.list | \
+		awk '{print "<script src=\"" $$1 "\"></script>"}'
 
 SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
 	public/futsal_floor.png
