@@ -1,3 +1,8 @@
+goog.module('soccersubMain');
+
+const Game = goog.require('soccersub.Game');
+const Lineup = goog.require('soccersub.Lineup');
+
 var cosmosPlayerNames = [
   'ander',
   'andrew',
@@ -69,7 +74,8 @@ var defaultPositionNames = [
   'striker',
 ];
 
-var game;
-window.onload = function() {
-  game = new Game(defaultPositionNames, defaultPlayerNames);
+const soccersubMain = () => {
+  const lineup = new Lineup(defaultPositionNames, defaultPlayerNames);
+  new Game(lineup);
 };
+goog.exportSymbol('soccersubMain', soccersubMain);

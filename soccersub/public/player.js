@@ -1,10 +1,23 @@
+goog.module('soccersub.Player');
+
+const Lineup = goog.require('soccersub.Lineup');
+const util = goog.require('soccersub.util');
+let Game = goog.forwardDeclare('soccersub.Game');
+let Position = goog.forwardDeclare('soccersub.Position');
+
+//const googString = goog.require('goog.string');
+//goog.module('Player');
+//const Game = goog.require('Game');
+
 class Player {
   /**
    * @param {string} name
-   * @param {Game} game
+   * @param {!Lineup} lineup
+   * @param {!Game} game
    */
-  constructor(name, game) {
+  constructor(name, lineup, game) {
     this.name = name;
+    this.lineup = lineup;
     this.game = game;
     /** @type {boolean} */
     this.availableForGame;
@@ -26,58 +39,62 @@ class Player {
     this.gameTimeElement = document.createElement('td');
     /** @type {number} */
     this.timeInShift;
+    /** @type {number} */
+    this.percentageInGameNotKeeper;
     this.reset();
   };
 
   reset() {
     this.timeInGameMs = 0;
     this.timeInShiftMs = 0;
+    this.percentageInGameNotKeeper = 0;
     this.availableForGame = true;  
     this.timeAtPositionMs = {};
     this.elementAtPosition = {};
     /** @type {?Position} */
     this.currentPosition = null;
     this.selected = false;
-    for (let i = 0; i < this.game.positionNames.length; ++i) {
-      const positionName = this.game.positionNames[i];
+    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
+      const positionName = this.lineup.positionNames[i];
       this.timeAtPositionMs[positionName] = 0;
     }
   }
 
-  computePercentageInGameNotKeeper() {
+  /** @param {number} elapsedTimeMs */
+  computePercentageInGameNotKeeper(elapsedTimeMs) {
     const timeAsKeeperMs = this.timeAtPositionMs['keeper'];
-    const totalInGameWhenThisPlayerWasNotKeeperMs = this.game.elapsedTimeMs -
-        timeAsKeeperMs;
+    const totalInGameWhenThisPlayerWasNotKeeperMs = elapsedTimeMs - timeAsKeeperMs;
     if (!totalInGameWhenThisPlayerWasNotKeeperMs) {
       return 0;
     }
     const playtimeTimeWhileNotKeeper = this.timeInGameMs - timeAsKeeperMs;
-    return 100 * playtimeTimeWhileNotKeeper /
+    this.percentageInGameNotKeeper = 100 * playtimeTimeWhileNotKeeper /
       totalInGameWhenThisPlayerWasNotKeeperMs;
   }
 
-  writeStatus() {
+  /** @return {string} */
+  status() {
     let msg = this.name + ': [';
     if (this.currentPosition != null) {
       msg += this.currentPosition.name + ': ' +
-        formatTime(this.timeAtPositionMs[this.currentPosition.name]);
+        util.formatTime(this.timeAtPositionMs[this.currentPosition.name]);
     } else if (this.availableForGame) {
       msg += 'available';
     } else { 
       msg += 'unavailable';
     }
     msg += ']';
-    for (let i = 0; i < this.game.positionNames.length; ++i) {
-      const positionName = this.game.positionNames[i];
+    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
+      const positionName = this.lineup.positionNames[i];
       if ((this.currentPosition == null) ||
           (this.currentPosition.name != positionName)) {
         const timeMs = this.timeAtPositionMs[positionName];
         if (timeMs && (timeMs != 0)) {
-          msg += " " + positionName + ": " + formatTime(timeMs);
+          msg += " " + positionName + ": " + util.formatTime(timeMs);
         }
       }
     }
-    this.game.writeStatus(msg);
+    return msg;
   }
 
   /**
@@ -100,27 +117,25 @@ class Player {
 
   /**
    * @param {Object} gameMap
+   * @return {?string}
    */
   restore(gameMap) {
     const playerMap = gameMap[this.name];
     if (!playerMap) {
       this.reset();
-      return;
+      return null;
     }
     this.timeInGameMs = playerMap.timeInGameMs;
     this.timeInShiftMs = playerMap.timeInShiftMs;
     this.availableForGame = playerMap.availableForGame;
     // timeAtPositionMs ...
-    this.currentPosition = this.game.findPosition(playerMap.currentPosition);
-    if (this.currentPosition != null) {
-      this.currentPosition.restorePlayer(this);
-    }
     this.timeAtPositionMs = {};
-    for (let i = 0; i < this.game.positionNames.length; ++i) {
-      const positionName = this.game.positionNames[i];
+    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
+      const positionName = this.lineup.positionNames[i];
       const timeMs = playerMap[positionName];
       this.timeAtPositionMs[positionName] = timeMs ? timeMs : 0;
     }
+    return playerMap.currentPosition;
   }
 
   /**
@@ -134,8 +149,8 @@ class Player {
     playerMap.availableForGame = this.availableForGame;
     playerMap.currentPosition = this.currentPosition
       ? this.currentPosition.name : null;
-    for (let i = 0; i < this.game.positionNames.length; ++i) {
-      const positionName = this.game.positionNames[i];
+    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
+      const positionName = this.lineup.positionNames[i];
       const timeMs = this.timeAtPositionMs[positionName];
       if (timeMs) {
         playerMap[positionName] = timeMs;
@@ -159,8 +174,8 @@ class Player {
    * @return {number}
    */
   static comparePlayingTimeMs(player1, player2) {
-    let cmp = player1.computePercentageInGameNotKeeper() -
-        player2.computePercentageInGameNotKeeper();
+    let cmp = player1.percentageInGameNotKeeper - 
+        player2.percentageInGameNotKeeper;
     if (cmp == 0) {
       cmp = player1.timeInGameMs - player2.timeInGameMs;
       if (cmp == 0) {
@@ -198,15 +213,14 @@ class Player {
   render(tableBody) {
     const row = document.createElement('tr');
     this.nameElement = document.createElement('td');
-    handleTouch(this.nameElement, this.game.bind(this.game.selectPlayer, this));
     this.nameElement.textContent = this.name;
     row.appendChild(this.nameElement);
     this.gameTimeElement = document.createElement('td');
     this.renderGameTime();
     row.appendChild(this.gameTimeElement);
     if (this.game.showTimesAtPosition) {
-      for (let i = 0; i < this.game.positionNames.length; ++i) {
-        const positionName = this.game.positionNames[i];
+      for (let i = 0; i < this.lineup.positionNames.length; ++i) {
+        const positionName = this.lineup.positionNames[i];
         const td = document.createElement('td');
         row.appendChild(td);
         this.elementAtPosition[positionName] = td;
@@ -231,7 +245,6 @@ class Player {
       this.currentPosition = position;
       this.timeInShift = 0;
       this.updateColor();
-      this.writeStatus();
       //this.save();
     }
   }
@@ -264,14 +277,14 @@ class Player {
    */
   renderAtPosition() {
     if (this.selected) {
-      this.writeStatus();
+      this.game.writeStatus(this.status());
     }
-    return this.name + ' ' + formatTime(this.timeInShiftMs);
+    return this.name + ' ' + util.formatTime(this.timeInShiftMs);
   }
 
   renderGameTime() {
-    this.gameTimeElement.textContent = formatTime(this.timeInGameMs) + ' ('
-      + Math.round(this.computePercentageInGameNotKeeper()) + '%)';
+    this.gameTimeElement.textContent = util.formatTime(this.timeInGameMs) + ' ('
+      + Math.round(this.percentageInGameNotKeeper) + '%)';
   }
 
   /**
@@ -305,3 +318,6 @@ class Player {
     this.updateColor();
   }
 }
+
+exports = Player;
+

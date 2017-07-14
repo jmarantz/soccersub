@@ -1,5 +1,7 @@
+goog.module('soccersub.util');
+
 /** @param {string} type */
-function storageAvailable(type) {
+exports.storageAvailable = (type) => {
   try {
     var storage = window[type],
 	x = '__storage_test__';
@@ -10,13 +12,13 @@ function storageAvailable(type) {
   catch(e) {
     return false;
   }
-}
+};
 
 /**
  * @param {!Element} element
  * @param {function()} func
  */
-function handleTouch(element, func) {
+exports.handleTouch = (element, func) => {
   /**
    * @param {!Event} event
    */
@@ -29,18 +31,18 @@ function handleTouch(element, func) {
                            ///** @type {boolean} */ ({'passive': true}));
   element.addEventListener('click', handler);
                            ///** @type {boolean} */ ({'passive': true}));
-}
+};
 
 /** @return {number} */
-function currentTimeMs() {
+exports.currentTimeMs = () => {
   return new Date().getTime() + 0;
-}
+};
 
 /**
  * @param {number} timeMs
  * @return {string}
  */
-function formatTime(timeMs) {
+exports.formatTime = (timeMs) => {
   var timeSec = Math.floor(timeMs / 1000);
   var minutes = Math.floor(timeSec / 60);
   var seconds = timeSec % 60;
@@ -48,5 +50,5 @@ function formatTime(timeMs) {
     seconds = '0' + seconds;
   }
   return '' + minutes + ':' + seconds;
-}
+};
 

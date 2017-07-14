@@ -1,9 +1,15 @@
+goog.module('soccersub.Game');
+const Dialog = goog.require('goog.ui.Dialog');
+const Lineup = goog.require('soccersub.Lineup');
+const Player = goog.require('soccersub.Player');
+const Position = goog.require('soccersub.Position');
+const util = goog.require('soccersub.util');
+
 class Game {
   /**
-   * @param {!Array<string>} defaultPositionNames
-   * @param {!Array<string>} defaultPlayerNames
+   * @param {!Lineup} lineup
    */
-  constructor(defaultPositionNames, defaultPlayerNames) {
+  constructor(lineup) {
     /** @type {boolean} */
     this.showTimesAtPosition = false;
     /** @type {boolean} */
@@ -14,7 +20,7 @@ class Game {
     /** @type {!Element} */
     this.toggleClockButton = 
       /** @type {!Element} */ (document.getElementById('clock_toggle'));
-    handleTouch(this.toggleClockButton, this.bind(this.toggleClock));
+    util.handleTouch(this.toggleClockButton, this.bind(this.toggleClock));
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
@@ -24,16 +30,16 @@ class Game {
     /** @type {boolean} */
     this.timeoutPending = false;
     this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
-    handleTouch(this.resetTag, this.bind(this.confirmAndReset));
+    util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
     this.started = false;
     this.unavailableButton = /** @type {!Element} */ 
     (document.getElementById('unavailable'));
-    handleTouch(this.unavailableButton, this.bind(this.togglePlayerUnavailable));
+    util.handleTouch(this.unavailableButton, this.bind(this.togglePlayerUnavailable));
     this.lightbox =  /** @type {!Element} */
     (document.getElementById('confirm'));
-    handleTouch(/** @type {!Element} */ (document.getElementById('ok')), 
+    util.handleTouch(/** @type {!Element} */ (document.getElementById('ok')), 
       this.bind(this.reset));
-    handleTouch(/** @type {!Element} */ (document.getElementById('cancel')),
+    util.handleTouch(/** @type {!Element} */ (document.getElementById('cancel')),
       this.bind(this.cancelReset));
 
     /** @type {number} */
@@ -48,14 +54,8 @@ class Game {
     this.selectedPlayer;
     /** @type {!Array<!Player>} */
     this.players;
-    /** @type {!Array<string>} */
-    this.defaultPositionNames = defaultPositionNames;
-    /** @type {!Array<string>} */
-    this.positionNames;
-    /** @type {!Array<string>} */
-    this.defaultPlayerNames = defaultPlayerNames;
-    /** @type {!Array<string>} */
-    this.playerNames;
+    /** @type {!Lineup} */
+    this.lineup = lineup;
     /** @type {boolean} */
     this.timeRunning = false;
     /** @type {boolean} */
@@ -88,6 +88,7 @@ class Game {
    * @return {void}
    */
   confirmAndReset() {
+    const dialog = new goog.ui.Dialog();
     if (this.started) {
       this.lightbox.style.display = 'block';
     }
@@ -104,12 +105,11 @@ class Game {
     this.rendered = false;
     this.positions = [];
     this.selectedPlayer = null;
-    this.positionNames = this.defaultPositionNames;
-    this.playerNames = this.defaultPlayerNames;
     this.constructPlayersAndPositions();
     this.sortAndRenderPlayers();
     this.timeRunning = false;
     this.started = false;
+    this.lineup.reset();
     this.update();
     this.updateAvailableButton();
   }
@@ -117,12 +117,12 @@ class Game {
   constructPlayersAndPositions() {
     var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
     this.positions = [];
-    for (var i = 0; i < this.positionNames.length; ++i) {
-      this.positions.push(new Position(this.positionNames[i], headRow, this));
+    for (var i = 0; i < this.lineup.positionNames.length; ++i) {
+      this.positions.push(new Position(this.lineup.positionNames[i], headRow, this));
     }
     this.players = [];
-    for (var i = 0; i < this.playerNames.length; ++i) {
-      var player = new Player(this.playerNames[i], this);
+    for (var i = 0; i < this.lineup.playerNames.length; ++i) {
+      var player = new Player(this.lineup.playerNames[i], this.lineup, this);
       this.players.push(player);
     }
   }
@@ -131,7 +131,7 @@ class Game {
    * @return {boolean}
    */
   restore() {
-    if (!storageAvailable('localStorage')) {
+    if (!util.storageAvailable('localStorage')) {
       return false;
     }
 
@@ -143,16 +143,19 @@ class Game {
       var map = /** @type {!Object} */ (JSON.parse(storedGame));
 
       this.rendered = false;
-      this.playerNames = map.playerNames;
-      this.positionNames = map.positionNames;
-      if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
+      if (!this.lineup.restore(map)) {
         return false;
       }
       this.constructPlayersAndPositions();
       for (let i = 0; i < this.players.length; ++i) {
-        var player = this.players[i];
-        player.restore(map);
+        const player = this.players[i];
+        const positionName = player.restore(map);
+        if (positionName) {
+          player.setPosition(this.findPosition(positionName));
+          //this.writeStatus(player.status());
+        }
       }
+
       /*
         for (var i = 0; i < this.positions.length; ++i) {
         var position = this.position[i];
@@ -196,8 +199,7 @@ class Game {
     map.timeRunning = this.timeRunning;
     map.started = this.started;
     map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
-    map.playerNames = this.playerNames;
-    map.positionNames = this.positionNames;
+    this.lineup.save(map);
     for (var i = 0; i < this.players.length; ++i) {
       var player = this.players[i];
       player.save(map);
@@ -205,8 +207,17 @@ class Game {
     window.localStorage.game = JSON.stringify(map);
   };
 
+  /** @private */
+  computePercentageInGameNotKeeper_() {
+    for (var i = 0; i < this.players.length; ++i) {
+      const player = this.players[i];
+      player.computePercentageInGameNotKeeper(this.elapsedTimeMs);
+    }
+  }
+
   sortAndRenderPlayers() {
-    this.computePositionWithLongestShift();
+    this.computePositionWithLongestShift_();
+    this.computePercentageInGameNotKeeper_();
     var players = this.players.slice(0);
     players.sort(Player.compare);
     var changed = !this.rendered;
@@ -221,6 +232,7 @@ class Game {
       for (var i = 0; i < this.players.length; ++i) {
         var player = this.players[i];
         player.render(tableBody);
+        util.handleTouch(player.nameElement, this.bind(this.selectPlayer, player));
       }
     }
   }
@@ -228,7 +240,7 @@ class Game {
   toggleClock() {
     this.started = true;
     this.timeRunning = !this.timeRunning;
-    this.timeOfLastUpdateMs = currentTimeMs();
+    this.timeOfLastUpdateMs = util.currentTimeMs();
     this.update();
   };
 
@@ -260,7 +272,7 @@ class Game {
           position.render();
         }
       }
-      this.selectedPlayer.writeStatus();
+      this.writeStatus(this.selectedPlayer.status());
       this.updateAvailableButton();
       this.sortAndRenderPlayers();
       this.redrawPositions();
@@ -290,7 +302,7 @@ class Game {
     if (this.selectedPlayer == null) {
       this.writeStatus(' ');
     } else {
-      this.selectedPlayer.writeStatus();
+      this.writeStatus(this.selectedPlayer.status());
     }
     this.updateAvailableButton();
     this.redrawPositions();
@@ -311,7 +323,8 @@ class Game {
     }
   };
 
-  computePositionWithLongestShift() {
+  /** @private */
+  computePositionWithLongestShift_() {
     var pos = null;
     for (var i = 0; i < this.positions.length; ++i) {
       var position = this.positions[i];
@@ -358,6 +371,7 @@ class Game {
       }
     } else if (this.selectedPlayer.availableForGame) {
       this.selectedPlayer.setPosition(position);
+      this.writeStatus(this.selectedPlayer.status());
       if (position != null) {
         position.setPlayer(this.selectedPlayer);
       }
@@ -385,7 +399,7 @@ class Game {
 
   update() {
     if (this.timeRunning) {
-      var timeMs = currentTimeMs();
+      var timeMs = util.currentTimeMs();
       var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
       if (timeSinceLastUpdate > 0) {
         this.elapsedTimeMs += timeSinceLastUpdate;
@@ -407,8 +421,10 @@ class Game {
       }*/
     this.redrawClock();
     this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
-      formatTime(this.elapsedTimeMs);
+      util.formatTime(this.elapsedTimeMs);
     this.save();
     this.resetTag.style.backgroundColor = this.started ? 'white': 'lightgray';
   }
 }
+
+exports = Game;

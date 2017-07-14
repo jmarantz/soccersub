@@ -1,3 +1,8 @@
+goog.module('soccersub.Position');
+const util = goog.require('soccersub.util');
+let Game = goog.forwardDeclare('soccersub.Game');
+let Player = goog.forwardDeclare('soccersub.Player');
+
 class Position {
   /**
    * @param {string} name
@@ -25,7 +30,7 @@ class Position {
 
     this.element.style.lineHeight = 'normal';
     this.render();
-    handleTouch(this.element, game.bind(game.assignPosition, this));
+    util.handleTouch(this.element, game.bind(game.assignPosition, this));
     
     // Now the table header entry, which we are just going to automatically
     // populate, and don't need to reference it after that.
@@ -81,3 +86,5 @@ class Position {
     }
   }
 }
+
+exports = Position;
