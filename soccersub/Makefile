@@ -25,7 +25,12 @@ jsopts : $(JSFILES) Makefile
 
 
 deps :
-	$(BUILD)
+	$(BUILD) | \
+		grep -v closure-library/ | \
+		sed -e s@public/@@g | \
+		awk '{print "goog.loadModuleFromUrl(\"" $$1 "\");"}' \
+		> bin/loader.js
+
 compile :
 	$(BUILD) \
 	  --compiler_jar=$(COMPILER_JAR) \

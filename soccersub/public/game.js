@@ -33,14 +33,8 @@ class Game {
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
     this.started = false;
     this.unavailableButton = /** @type {!Element} */ 
-    (document.getElementById('unavailable'));
+        (document.getElementById('unavailable'));
     util.handleTouch(this.unavailableButton, this.bind(this.togglePlayerUnavailable));
-    this.lightbox =  /** @type {!Element} */
-    (document.getElementById('confirm'));
-    util.handleTouch(/** @type {!Element} */ (document.getElementById('ok')), 
-      this.bind(this.reset));
-    util.handleTouch(/** @type {!Element} */ (document.getElementById('cancel')),
-      this.bind(this.cancelReset));
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -88,18 +82,19 @@ class Game {
    * @return {void}
    */
   confirmAndReset() {
-    const dialog = new goog.ui.Dialog();
-    if (this.started) {
-      this.lightbox.style.display = 'block';
-    }
-  }
-
-  cancelReset() {
-    this.lightbox.style.display = 'none';
+    const dialog = new goog.ui.Dialog(
+      undefined /* cssClass */, false /* useIframeMask */);
+    dialog.setTextContent('Completely reset game state?');
+    dialog.setButtonSet(goog.ui.Dialog.ButtonSet.createOkCancel());
+    goog.events.listen(dialog, goog.ui.Dialog.EventType.SELECT, (e) => {
+      if (e.key == 'ok') {
+        this.reset();
+      }
+    });
+    dialog.setVisible(true);
   }
 
   reset() {
-    this.lightbox.style.display = 'none';
     this.elapsedTimeMs = 0;
     this.timeOfLastUpdateMs = 0;
     this.rendered = false;
