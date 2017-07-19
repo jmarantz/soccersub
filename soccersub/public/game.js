@@ -3,6 +3,7 @@ const Dialog = goog.require('goog.ui.Dialog');
 const Lineup = goog.require('soccersub.Lineup');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
+const Prompt = goog.require('goog.ui.Prompt');
 const util = goog.require('soccersub.util');
 
 class Game {
@@ -32,9 +33,10 @@ class Game {
     this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
     this.started = false;
-    this.unavailableButton = /** @type {!Element} */ 
-        (document.getElementById('unavailable'));
-    util.handleTouch(this.unavailableButton, this.bind(this.togglePlayerUnavailable));
+    this.adjustRosterButton = /** @type {!Element} */ 
+        (document.getElementById('adjust-roster'));
+    this.adjustRosterButton.style.backgroundColor = 'white';
+    util.handleTouch(this.adjustRosterButton, this.bind(this.adjustRoster));
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -47,7 +49,9 @@ class Game {
     /** @type {?Player} */
     this.selectedPlayer;
     /** @type {!Array<!Player>} */
-    this.players;
+    this.activePlayers;
+    /** @type {!Map<string, !Player>} */
+    this.playerMap;
     /** @type {!Lineup} */
     this.lineup = lineup;
     /** @type {boolean} */
@@ -101,10 +105,10 @@ class Game {
     this.positions = [];
     this.selectedPlayer = null;
     this.constructPlayersAndPositions();
-    this.sortAndRenderPlayers();
+    this.sortAndRenderPlayers(false);
     this.timeRunning = false;
     this.started = false;
-    this.lineup.reset();
+    //this.lineup.reset();
     this.update();
     this.updateAvailableButton();
   }
@@ -115,11 +119,70 @@ class Game {
     for (var i = 0; i < this.lineup.positionNames.length; ++i) {
       this.positions.push(new Position(this.lineup.positionNames[i], headRow, this));
     }
-    this.players = [];
-    for (var i = 0; i < this.lineup.playerNames.length; ++i) {
-      var player = new Player(this.lineup.playerNames[i], this.lineup, this);
-      this.players.push(player);
+    this.activePlayers = [];
+    this.playerMap = new Map();
+    for (const name of this.lineup.playerNames) {
+      var player = new Player(name, this.lineup, this);
+      this.activePlayers.push(player);
+      player.availableForGame = true;
+      this.playerMap.set(name, player);
     }
+    for (const name of this.lineup.unavailablePlayerNames) {
+      var player = new Player(name, this.lineup, this);
+      player.availableForGame = false;
+      this.playerMap.set(name, player);
+    }
+  }
+
+  /**
+   * Following an adjustment of the set of players, update the ones in the game
+   * currently.  Make new players for those that we didn't previously know about,
+   * and move any that were deleted or commented out to inactive status.  We don't
+   * delete them so that they can retain their stats if they are brought back (e.g.
+   * recover from injury).
+   */
+  updatePlayers() {
+    // Make a map of active players based on the lineup change, which might differ
+    // from this.activePlayers.
+
+    // Populate the previously active players.
+    const previouslyActivePlayers = new Map();
+    for (const player of this.activePlayers) {
+      previouslyActivePlayers.set(player.name, player);
+    }
+    this.activePlayers = [];
+
+    // Iterate over the new set of active players, pulling player records from
+    // the current inactive & active maps.
+    for (var i = 0; i < this.lineup.playerNames.length; ++i) {
+      const name = this.lineup.playerNames[i];
+      let player = previouslyActivePlayers.get(name);
+      if (player) {
+        previouslyActivePlayers.delete(player.name);
+      } else {
+        player = this.playerMap.get(name);
+        if (player) {
+          player.availableForGame = true;
+        } else {
+          player = new Player(name, this.lineup, this);
+        }
+      }
+      this.activePlayers.push(player);
+    }
+
+    // The remaining previouslyActivePlayers are now inactive.
+    for (const player of previouslyActivePlayers.values()) {
+      player.availableForGame = false;
+      var position = player.currentPosition;
+      if (position != null) {
+        position.setPlayer(null);
+        position.render();
+      }
+    }
+
+    this.sortAndRenderPlayers(true);
+    this.redrawPositions();
+    this.update();
   }
 
   /**
@@ -130,7 +193,7 @@ class Game {
       return false;
     }
 
-    try {
+    //try {
       var storedGame = window.localStorage.game;
       if (!storedGame) {
         return false;
@@ -142,11 +205,12 @@ class Game {
         return false;
       }
       this.constructPlayersAndPositions();
-      for (let i = 0; i < this.players.length; ++i) {
-        const player = this.players[i];
+      for (const player of this.playerMap.values()) {
         const positionName = player.restore(map);
         if (positionName) {
-          player.setPosition(this.findPosition(positionName));
+          const position = this.findPosition(positionName);
+          player.setPosition(position);
+          position.setPlayer(player);
           //this.writeStatus(player.status());
         }
       }
@@ -161,17 +225,16 @@ class Game {
       this.timeRunning = map.timeRunning;
       this.started = map.started;
       this.timeOfLastUpdateMs = map.timeOfLastUpdateMs;
-      this.sortAndRenderPlayers();
-      for (let i = 0; i < this.players.length; ++i) {
-        var player = this.players[i];
+      this.sortAndRenderPlayers(true);
+      for (const player of this.activePlayers) {
         player.updateColor();
       }
       this.update();
       this.updateAvailableButton();
       return true;
-    } catch (err) {
-      return false;
-    }
+    //} catch (err) {
+    //  return false;
+    //}
   }
 
   /**
@@ -195,8 +258,7 @@ class Game {
     map.started = this.started;
     map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
     this.lineup.save(map);
-    for (var i = 0; i < this.players.length; ++i) {
-      var player = this.players[i];
+    for (const player of this.playerMap.values()) {
       player.save(map);
     }
     window.localStorage.game = JSON.stringify(map);
@@ -204,30 +266,33 @@ class Game {
 
   /** @private */
   computePercentageInGameNotKeeper_() {
-    for (var i = 0; i < this.players.length; ++i) {
-      const player = this.players[i];
+    for (const player of this.activePlayers) {
       player.computePercentageInGameNotKeeper(this.elapsedTimeMs);
     }
   }
 
-  sortAndRenderPlayers() {
+  /** @param {boolean} force */
+  sortAndRenderPlayers(force) {
     this.computePositionWithLongestShift_();
     this.computePercentageInGameNotKeeper_();
-    var players = this.players.slice(0);
+    var players = this.activePlayers.slice(0);
     players.sort(Player.compare);
-    var changed = !this.rendered;
+    var changed = !this.rendered || force;
     for (var i = 0; !changed && (i < players.length); ++i) {
-      changed = players[i] != this.players[i];
+      changed = players[i] != this.activePlayers[i];
     }
     if (changed) {
       this.rendered = true;
-      this.players = players;
+      this.activePlayers = players;
       var tableBody = document.getElementById('table-body');
       tableBody.innerHTML = '';
-      for (var i = 0; i < this.players.length; ++i) {
-        var player = this.players[i];
+      for (var i = 0; i < this.activePlayers.length; ++i) {
+        var player = this.activePlayers[i];
         player.render(tableBody);
-        util.handleTouch(player.nameElement, this.bind(this.selectPlayer, player));
+        if (player.nameElement) {
+          util.handleTouch(player.nameElement,
+                           this.bind(this.selectPlayer, player));
+        }
       }
     }
   }
@@ -257,7 +322,21 @@ class Game {
     document.body.style.backgroundColor = background;
   }
 
-  togglePlayerUnavailable() {
+  adjustRoster() {
+    const prompt = new goog.ui.Prompt(
+      'Roster Entry',
+      'Entry names of players, prefixing unavailable ones with #',
+      (response) => {
+        if (response) {
+          this.lineup.setPlayersFromText(response);
+          this.updatePlayers();
+          this.save();
+        }
+      });
+    prompt.setRows(15);
+    prompt.setDefaultValue(this.lineup.getPlayersAsText());
+    prompt.setVisible(true);
+/*
     if (this.selectedPlayer != null) {
       this.selectedPlayer.availableForGame = !this.selectedPlayer.availableForGame;
       if (!this.selectedPlayer.availableForGame) {
@@ -273,6 +352,7 @@ class Game {
       this.redrawPositions();
       this.update();
     }
+*/
   }
 
   /**
@@ -304,6 +384,7 @@ class Game {
   }
 
   updateAvailableButton() {
+/*
     if (this.selectedPlayer) {
       if (this.selectedPlayer.availableForGame) {
         this.unavailableButton.style.backgroundColor = 'white';
@@ -316,6 +397,7 @@ class Game {
       this.unavailableButton.style.backgroundColor = 'lightgray';
       this.unavailableButton.textContent = 'Make Unavailable';
     }
+*/
   };
 
   /** @private */
@@ -373,7 +455,7 @@ class Game {
       
       // Unselect the player so we are less likely to double-assign.
       this.selectPlayer(null);
-      this.sortAndRenderPlayers();
+      this.sortAndRenderPlayers(false);
       this.started = true;
       this.update();
     }
@@ -402,7 +484,7 @@ class Game {
         for (var i = 0; i < this.positions.length; ++i) {
           this.positions[i].addTimeToShift(timeSinceLastUpdate);
         }
-        this.sortAndRenderPlayers();
+        this.sortAndRenderPlayers(false);
       }
       if (!this.timeoutPending) {
         this.timeoutPending = true;

@@ -10,12 +10,13 @@ class Lineup {
     this.defaultPlayerNames = defaultPlayerNames;
     this.positionNames = defaultPositionNames;
     this.playerNames = defaultPlayerNames;
+    this.unavailablePlayerNames = [];
   }
 
-  reset() {
+  /*reset() {
     this.positionNames = this.defaultPositionNames;
     this.playerNames = this.defaultPlayerNames;
-  }
+  }*/
 
   /**
    * @param {!Object} map
@@ -36,6 +37,38 @@ class Lineup {
   save(map) {
     map.playerNames = this.playerNames;
     map.positionNames = this.positionNames;
+  }
+
+  /**
+   * @return {string}
+   */
+  getPlayersAsText() {
+    let names = this.playerNames.sort().join('\n');
+    if (this.unavailablePlayerNames.length) {
+      names += (this.playerNames.length ? '\n#' : '#');
+      names += this.unavailablePlayerNames.sort().join('\n#');
+    }
+    return names;
+  }
+
+  /**
+   * @param {string} names
+   */
+  setPlayersFromText(names) {
+    this.playerNames = [];
+    this.unavailablePlayerNames = [];
+    for (let player of names.split('\n')) {
+      if (player) {
+        if (player[0] == '#') {
+          player = player.substring(1);
+          if (player) {
+            this.unavailablePlayerNames.push(player);
+          }
+        } else {
+          this.playerNames.push(player);
+        }
+      }
+    }
   }
 }
 

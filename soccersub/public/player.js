@@ -33,8 +33,8 @@ class Player {
     this.elementAtPosition;
     /** @type {?Position} */
     this.currentPosition;
-    /** @type {!Element} */
-    this.nameElement;
+    /** @type {?Element} */
+    this.nameElement = null;    // initialized on render.
     /** @type {!Element} */
     this.gameTimeElement = document.createElement('td');
     /** @type {number} */
@@ -250,6 +250,9 @@ class Player {
   }
 
   updateColor() {
+    if (!this.nameElement) {
+      return;
+    }
     let color = 'white';
     if (!this.availableForGame) {
       color = 'lightblue';
