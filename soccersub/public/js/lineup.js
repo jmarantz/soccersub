@@ -75,7 +75,13 @@ class Lineup {
    * @return {string}
    */
   getPositionsAsText() {
-    return this.positionNames.map((row) => row.join(', ')).join('\n');
+    const transformRow = (row) => {
+      if (row instanceof Array) {
+        return row.join(', ');
+      }
+      return '' + row;
+    };
+    return this.positionNames.map(transformRow).join('\n');
   }
 
   /**

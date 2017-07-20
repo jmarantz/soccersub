@@ -159,10 +159,12 @@ class Game {
     for (const row of this.lineup.positionNames) {
       const tableRow = this.makeTableRow(field);
       for (const positionName of row) {
-        this.makePositionElement(tableRow, positionName);
-        const position = new Position(positionName, headRow, this);
-        this.positionDropGroup.addItem(position.element, position);
-        this.positions.push(position);
+        if (positionName) {
+          this.makePositionElement(tableRow, positionName);
+          const position = new Position(positionName, headRow, this);
+          this.positionDropGroup.addItem(position.element, position);
+          this.positions.push(position);
+        }
       }
     }
     this.activePlayers = [];

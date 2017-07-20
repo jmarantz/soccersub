@@ -110,16 +110,16 @@
     //scriptNode.async = false;
     //scriptNode.onload = () => soccersubMain();
     if (window.location.href.includes("?debug")) {
-      scriptNode.src = "../bin/loader.js";
+      scriptNode.src = "loader.js";
     } else {
-      scriptNode.src = "../bin/soccersub.min.js";
+      scriptNode.src = "soccersub.min.js";
     }
     //document.body.appendChild(scriptNode);
     //document.write(scriptNode.outerHTML);
 */
   </script>
-  <!--<script src="../bin/loader.js"></script>-->
-  <script src="../bin/soccersub.min.js"></script>
+  <script src="loader.js"></script>
+  <!--<script src="soccersub.min.js"></script>-->
   <script>
     soccersubMain();
   </script>
