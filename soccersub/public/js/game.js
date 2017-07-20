@@ -113,17 +113,21 @@ class Game {
   }
 
   reset() {
-    this.elapsedTimeMs = 0;
-    this.timeOfLastUpdateMs = 0;
-    this.rendered = false;
-    this.positions = [];
-    this.selectedPlayer = null;
-    this.constructPlayersAndPositions();
-    this.sortAndRenderPlayers(false);
-    this.timeRunning = false;
-    this.started = false;
-    //this.lineup.reset();
-    this.update();
+    try {
+      this.elapsedTimeMs = 0;
+      this.timeOfLastUpdateMs = 0;
+      this.rendered = false;
+      this.positions = [];
+      this.selectedPlayer = null;
+      this.constructPlayersAndPositions();
+      this.sortAndRenderPlayers(false);
+      this.timeRunning = false;
+      this.started = false;
+      //this.lineup.reset();
+      this.update();
+    } catch (err) {
+      this.writeStatus('ERROR: ' + err + '\n' + err.stack);
+    }
   }
 
   /**
