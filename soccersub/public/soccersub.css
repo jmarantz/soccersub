@@ -45,3 +45,8 @@ table {
 
 .dnd-target {
 }
+
+.modal-dialog-userInput {
+    font-size: medium;
+    width: 100%;
+}
