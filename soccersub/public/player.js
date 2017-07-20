@@ -9,6 +9,8 @@ let Position = goog.forwardDeclare('soccersub.Position');
 //goog.module('Player');
 //const Game = goog.require('Game');
 
+const DB_PREFIX = 'player:';
+
 class Player {
   /**
    * @param {string} name
@@ -103,7 +105,7 @@ class Player {
    * @return {string}
    */
   getStorage(field, storage) {
-    return storage['Player:' + this.name + ':' + field];
+    return storage[DB_PREFIX + this.name + ':' + field];
   }
 
   /**
@@ -112,7 +114,7 @@ class Player {
    * @param {!Object.<string, string>} storage
    */
   setStorage(field, value, storage) {
-    storage['Player:' + this.name + ':' + field] = value;
+    storage[DB_PREFIX + this.name + ':' + field] = value;
   };
 
   /**
@@ -120,7 +122,7 @@ class Player {
    * @return {?string}
    */
   restore(gameMap) {
-    const playerMap = gameMap[this.name];
+    const playerMap = gameMap[DB_PREFIX + this.name];
     if (!playerMap) {
       this.reset();
       return null;
@@ -143,7 +145,7 @@ class Player {
    */
   save(gameMap) {
     const playerMap = {};
-    gameMap[this.name] = playerMap;
+    gameMap[DB_PREFIX + this.name] = playerMap;
     playerMap.timeInGameMs = this.timeInGameMs;
     playerMap.timeInShiftMs = this.timeInShiftMs;
     playerMap.availableForGame = this.availableForGame;
