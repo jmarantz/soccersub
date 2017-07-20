@@ -2,7 +2,7 @@ goog.module('soccersub.Lineup');
 
 class Lineup {
   /**
-   * @param {!Array<string>} defaultPositionNames
+   * @param {!Array<!Array<string>>} defaultPositionNames
    * @param {!Array<string>} defaultPlayerNames
    */
   constructor(defaultPositionNames, defaultPlayerNames) {

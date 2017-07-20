@@ -65,13 +65,10 @@ var santosRedPlayerNames = [
 var defaultPlayerNames = cosmosPlayerNames;
 
 var defaultPositionNames = [
-  'keeper',
-  'left_back',
-  'right_back',
-  'left_mid',
-  'center_mid',
-  'right_mid',
-  'striker',
+  ['striker'],
+  ['left_mid', 'center_mid', 'right_mid'],
+  ['left_back', 'right_back'],
+  ['keeper'],
 ];
 
 const soccersubMain = () => {

@@ -120,15 +120,47 @@ class Game {
     this.updateAvailableButton();
   }
 
+  /**
+   * @param {!Element} field
+   * @return {!Element} 
+   */
+  makeTableRow(field) {
+    const table = document.createElement('table');
+    table.className = 'field-row';
+    field.appendChild(table);
+    const tbody = document.createElement('tbody');
+    table.appendChild(tbody);
+    const tr = document.createElement('tr');
+    tbody.appendChild(tr);
+    return tr;
+  }
+
+  /**
+   * @param {!Element} tableRow
+   * @param {string} name
+   * @return {!Element}
+   */
+  makePositionElement(tableRow, name) {
+    const td = document.createElement('td');
+    td.className = 'player';
+    td.id = name;
+    tableRow.appendChild(td);
+  }
+
   constructPlayersAndPositions() {
     var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
     this.positions = [];
     this.playerDragGroup = new goog.fx.DragDropGroup();
     this.positionDropGroup = new goog.fx.DragDropGroup();
-    for (var i = 0; i < this.lineup.positionNames.length; ++i) {
-      const position = new Position(this.lineup.positionNames[i], headRow, this);
-      this.positionDropGroup.addItem(position.element, position);
-      this.positions.push(position);
+    const field = document.getElementById('field');
+    for (const row of this.lineup.positionNames) {
+      const tableRow = this.makeTableRow(field);
+      for (const positionName of row) {
+        this.makePositionElement(tableRow, positionName);
+        const position = new Position(positionName, headRow, this);
+        this.positionDropGroup.addItem(position.element, position);
+        this.positions.push(position);
+      }
     }
     this.activePlayers = [];
     this.playerMap = new Map();

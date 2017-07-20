@@ -1,5 +1,3 @@
-.row { text-align: center; }
-.player { width: 100% }
 /* assume viewport is 414 x 736 */
 
 body { 
@@ -12,7 +10,10 @@ table {
     font-size: large;
 }
 .player {
-    width: 207px;
+}
+.field-row {
+    width: 100%;
+    text-align: center;
 }
 .inline-button {
     font-size: medium;
