@@ -20,6 +20,9 @@ class Position {
     // for player assignment, and we will write the player in there
     // when assigned.
     const element = document.getElementById(name);
+    if (!element) {
+      console.log('could not find element ' + name);
+    }
 
     // Rebuild the element in case this is a 'reset' and the HTML element
     // already has a touch handler.
@@ -73,7 +76,7 @@ class Position {
       if (this.currentPlayer != null) {
         var oldPlayer = this.currentPlayer;
         this.currentPlayer = null;
-        oldPlayer.setPosition(null);
+        oldPlayer.setPosition(null, true);
       }
       this.restorePlayer(player);
     }

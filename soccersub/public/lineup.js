@@ -79,7 +79,7 @@ class Lineup {
   }
 
   /**
-   * @param {string} names
+   * @param {string} positions
    */
   setPositionsFromText(positions) {
     const rows = positions.split('\n');

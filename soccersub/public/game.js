@@ -141,7 +141,6 @@ class Game {
   /**
    * @param {!Element} tableRow
    * @param {string} name
-   * @return {!Element}
    */
   makePositionElement(tableRow, name) {
     const td = document.createElement('td');
@@ -527,7 +526,7 @@ class Game {
   };
 
   /**
-   * @param {?Player} position
+   * @param {?Player} player
    * @param {?Position} position
    */
   assignPosition(player, position) {
