@@ -169,6 +169,8 @@ class Game {
           const position = new Position(positionName, headRow, this);
           this.positionDropGroup.addItem(position.element, position);
           this.positions.push(position);
+          util.handleTouch(
+            position.element, this.bind(this.selectPosition, position));
         }
       }
     }
@@ -414,8 +416,8 @@ class Game {
         if (!player.currentPosition) {
           player.render(tableBody);
           if (player.nameElement) {
-            //D&D util.handleTouch(player.nameElement,
-            //this.bind(this.selectPlayer, player));
+            util.handleTouch(
+              player.nameElement, this.bind(this.selectPlayer, player));
             this.playerDragGroup.addItem(player.nameElement, player);
           } else {
             console.log('how does this happen?');
@@ -512,6 +514,13 @@ class Game {
       this.writeStatus(this.selectedPlayer.status());
     }
     this.redrawPositions();
+  }
+
+  /**
+   * @param {?Position} position
+   */
+  selectPosition(position) {
+    this.selectPlayer(position.currentPlayer);
   }
 
   /** @private */

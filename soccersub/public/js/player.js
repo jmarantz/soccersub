@@ -54,15 +54,17 @@ class Player {
     /** @type {?Position} */
     this.currentPosition = null;
     this.selected = false;
+/*
     for (let i = 0; i < this.lineup.positionNames.length; ++i) {
       const positionName = this.lineup.positionNames[i];
       this.timeAtPositionMs[positionName] = 0;
     }
+*/
   }
 
   /** @param {number} elapsedTimeMs */
   computePercentageInGameNotKeeper(elapsedTimeMs) {
-    const timeAsKeeperMs = this.timeAtPositionMs['keeper'];
+    const timeAsKeeperMs = this.timeAtPositionMs['keeper'] || 0;
     const totalInGameWhenThisPlayerWasNotKeeperMs = elapsedTimeMs - timeAsKeeperMs;
     if (!totalInGameWhenThisPlayerWasNotKeeperMs) {
       return 0;
@@ -77,7 +79,7 @@ class Player {
     let msg = this.name + ': [';
     if (this.currentPosition != null) {
       msg += this.currentPosition.name + ': ' +
-        util.formatTime(this.timeAtPositionMs[this.currentPosition.name]);
+        util.formatTime(this.timeAtPositionMs[this.currentPosition.name] || 0);
     } else if (this.availableForGame) {
       msg += 'available';
     } else { 
@@ -88,7 +90,7 @@ class Player {
       const positionName = this.lineup.positionNames[i];
       if ((this.currentPosition == null) ||
           (this.currentPosition.name != positionName)) {
-        const timeMs = this.timeAtPositionMs[positionName];
+        const timeMs = this.timeAtPositionMs[positionName] || 0;
         if (timeMs && (timeMs != 0)) {
           msg += " " + positionName + ": " + util.formatTime(timeMs);
         }
@@ -130,10 +132,8 @@ class Player {
     this.availableForGame = playerMap.availableForGame;
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
-    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
-      const positionName = this.lineup.positionNames[i];
-      const timeMs = playerMap[positionName];
-      this.timeAtPositionMs[positionName] = timeMs ? timeMs : 0;
+    for (const positionName of this.lineup.positionNames) {
+      this.timeAtPositionMs[positionName] = playerMap[positionName] || 0;
     }
     return playerMap.currentPosition;
   }
@@ -297,7 +297,8 @@ class Player {
   addTimeToShift(timeMs) {
     this.timeInShiftMs += timeMs;
     this.timeInGameMs += timeMs;
-    this.timeAtPositionMs[this.currentPosition.name] += timeMs;
+    this.timeAtPositionMs[this.currentPosition.name] = timeMs +
+          (this.timeAtPositionMs[this.currentPosition.name] || 0);
     this.renderGameTime();
     //if (SHOW_TIMES_AT_POSITION) {
     //var positionMs = ...;
