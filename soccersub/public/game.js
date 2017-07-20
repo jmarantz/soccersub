@@ -436,7 +436,6 @@ class Game {
       (response) => {
         if (response) {
           this.lineup.setPlayersFromText(response);
-          //this.updatePlayers();
           this.save();
           this.constructPlayersAndPositions();
           this.restore();
