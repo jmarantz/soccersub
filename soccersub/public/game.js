@@ -358,7 +358,7 @@ class Game {
     this.computePercentageInGameNotKeeper_();
     var players = this.activePlayers.slice(0);
     players.sort(Player.compare);
-    var changed = !this.rendered || force;
+    var changed = true; // !this.rendered || force;
     for (var i = 0; !changed && (i < players.length); ++i) {
       changed = players[i] != this.activePlayers[i];
     }
@@ -367,17 +367,18 @@ class Game {
       this.activePlayers = players;
       var tableBody = document.getElementById('table-body');
       tableBody.innerHTML = '';
-      for (var i = 0; i < this.activePlayers.length; ++i) {
-        var player = this.activePlayers[i];
-        player.render(tableBody);
-        if (player.nameElement) {
-          //D&D util.handleTouch(player.nameElement,
-          //this.bind(this.selectPlayer, player));
-          this.playerDragGroup.addItem(player.nameElement, player);
-          //this.playerDragGroup.listenForDragEvents(player.nameElement);
-          this.playerDragGroup.addItem(player.nameElement, player);
-        } else {
-          console.log('how does this happen?');
+      for (const player of this.activePlayers) {
+        if (!player.currentPosition) {
+          player.render(tableBody);
+          if (player.nameElement) {
+            //D&D util.handleTouch(player.nameElement,
+            //this.bind(this.selectPlayer, player));
+            this.playerDragGroup.addItem(player.nameElement, player);
+            //this.playerDragGroup.listenForDragEvents(player.nameElement);
+            this.playerDragGroup.addItem(player.nameElement, player);
+          } else {
+            console.log('how does this happen?');
+          }
         }
       }
       this.playerDragGroup.addTarget(this.positionDropGroup);
