@@ -140,7 +140,6 @@ class Game {
     }
     for (const name of this.lineup.unavailablePlayerNames) {
       var player = new Player(name, this.lineup, this);
-      listenForDragEvents
       player.availableForGame = false;
       this.playerMap.set(name, player);
     }
