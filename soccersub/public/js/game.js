@@ -28,6 +28,9 @@ class Game {
     /** @type {Position} */
     this.positionWithLongestShift = null;
 
+    /** @type {boolean} */
+    this.dragActive = false;
+
     this.statusBar = document.getElementById('status_bar');
     //this.statusBarWriteMs = 0;
     /** @type {boolean} */
@@ -65,11 +68,11 @@ class Game {
     /** @type {boolean} */
     this.started = false;
     /** @type {!DragDropGroup} */
-    this.playerDragGroup;
+    this.playerDragGroup =  new goog.fx.DragDropGroup();
     /** @type {!DragDropGroup} */
-    this.positionDropGroup;
-    /** @type {string} */
-    this.dragSaveColor = '';
+    this.positionDropGroup = new goog.fx.DragDropGroup();
+    /** @type {?function():undefined} */
+    this.dragRestore = null;
     if (!this.restore()) {
       this.reset();
     }
@@ -152,8 +155,6 @@ class Game {
   constructPlayersAndPositions() {
     var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
     this.positions = [];
-    this.playerDragGroup = new goog.fx.DragDropGroup();
-    this.positionDropGroup = new goog.fx.DragDropGroup();
     const field = document.getElementById('field');
     field.innerHTML = '';
     for (const row of this.lineup.positionNames) {
@@ -190,29 +191,48 @@ class Game {
     goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
     goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
     goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
+
+    goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
+  }
+
+  saveRestoreColor(event) {
+    if (this.dragRestore) {
+      this.dragRestore();
+      this.dragRestore = null;
+    }
+    if (event && event.dropTargetItem) {
+      const dragSaveColor = event.dropTargetItem.element.style.backgroundColor;
+      this.dragRestore = () => event.dropTargetItem.element.style.backgroundColor
+        = dragSaveColor;
+    }
   }
 
   dragOver(event) {
-    this.dragSaveColor = event.dropTargetItem.element.style.backgroundColor;
+    this.saveRestoreColor(event);
     event.dropTargetItem.element.style.backgroundColor = 'green';
   }
 
   dragOut(event) {
-    if (this.dragSaveColor) {
-      event.dropTargetItem.element.style.backgroundColor = this.dragSaveColor;
-      this.dragSaveColor = '';
-    }
+    this.saveRestoreColor(null);
   }
 
   dragStart(event) {
+    this.saveRestoreColor(event);
     goog.style.setOpacity(event.dragSourceItem.element, 0.5);
+    this.dragActive = true;
+    console.log('starting drag');
   }
 
   dragEnd(event) {
+    this.saveRestoreColor(event);
     goog.style.setOpacity(event.dragSourceItem.element, 1.0);
+    this.dragActive = false;
+    console.log('finished drag');
   }
 
   drop(event) {
+    this.saveRestoreColor(event);
+
     // We can drop positions over other positions, for one a player is moved
     // directly from one position to another without going out first.  So
     // check if the source is a player or a position.
@@ -227,7 +247,9 @@ class Game {
       return;
     }
     const position = /** type {!Position} */ (event.dropTargetItem.data);
+    this.dragActive = false;
     this.assignPosition(player, position);
+    console.log('drop');
   }
 
   /**
@@ -289,7 +311,7 @@ class Game {
       return false;
     }
 
-    //try {
+    try {
       var storedGame = window.localStorage.game;
       if (!storedGame) {
         return false;
@@ -331,9 +353,9 @@ class Game {
       }
       this.update();
       return true;
-    //} catch (err) {
-    //  return false;
-    //}
+    } catch (err) {
+      return false;
+    }
   }
 
   /**
@@ -341,8 +363,7 @@ class Game {
    * @return {?Position}
    */
   findPosition(name) {
-    for (var i = 0; i < this.positions.length; ++i) {
-      var position = this.positions[i];
+    for (const position of this.positions) {
       if (position.name == name) {
         return position;
       }
@@ -391,8 +412,6 @@ class Game {
           if (player.nameElement) {
             //D&D util.handleTouch(player.nameElement,
             //this.bind(this.selectPlayer, player));
-            this.playerDragGroup.addItem(player.nameElement, player);
-            //this.playerDragGroup.listenForDragEvents(player.nameElement);
             this.playerDragGroup.addItem(player.nameElement, player);
           } else {
             console.log('how does this happen?');
@@ -581,7 +600,9 @@ class Game {
         for (var i = 0; i < this.positions.length; ++i) {
           this.positions[i].addTimeToShift(timeSinceLastUpdate);
         }
-        this.sortAndRenderPlayers(false);
+        if (!this.dragActive) {
+          this.sortAndRenderPlayers(false);
+        }
       }
       if (!this.timeoutPending) {
         this.timeoutPending = true;
