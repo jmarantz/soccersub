@@ -180,12 +180,10 @@ class Game {
 
   dragOver(event) {
     this.dragSaveColor = event.dropTargetItem.element.style.backgroundColor;
-    console.log('dragOver: ' + this.dragSaveColor);
     event.dropTargetItem.element.style.backgroundColor = 'green';
   }
 
   dragOut(event) {
-    console.log('dragOut --> ' + this.dragSaveColor);
     if (this.dragSaveColor) {
       event.dropTargetItem.element.style.backgroundColor = this.dragSaveColor;
       this.dragSaveColor = '';
@@ -193,16 +191,17 @@ class Game {
   }
 
   dragStart(event) {
-    console.log('dragStart');
     goog.style.setOpacity(event.dragSourceItem.element, 0.5);
   }
 
   dragEnd(event) {
-    console.log('dragEnd');
     goog.style.setOpacity(event.dragSourceItem.element, 1.0);
   }
 
   drop(event) {
+    // We can drop positions over other positions, for one a player is moved
+    // directly from one position to another without going out first.  So
+    // check if the source is a player or a position.
     const source = event.dragSourceItem.data;
     let player;
     if (source instanceof Player) {
