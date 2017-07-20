@@ -539,12 +539,16 @@ class Game {
         this.writeStatus('Select a player before assigning a position');
       }
     } else if (player.availableForGame) {
+      //const previousPosition = player.currentPosition;
       player.setPosition(position, true);
       this.writeStatus(player.status());
       if (position != null) {
         position.setPlayer(player);
       }
-      
+      //if (previousPosition != null) {
+      //  previousPosition.setPlayer(null);
+      //}
+
       // Unselect the player so we are less likely to double-assign.
       //this.selectPlayer(null);
       this.sortAndRenderPlayers(false);

@@ -235,20 +235,16 @@ class Player {
    * @param {boolean} clearTimeInShift
    */
   setPosition(position, clearTimeInShift) {
+    if (clearTimeInShift && this.currentPosition) {
+      this.timeInShiftMs = 0;
+    }
     if (this.currentPosition != position) {
-/*
       if (this.currentPosition != null) {
         const oldPos = this.currentPosition;
         this.currentPosition = null;
         oldPos.setPlayer(null);
-      } else {
-        this.timeInShiftMs = 0;
       }
-*/
       this.currentPosition = position;
-      if (clearTimeInShift) {
-        this.timeInShiftMs = 0;
-      }
       this.updateColor();
       //this.save();
     }
