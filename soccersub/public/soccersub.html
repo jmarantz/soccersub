@@ -127,8 +127,22 @@
     <button type="button" class=inline-button id="ok">OK</button>
     <button type="button" class=inline-button id="cancel">Cancel</button>
   </div>
-  <!-- <script src="../bin/soccersub.min.js"></script> -->
+  <script>
+  /*
+    const scriptNode = document.createElement('script');
+    //scriptNode.async = false;
+    //scriptNode.onload = () => soccersubMain();
+    if (window.location.href.includes("?debug")) {
+      scriptNode.src = "../bin/loader.js";
+    } else {
+      scriptNode.src = "../bin/soccersub.min.js";
+    }
+    //document.body.appendChild(scriptNode);
+    //document.write(scriptNode.outerHTML);
+*/
+  </script>
   <script src="../bin/loader.js"></script>
+  <!--<script src=""></script>-->
   <script>
     soccersubMain();
   </script>

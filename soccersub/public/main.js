@@ -79,3 +79,4 @@ const soccersubMain = () => {
   new Game(lineup);
 };
 goog.exportSymbol('soccersubMain', soccersubMain);
+window['soccersubMain'] = soccersubMain;

@@ -33,3 +33,14 @@ table {
     padding: 20px;
     display: none;
 }
+
+.dnd-source {
+    cursor: move;
+}
+.dnd-drag {
+    cursor: move;
+    background: green;
+}
+
+.dnd-target {
+}

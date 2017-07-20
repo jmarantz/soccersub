@@ -23,6 +23,7 @@ class Position {
 
     // Rebuild the element in case this is a 'reset' and the HTML element
     // already has a touch handler.
+    /** @type {!Element} */
     this.element = element.cloneNode(true);
     const parent = element.parentNode;
     parent.removeChild(element);

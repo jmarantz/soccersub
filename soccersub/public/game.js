@@ -1,5 +1,7 @@
 goog.module('soccersub.Game');
 const Dialog = goog.require('goog.ui.Dialog');
+const DragDrop = goog.require('goog.fx.DragDrop');
+const DragDropGroup = goog.require('goog.fx.DragDropGroup');
 const Lineup = goog.require('soccersub.Lineup');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
@@ -58,7 +60,12 @@ class Game {
     this.timeRunning = false;
     /** @type {boolean} */
     this.started = false;
-
+    /** @type {!DragDropGroup} */
+    this.playerDragGroup;
+    /** @type {!DragDropGroup} */
+    this.positionDropGroup;
+    /** @type {string} */
+    this.dragSaveColor = '';
     if (!this.restore()) {
       this.reset();
     }
@@ -116,8 +123,12 @@ class Game {
   constructPlayersAndPositions() {
     var headRow = /** @type {!Element} */ (document.getElementById('table-head-row'));
     this.positions = [];
+    this.playerDragGroup = new goog.fx.DragDropGroup();
+    this.positionDropGroup = new goog.fx.DragDropGroup();
     for (var i = 0; i < this.lineup.positionNames.length; ++i) {
-      this.positions.push(new Position(this.lineup.positionNames[i], headRow, this));
+      const position = new Position(this.lineup.positionNames[i], headRow, this);
+      this.positionDropGroup.addItem(position.element, position);
+      this.positions.push(position);
     }
     this.activePlayers = [];
     this.playerMap = new Map();
@@ -129,9 +140,81 @@ class Game {
     }
     for (const name of this.lineup.unavailablePlayerNames) {
       var player = new Player(name, this.lineup, this);
+      listenForDragEvents
       player.availableForGame = false;
       this.playerMap.set(name, player);
     }
+    this.positionDropGroup.setTargetClass('target');
+    this.positionDropGroup.setSourceClass('source');
+    this.positionDropGroup.addTarget(this.positionDropGroup);
+    this.positionDropGroup.init();
+
+    goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
+    goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
+    goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
+    goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
+    goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
+    //goog.events.listen(this.positionDropGroup, 'drag', (e)dragThis.PositionDropGroup);
+    //goog.events.listen(this.positionDropGroup, 'dragstart', dragStart);
+    //goog.events.listen(this.positionDropGroup, 'dragend', dragEnd);
+
+/*
+    goog.events.listen(this.playerDragGroup, 'dragover', (e) => this.dragOver(e));
+    goog.events.listen(this.playerDragGroup, 'dragout', (e) => this.dragOut(e));
+    goog.events.listen(this.playerDragGroup, 'drop', (e) => this.drop(e));
+    goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
+    goog.events.listen(this.playerDragGroup, 'dragend', (e) => this.dragEnd(e));
+*/
+
+/*
+    goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
+    goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
+    goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
+    goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
+    goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
+*/
+
+    //goog.events.listen(this.playerDragGroup, 'dragover', dragover);
+    //goog.events.listen(this.playerDragGroup, 'dragover', dragover);
+  }
+
+  dragOver(event) {
+    this.dragSaveColor = event.dropTargetItem.element.style.backgroundColor;
+    console.log('dragOver: ' + this.dragSaveColor);
+    event.dropTargetItem.element.style.backgroundColor = 'green';
+  }
+
+  dragOut(event) {
+    console.log('dragOut --> ' + this.dragSaveColor);
+    if (this.dragSaveColor) {
+      event.dropTargetItem.element.style.backgroundColor = this.dragSaveColor;
+      this.dragSaveColor = '';
+    }
+  }
+
+  dragStart(event) {
+    console.log('dragStart');
+    goog.style.setOpacity(event.dragSourceItem.element, 0.5);
+  }
+
+  dragEnd(event) {
+    console.log('dragEnd');
+    goog.style.setOpacity(event.dragSourceItem.element, 1.0);
+  }
+
+  drop(event) {
+    const source = event.dragSourceItem.data;
+    let player;
+    if (source instanceof Player) {
+      player = source;
+    } else {
+      player = source.currentPlayer;
+    }
+    if (!player) {
+      return;
+    }
+    const position = /** type {!Position} */ (event.dropTargetItem.data);
+    this.assignPosition(player, position);
   }
 
   /**
@@ -290,10 +373,18 @@ class Game {
         var player = this.activePlayers[i];
         player.render(tableBody);
         if (player.nameElement) {
-          util.handleTouch(player.nameElement,
-                           this.bind(this.selectPlayer, player));
+          //D&D util.handleTouch(player.nameElement,
+          //this.bind(this.selectPlayer, player));
+          this.playerDragGroup.addItem(player.nameElement, player);
+          //this.playerDragGroup.listenForDragEvents(player.nameElement);
+          this.playerDragGroup.addItem(player.nameElement, player);
+        } else {
+          console.log('how does this happen?');
         }
       }
+      this.playerDragGroup.addTarget(this.positionDropGroup);
+      this.playerDragGroup.setSourceClass('source');
+      this.playerDragGroup.init();
     }
   }
 
@@ -437,24 +528,26 @@ class Game {
   };
 
   /**
+   * @param {?Player} position
    * @param {?Position} position
    */
-  assignPosition(position) {
-    if (this.selectedPlayer == null) {
+  assignPosition(player, position) {
+    if (player == null) {
+      // Can we get here?
       if (position.currentPlayer != null) {
         this.selectPlayer(position.currentPlayer);
       } else {
         this.writeStatus('Select a player before assigning a position');
       }
-    } else if (this.selectedPlayer.availableForGame) {
-      this.selectedPlayer.setPosition(position);
-      this.writeStatus(this.selectedPlayer.status());
+    } else if (player.availableForGame) {
+      player.setPosition(position);
+      this.writeStatus(player.status());
       if (position != null) {
-        position.setPlayer(this.selectedPlayer);
+        position.setPlayer(player);
       }
       
       // Unselect the player so we are less likely to double-assign.
-      this.selectPlayer(null);
+      //this.selectPlayer(null);
       this.sortAndRenderPlayers(false);
       this.started = true;
       this.update();
