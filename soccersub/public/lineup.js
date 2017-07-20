@@ -70,6 +70,22 @@ class Lineup {
       }
     }
   }
+
+  /**
+   * @return {string}
+   */
+  getPositionsAsText() {
+    return this.positionNames.map((row) => row.join(', ')).join('\n');
+  }
+
+  /**
+   * @param {string} names
+   */
+  setPositionsFromText(positions) {
+    const rows = positions.split('\n');
+    this.positionNames = rows.map((row) => row.split(',').map(
+      (position) => position.trim()));
+  }
 }
 
 exports = Lineup;

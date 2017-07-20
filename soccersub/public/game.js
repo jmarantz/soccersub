@@ -39,6 +39,10 @@ class Game {
         (document.getElementById('adjust-roster'));
     this.adjustRosterButton.style.backgroundColor = 'white';
     util.handleTouch(this.adjustRosterButton, this.bind(this.adjustRoster));
+    this.adjustPositionsButton = /** @type {!Element} */ 
+        (document.getElementById('adjust-positions'));
+    this.adjustPositionsButton.style.backgroundColor = 'white';
+    util.handleTouch(this.adjustPositionsButton, this.bind(this.adjustPositions));
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -117,7 +121,6 @@ class Game {
     this.started = false;
     //this.lineup.reset();
     this.update();
-    this.updateAvailableButton();
   }
 
   /**
@@ -153,6 +156,7 @@ class Game {
     this.playerDragGroup = new goog.fx.DragDropGroup();
     this.positionDropGroup = new goog.fx.DragDropGroup();
     const field = document.getElementById('field');
+    field.innerHTML = '';
     for (const row of this.lineup.positionNames) {
       const tableRow = this.makeTableRow(field);
       for (const positionName of row) {
@@ -185,28 +189,6 @@ class Game {
     goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
     goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
     goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
-    //goog.events.listen(this.positionDropGroup, 'drag', (e)dragThis.PositionDropGroup);
-    //goog.events.listen(this.positionDropGroup, 'dragstart', dragStart);
-    //goog.events.listen(this.positionDropGroup, 'dragend', dragEnd);
-
-/*
-    goog.events.listen(this.playerDragGroup, 'dragover', (e) => this.dragOver(e));
-    goog.events.listen(this.playerDragGroup, 'dragout', (e) => this.dragOut(e));
-    goog.events.listen(this.playerDragGroup, 'drop', (e) => this.drop(e));
-    goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
-    goog.events.listen(this.playerDragGroup, 'dragend', (e) => this.dragEnd(e));
-*/
-
-/*
-    goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
-    goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
-    goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
-    goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
-    goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
-*/
-
-    //goog.events.listen(this.playerDragGroup, 'dragover', dragover);
-    //goog.events.listen(this.playerDragGroup, 'dragover', dragover);
   }
 
   dragOver(event) {
@@ -322,8 +304,12 @@ class Game {
         const positionName = player.restore(map);
         if (positionName) {
           const position = this.findPosition(positionName);
-          player.setPosition(position);
-          position.setPlayer(player);
+          // position can be null here if the list of positions is adjusted
+          // mid-game.
+          if (position) {
+            player.setPosition(position, false);
+            position.setPlayer(player);
+          }
           //this.writeStatus(player.status());
         }
       }
@@ -343,7 +329,6 @@ class Game {
         player.updateColor();
       }
       this.update();
-      this.updateAvailableButton();
       return true;
     //} catch (err) {
     //  return false;
@@ -451,30 +436,32 @@ class Game {
       (response) => {
         if (response) {
           this.lineup.setPlayersFromText(response);
-          this.updatePlayers();
+          //this.updatePlayers();
           this.save();
+          this.constructPlayersAndPositions();
+          this.restore();
         }
       });
     prompt.setRows(15);
     prompt.setDefaultValue(this.lineup.getPlayersAsText());
     prompt.setVisible(true);
-/*
-    if (this.selectedPlayer != null) {
-      this.selectedPlayer.availableForGame = !this.selectedPlayer.availableForGame;
-      if (!this.selectedPlayer.availableForGame) {
-        var position = this.selectedPlayer.currentPosition;
-        if (position != null) {
-          position.setPlayer(null);
-          position.render();
+  }
+
+  adjustPositions() {
+    const prompt = new goog.ui.Prompt(
+      'Position Entry',
+      'Positions names in lines, each position separated by comma',
+      (response) => {
+        if (response) {
+          this.lineup.setPositionsFromText(response);
+          this.save();
+          this.constructPlayersAndPositions();
+          this.restore();
         }
-      }
-      this.writeStatus(this.selectedPlayer.status());
-      this.updateAvailableButton();
-      this.sortAndRenderPlayers();
-      this.redrawPositions();
-      this.update();
-    }
-*/
+      });
+    prompt.setRows(15);
+    prompt.setDefaultValue(this.lineup.getPositionsAsText());
+    prompt.setVisible(true);
   }
 
   /**
@@ -501,26 +488,8 @@ class Game {
     } else {
       this.writeStatus(this.selectedPlayer.status());
     }
-    this.updateAvailableButton();
     this.redrawPositions();
   }
-
-  updateAvailableButton() {
-/*
-    if (this.selectedPlayer) {
-      if (this.selectedPlayer.availableForGame) {
-        this.unavailableButton.style.backgroundColor = 'white';
-        this.unavailableButton.textContent = 'Make Unavailable';
-      } else {
-        this.unavailableButton.style.backgroundColor = 'lightgreen';
-        this.unavailableButton.textContent = 'Make Available';
-      }
-    } else {
-      this.unavailableButton.style.backgroundColor = 'lightgray';
-      this.unavailableButton.textContent = 'Make Unavailable';
-    }
-*/
-  };
 
   /** @private */
   computePositionWithLongestShift_() {
@@ -571,7 +540,7 @@ class Game {
         this.writeStatus('Select a player before assigning a position');
       }
     } else if (player.availableForGame) {
-      player.setPosition(position);
+      player.setPosition(position, true);
       this.writeStatus(player.status());
       if (position != null) {
         position.setPlayer(player);

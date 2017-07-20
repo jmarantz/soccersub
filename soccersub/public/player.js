@@ -40,8 +40,6 @@ class Player {
     /** @type {!Element} */
     this.gameTimeElement = document.createElement('td');
     /** @type {number} */
-    this.timeInShift;
-    /** @type {number} */
     this.percentageInGameNotKeeper;
     this.reset();
   };
@@ -234,9 +232,11 @@ class Player {
 
   /**
    * @param {?Position} position
+   * @param {boolean} clearTimeInShift
    */
-  setPosition(position) {
+  setPosition(position, clearTimeInShift) {
     if (this.currentPosition != position) {
+/*
       if (this.currentPosition != null) {
         const oldPos = this.currentPosition;
         this.currentPosition = null;
@@ -244,8 +244,11 @@ class Player {
       } else {
         this.timeInShiftMs = 0;
       }
+*/
       this.currentPosition = position;
-      this.timeInShift = 0;
+      if (clearTimeInShift) {
+        this.timeInShiftMs = 0;
+      }
       this.updateColor();
       //this.save();
     }
