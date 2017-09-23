@@ -9,7 +9,7 @@ const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
-const VERSION_STRING = 'v2';
+const VERSION_STRING = 'v3';
 
 class Game {
   /**

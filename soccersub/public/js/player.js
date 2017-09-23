@@ -309,12 +309,17 @@ class Player {
     if (this.selected) {
       this.game.writeStatus(this.status());
     }
-    return this.name + ' ' + util.formatTime(this.timeInShiftMs);
+    return this.name + ' ' + util.formatTime(this.timeInShiftMs) + ' ' +
+      this.formatGameTime();
   }
 
+  /** @return {string} */
+  formatGameTime() {
+    return util.formatTime(this.timeInGameMs) + ' ('
+      + Math.round(this.percentageInGameNotKeeper) + '%)'
+  }
   renderGameTime() {
-    this.gameTimeElement.textContent = util.formatTime(this.timeInGameMs) + ' ('
-      + Math.round(this.percentageInGameNotKeeper) + '%)';
+    this.gameTimeElement.textContent = this.formatGameTime();
   }
 
   /**
