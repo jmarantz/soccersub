@@ -18,8 +18,9 @@ xcompile : public/soccersub.min.js
 
 .PHONY: deploy compile jsopts
 
-JSFILES = public/js/game.js public/js/position.js public/js/player.js public/js/main.js \
-	  public/js/util.js public/js/lineup.js
+JSFILES = public/js/game.js public/js/position.js public/js/player.js \
+	public/js/main.js public/js/util.js public/js/lineup.js \
+	public/js/storage.js public/js/array_section.js public/js/map_section.js
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help

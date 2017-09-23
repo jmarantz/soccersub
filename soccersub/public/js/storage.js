@@ -1,3 +1,8 @@
+goog.module('soccersub.Storage');
+
+const ArraySection = goog.require('soccersub.ArraySection');
+const MapSection = goog.require('soccersub.MapSection');
+
 // Defines an abstract storage interface for saving game-state.  The
 // storage has two somewhat divergent implementations: HTML
 // localStorage and Google-Sheets.
@@ -18,139 +23,58 @@
 // sections (which might be rendered as different sheets in a
 // spreadsheet).
 
-class StorageTable {
-  /**
-   * A section can be defined with columns, in which case it will be
-   * accessed with the RowColumn
-   *
-   * @param {string} name
-   * @param {!Array<string>} columns
-   */
-  constructor(name, columns) {
-    this.name = name;
-
-    /** @type {!Map<string, number>} columns */
-    this.columns = new Map();
-    
-    for (let index = 0; index < columns.length(); ++index) {
-      this.columns.set(columns[index], index);
-    }
-
-    /** @type {?Array<!Array<*>>} */
-    this.map;
-  }
-
-  save(map) {
-    this.array = [];
-    map[this.name] = this.array;
-  }
-
-  restore(map) {
-    this.array = /** @type {!Array<!Array<*>>} */ (map[this.name]);
-  }
-
-  /**
-   * @type {number} row
-   * @type {string} columnName
-   * @type {*} value
-   */
-  set(row, columnName, value) {
-    while (this.array.length <= row) {
-      const rowValues = [];
-      for (let i = 0; i < this.columns.size; ++i) {
-        rowValues.push(null);
-      }
-      this.array.push(rowValues);
-    }
-    this.array[row][this.columns.get(columnName)] = value;
-  }
-
-  /**
-   * @type {number} row
-   * @type {string} columnName
-   * @return {*}
-   */
-  get(row, columnName) {
-    return this.array[row][this.columns.get(columnName)];
-  }
-}
-
-class StorageMap {
-  constructor(name) {
-    this.name = name;
-    this.map;
-  }
-
-  save(map) {
-    this.map = {};
-    map[this.name] = this.map;
-  }
-
-  restore(map) {
-    this.map = /** @type {!Object<string, *>} */ (map[this.name]);
-  }
-
-  /**
-   * @type {string} name
-   * @type {*} value
-   */
-  setValue(name, value) {
-    this.map[name] = value;
-  }
-
-  /**
-   * @type {string} name
-   * @return {*}
-   */
-  getValue(name, value) {
-    return this.map[name];
-  }
-}
-
 class Storage {
-  constructor(name) {
-    this.name = name;
-    this.map;
-    this.sections = [];
-  }
-
-  /** @return {boolean} */
-  restore() {
-    try {
-      this.map = /** @type {!Object} */ (
-        JSON.parse(window.localStorage[this.name]));
-      for (section of this.sections) {
-        this.section.restore(this.map);
-      }
-      return true;
-    } catch (err) {
-      console.log(err);
-    }
-    return false;
-  }
-
-  save() {
-    this.map = {};
-    for (section of this.sections) {
-      this.section.save(this.map);
-    }
-  }
-}
-
-class LocalStorage implements Storage {
   /** @param {string} name */
-  constructor(name, writeMode) {
+  constructor(name) {
+    /** @type {string} */
     this.name = name;
-    this.map = writeMode ? {} : 
+    /** @type {!Array<!MapSection>} */
+    this.mapSections = [];
+    /** @type {!Array<!ArraySection>} */
+    this.arraySections = [];
   }
 
-  save() {
-    window.localStorage[this.name] = JSON.stringify(this.map);
+  /** 
+   * @param {string} name
+   * @return {!MapSection}
+   */
+  addMapSection(name) {
+    const mapSection = new MapSection(name);
+    this.mapSections.push(mapSection);
+    return mapSection;
   }
-  restore() {
-    this.map = /** @type {!Object} */ (JSON.parse(storedGame));
 
+  /**
+   * @param {string} name
+   * @return {!ArraySection}
+   */
+  addArraySection(name) {
+    const arraySection = new ArraySection(name);
+    this.arraySections.push(arraySection);
+    return arraySection;
+  }
 
-    window.localStorage[this.name] = JSON.stringify(this.map);
+  saveToLocalStorage() {
+    const map = {};
+    for (const mapSection of this.mapSections) {
+      map[mapSection.name] = mapSection.save();
+    }
+    for (const arraySection of this.arraySections) {
+      map[arraySection.name] = arraySection.save();
+    }
+    window.localStorage[this.name] = JSON.stringify(map);
+  }
+
+  restoreFromLocalStorage() {
+    const map = /** @type {!Object} */ (
+      JSON.parse(window.localStorage[this.name]));
+    for (const mapSection of this.mapSections) {
+      mapSection.restore(map[mapSection.name]);
+    }
+    for (const arraySection of this.arraySections) {
+      arraySection.restore(map[arraySection.name]);
+    }
   }
 }
+
+exports = Storage;

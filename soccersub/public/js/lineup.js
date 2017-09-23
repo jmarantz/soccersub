@@ -25,6 +25,7 @@ class Lineup {
   restore(map) {
     this.playerNames = map.playerNames;
     this.positionNames = map.positionNames;
+    this.unavailablePlayerNames = map.unavailablePlayerNames || [];
     if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
       return false;
     }
@@ -37,6 +38,7 @@ class Lineup {
   save(map) {
     map.playerNames = this.playerNames;
     map.positionNames = this.positionNames;
+    map.unavailablePlayerNames = this.unavailablePlayerNames;
   }
 
   /**

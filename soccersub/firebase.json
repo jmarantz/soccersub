@@ -3,6 +3,13 @@
     "rules": "database.rules.json"
   },
   "hosting": {
-    "public": "public"
+    "public": "public",
+    "headers": [ {
+      "source" : "**/*.@(js)",
+      "headers" : [ {
+        "key" : "Cache-Control",
+        "value" : "max-age=30"
+      } ]
+    } ]
   }
 }

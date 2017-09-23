@@ -6,13 +6,18 @@ const Lineup = goog.require('soccersub.Lineup');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
 const Prompt = goog.require('goog.ui.Prompt');
+const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
+
+const VERSION_STRING = 'v2';
 
 class Game {
   /**
    * @param {!Lineup} lineup
    */
   constructor(lineup) {
+    document.getElementById('game_version').textContent = VERSION_STRING;
+
     /** @type {boolean} */
     this.showTimesAtPosition = false;
     /** @type {boolean} */
@@ -45,7 +50,8 @@ class Game {
     this.adjustPositionsButton = /** @type {!Element} */ 
         (document.getElementById('adjust-positions'));
     this.adjustPositionsButton.style.backgroundColor = 'white';
-    util.handleTouch(this.adjustPositionsButton, this.bind(this.adjustPositions));
+    util.handleTouch(this.adjustPositionsButton, 
+                     this.bind(this.adjustPositions));
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -179,12 +185,12 @@ class Game {
     for (const name of this.lineup.playerNames) {
       var player = new Player(name, this.lineup, this);
       this.activePlayers.push(player);
-      player.availableForGame = true;
+      player.available = true;
       this.playerMap.set(name, player);
     }
     for (const name of this.lineup.unavailablePlayerNames) {
       var player = new Player(name, this.lineup, this);
-      player.availableForGame = false;
+      player.available = false;
       this.playerMap.set(name, player);
     }
     this.positionDropGroup.setTargetClass('target');
@@ -286,7 +292,7 @@ class Game {
       } else {
         player = this.playerMap.get(name);
         if (player) {
-          player.availableForGame = true;
+          player.available = true;
         } else {
           player = new Player(name, this.lineup, this);
         }
@@ -296,7 +302,7 @@ class Game {
 
     // The remaining previouslyActivePlayers are now inactive.
     for (const player of previouslyActivePlayers.values()) {
-      player.availableForGame = false;
+      player.available = false;
       var position = player.currentPosition;
       if (position != null) {
         position.setPlayer(null);
@@ -328,6 +334,12 @@ class Game {
       if (!this.lineup.restore(map)) {
         return false;
       }
+/*
+      const playerSection = Player.dbSection(this.lineup);
+      for (const player of this.playerMap.values()) {
+        player.restore(map);
+      }
+*/
       this.constructPlayersAndPositions();
       for (const player of this.playerMap.values()) {
         const positionName = player.restore(map);
@@ -377,6 +389,10 @@ class Game {
     return null;
   }
 
+  nsave() {
+    //this.storage.saveToLocalStorage();
+  }
+
   save() {
     var map = {};
     map.elapsedTimeMs = this.elapsedTimeMs;
@@ -384,6 +400,7 @@ class Game {
     map.started = this.started;
     map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
     this.lineup.save(map);
+    const playerSection = Player.dbSection(this.lineup);
     for (const player of this.playerMap.values()) {
       player.save(map);
     }
@@ -540,7 +557,7 @@ class Game {
   }
 
   redrawPositions() {
-    var unavailable = (this.selectedPlayer != null) && !this.selectedPlayer.availableForGame;
+    var unavailable = (this.selectedPlayer != null) && !this.selectedPlayer.available;
     for (var i = 0; i < this.positions.length; ++i) {
       var position = this.positions[i];
       if (unavailable) {
@@ -571,7 +588,7 @@ class Game {
       } else {
         this.writeStatus('Select a player before assigning a position');
       }
-    } else if (player.availableForGame) {
+    } else if (player.available) {
       //const previousPosition = player.currentPosition;
       player.setPosition(position, true);
       this.writeStatus(player.status());

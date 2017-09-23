@@ -10,7 +10,9 @@ class Position {
    * @param {!Game} game
    */
   constructor(name, headRow, game) {
+    /** @type {string} */
     this.name = name;
+    /** @type {?Player} */
     this.currentPlayer = null;
 
     // The position shows up twice in the DOM, once in the field
@@ -65,12 +67,6 @@ class Position {
   }
 
   /** @param {?Player} player */
-  restorePlayer(player) {
-    this.currentPlayer = player;
-    this.render();
-  }
-
-  /** @param {?Player} player */
   setPlayer(player) {
     if (this.currentPlayer != player) {
       if (this.currentPlayer != null) {
@@ -78,7 +74,8 @@ class Position {
         this.currentPlayer = null;
         oldPlayer.setPosition(null, true);
       }
-      this.restorePlayer(player);
+      this.currentPlayer = player;
+      this.render();
     }
   }
 

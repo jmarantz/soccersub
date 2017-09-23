@@ -22,7 +22,7 @@ class Player {
     this.lineup = lineup;
     this.game = game;
     /** @type {boolean} */
-    this.availableForGame;
+    this.available;
     /** @type {boolean} */
     this.selected = false;
     /** @type {number} */
@@ -48,7 +48,7 @@ class Player {
     this.timeInGameMs = 0;
     this.timeInShiftMs = 0;
     this.percentageInGameNotKeeper = 0;
-    this.availableForGame = true;  
+    this.available = true;  
     this.timeAtPositionMs = {};
     this.elementAtPosition = {};
     /** @type {?Position} */
@@ -80,7 +80,7 @@ class Player {
     if (this.currentPosition != null) {
       msg += this.currentPosition.name + ': ' +
         util.formatTime(this.timeAtPositionMs[this.currentPosition.name] || 0);
-    } else if (this.availableForGame) {
+    } else if (this.available) {
       msg += 'available';
     } else { 
       msg += 'unavailable';
@@ -129,13 +129,39 @@ class Player {
     }
     this.timeInGameMs = playerMap.timeInGameMs;
     this.timeInShiftMs = playerMap.timeInShiftMs;
-    this.availableForGame = playerMap.availableForGame;
+    if (playerMap.hasOwnProperty('available')) {
+      this.available = playerMap.available;
+    }
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
     for (const positionName of this.lineup.positionNames) {
       this.timeAtPositionMs[positionName] = playerMap[positionName] || 0;
     }
     return playerMap.currentPosition;
+  }
+
+  /** @param {!Lineup} lineup */
+  static dbSection(lineup) {
+    let fields = [
+      ['timeInGameMs', (p) => p.timeInGameMs, (p, v) => p.timeInGameMs = v],
+      ['timeInShiftMs', (p) => p.timeInShiftMs, (p, v) => p.timeInShiftMs = v],
+      ['available', (p) => p.available, (p, v) => p.available = v],
+      ['currentPosition', 
+       (p) => p.currentPosition ? p.currentPosition.name : null,
+       (p, positionName) => {
+         p.currentPosition = null;
+         if (positionName) {
+           p.currentPosition = p.game.findPosition(positionName);
+         }
+       }],
+    ];
+    for (const positionName of lineup.positionNames) {
+      fields.push([
+        positionName, 
+        (p) => p.timeAtPositionMs[positionName] || 0,
+        (p, v) => p.timeAtPositionMs[positionName] = v || 0
+      ]);
+    }
   }
 
   /**
@@ -146,7 +172,7 @@ class Player {
     gameMap[DB_PREFIX + this.name] = playerMap;
     playerMap.timeInGameMs = this.timeInGameMs;
     playerMap.timeInShiftMs = this.timeInShiftMs;
-    playerMap.availableForGame = this.availableForGame;
+    playerMap.available = this.available;
     playerMap.currentPosition = this.currentPosition
       ? this.currentPosition.name : null;
     for (let i = 0; i < this.lineup.positionNames.length; ++i) {
@@ -191,9 +217,9 @@ class Player {
    * @return {number}
    */
   static compare(player1, player2) {
-    if (player1.availableForGame && !player2.availableForGame) {
+    if (player1.available && !player2.available) {
       return -1;
-    } else if (player2.availableForGame && !player1.availableForGame) {
+    } else if (player2.available && !player1.available) {
       return 1;
     }
     let cmp = Player.comparePlayingTimeMs(player1, player2);
@@ -255,7 +281,7 @@ class Player {
       return;
     }
     let color = 'white';
-    if (!this.availableForGame) {
+    if (!this.available) {
       color = 'lightblue';
     } else if (this.currentPosition != null) {
       if (this.currentPosition == this.game.positionWithLongestShift) {
@@ -325,4 +351,3 @@ class Player {
 }
 
 exports = Player;
-
