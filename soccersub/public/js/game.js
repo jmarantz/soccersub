@@ -9,7 +9,7 @@ const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
-const VERSION_STRING = 'v3';
+const VERSION_STRING = 'v4';
 
 class Game {
   /**
@@ -75,8 +75,21 @@ class Game {
     this.started = false;
     /** @type {!DragDropGroup} */
     this.playerDragGroup =  new goog.fx.DragDropGroup();
+    goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
+
     /** @type {!DragDropGroup} */
     this.positionDropGroup = new goog.fx.DragDropGroup();
+    goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
+    goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
+    goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
+    goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
+    goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
+
+    this.positionDropGroup.setTargetClass('target');
+    this.positionDropGroup.setSourceClass('source');
+    this.positionDropGroup.addTarget(this.positionDropGroup);
+    this.positionDropGroup.init();
+
     /** @type {?function():undefined} */
     this.dragRestore = null;
     if (!this.restore()) {
@@ -114,6 +127,7 @@ class Game {
       if (e.key == 'ok') {
         this.reset();
       }
+      dialog.dispose();
     });
     dialog.setVisible(true);
   }
@@ -193,18 +207,6 @@ class Game {
       player.available = false;
       this.playerMap.set(name, player);
     }
-    this.positionDropGroup.setTargetClass('target');
-    this.positionDropGroup.setSourceClass('source');
-    this.positionDropGroup.addTarget(this.positionDropGroup);
-    this.positionDropGroup.init();
-
-    goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
-    goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
-    goog.events.listen(this.positionDropGroup, 'drop', (e) => this.drop(e));
-    goog.events.listen(this.positionDropGroup, 'dragstart', (e) => this.dragStart(e));
-    goog.events.listen(this.positionDropGroup, 'dragend', (e) => this.dragEnd(e));
-
-    goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
   }
 
   saveRestoreColor(event) {
@@ -483,6 +485,7 @@ class Game {
           this.constructPlayersAndPositions();
           this.restore();
         }
+        prompt.dispose();
       });
     prompt.setRows(15);
     prompt.setDefaultValue(this.lineup.getPlayersAsText());
@@ -500,6 +503,7 @@ class Game {
           this.constructPlayersAndPositions();
           this.restore();
         }
+        prompt.dispose();
       });
     prompt.setRows(15);
     prompt.setDefaultValue(this.lineup.getPositionsAsText());
