@@ -33,8 +33,8 @@ class Game {
     /** @type {Position} */
     this.positionWithLongestShift = null;
 
-    /** @type {boolean} */
-    this.dragActive = false;
+    /** @type {?Element} */
+    this.dragElement = null;
 
     this.statusBar = document.getElementById('status_bar');
     //this.statusBarWriteMs = 0;
@@ -237,27 +237,37 @@ class Game {
   dragOver(event) {
     this.saveRestoreColor(event);
     event.dropTargetItem.element.style.backgroundColor = 'green';
+    this.log('dragOver');
   }
 
   dragOut(event) {
     this.saveRestoreColor(null);
+    this.log('dragOut');
   }
 
   dragStart(event) {
     this.saveRestoreColor(event);
+    this.endDrag();
+    this.dragElement = event.dragSourceItem.element;
     goog.style.setOpacity(event.dragSourceItem.element, 0.5);
-    this.dragActive = true;
-    console.log('starting drag');
+    this.log('dragStart');
+  }
+
+  endDrag() {
+    if (this.dragElement) {
+      goog.style.setOpacity(this.dragElement, 1.0);
+      this.dragElement = null;
+    }
   }
 
   dragEnd(event) {
     this.saveRestoreColor(event);
-    goog.style.setOpacity(event.dragSourceItem.element, 1.0);
-    this.dragActive = false;
-    console.log('finished drag');
+    this.endDrag();
+    this.log('dragEnd');
   }
 
   drop(event) {
+    this.log('drop');
     this.saveRestoreColor(event);
 
     // We can drop positions over other positions, for one a player is moved
@@ -273,10 +283,9 @@ class Game {
     if (!player) {
       return;
     }
+    this.endDrag();
     const position = /** type {!Position} */ (event.dropTargetItem.data);
-    this.dragActive = false;
     this.assignPosition(player, position);
-    console.log('drop');
   }
 
   /**
@@ -529,15 +538,9 @@ class Game {
   }
 
   showLog() {
-/*
-    const prompt = new goog.ui.Prompt(
-      'Log', 'Log Viewer', (response) => prompt.dispose());
-    prompt.setRows(15);
-    prompt.setDefaultValue(this.log_);
-    prompt.setVisible(true);
-*/
     this.logDiv.style.display = 'block';
     this.gameDiv.style.display = 'none';
+    window.scrollTo(0, document.body.scrollHeight);
   }
 
   showGame() {
@@ -619,6 +622,7 @@ class Game {
     const msg = util.formatTime(this.elapsedTimeMs) + ': ' + text + '\n';
     //this.log_ += msg;
     this.logText.textContent += msg;
+    this.writeStatus(msg);
   }
 
   /**
@@ -679,7 +683,7 @@ class Game {
         for (var i = 0; i < this.positions.length; ++i) {
           this.positions[i].addTimeToShift(timeSinceLastUpdate);
         }
-        if (!this.dragActive) {
+        if (this.dragElement == null) {
           this.sortAndRenderPlayers(false);
         }
       }
