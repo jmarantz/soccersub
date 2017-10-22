@@ -92,37 +92,18 @@
     <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
   </div>
   <!--<img src="futsal2.jpg" style="width:150px; margin-bottom: 50px;"/>-->
-  <div>
+  <div style="margin-bottom:10px;">
     <button type="button" class=inline-button id="reset">Reset Game</button>
+  </div>
+  <div>
+    <button type="button" class=inline-button id="show-log">Show Log</button>
   </div>
 </div>
 <div id='status_bar'; style='font-size: medium;'></div>
-<div id='confirm' class='lightbox'>
-  <div>
-    Reset game state completely?
-  </div>
-  <div>
-    <button type="button" class=inline-button id="ok">OK</button>
-    <button type="button" class=inline-button id="cancel">Cancel</button>
-  </div>
-  <script>
-  /*
-    const scriptNode = document.createElement('script');
-    //scriptNode.async = false;
-    //scriptNode.onload = () => soccersubMain();
-    if (window.location.href.includes("?debug")) {
-      scriptNode.src = "loader.js";
-    } else {
-      scriptNode.src = "soccersub.min.js";
-    }
-    //document.body.appendChild(scriptNode);
-    //document.write(scriptNode.outerHTML);
-*/
-  </script>
-  <script src="loader.js"></script>
-  <!--<script src="soccersub.min.js"></script>-->
-  <script>
-    soccersubMain();
-  </script>
-</div>
+
+<script src="loader.js"></script>
+<!--<script src="soccersub.min.js"></script>-->
+<script>
+soccersubMain();
+</script>
 </body> </html>

@@ -22,19 +22,6 @@ table {
     background-image: url(futsal_floor.png)
 }
 
-/* again, assume viewport is 414 x 736 */
-.lightbox {
-    position: fixed;
-    width: 260px;
-    height: 100px;
-    left: 57px;
-    top: 100px;
-    z-index: 1000;
-    background-color: tan;
-    padding: 20px;
-    display: none;
-}
-
 .dnd-source {
     cursor: move;
 }

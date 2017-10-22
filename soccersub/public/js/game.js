@@ -9,7 +9,7 @@ const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
-const VERSION_STRING = 'v4';
+const VERSION_STRING = 'v5';
 
 class Game {
   /**
@@ -42,6 +42,8 @@ class Game {
     this.timeoutPending = false;
     this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
+    this.showLogTag = /** @type {!Element} */ (document.getElementById('show-log'));
+    util.handleTouch(this.showLogTag, this.bind(this.showLog));
     this.started = false;
     this.adjustRosterButton = /** @type {!Element} */ 
         (document.getElementById('adjust-roster'));
@@ -73,6 +75,9 @@ class Game {
     this.timeRunning = false;
     /** @type {boolean} */
     this.started = false;
+    /** @type {string} */
+    this.log_ = '';
+
     /** @type {!DragDropGroup} */
     this.playerDragGroup =  new goog.fx.DragDropGroup();
     goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
@@ -145,6 +150,7 @@ class Game {
       this.started = false;
       //this.lineup.reset();
       this.update();
+      this.log('reset');
     } catch (err) {
       this.writeStatus('ERROR: ' + err + '\n' + err.stack);
     }
@@ -322,18 +328,21 @@ class Game {
    */
   restore() {
     if (!util.storageAvailable('localStorage')) {
+      this.log('restore failed: local storage not available');
       return false;
     }
 
     try {
       var storedGame = window.localStorage.game;
       if (!storedGame) {
+        this.log('restore failed: no "game" entry in localStorage');
         return false;
       }
       var map = /** @type {!Object} */ (JSON.parse(storedGame));
 
       this.rendered = false;
       if (!this.lineup.restore(map)) {
+        this.log('restore failed: lineup restore failure');
         return false;
       }
 /*
@@ -372,8 +381,10 @@ class Game {
         player.updateColor();
       }
       this.update();
+      this.log('restore');
       return true;
     } catch (err) {
+      this.log('restore failed: exception caught: ' + err);
       return false;
     }
   }
@@ -510,6 +521,14 @@ class Game {
     prompt.setVisible(true);
   }
 
+  showLog() {
+    const prompt = new goog.ui.Prompt(
+      'Log', 'Log Viewer', (response) => prompt.dispose());
+    prompt.setRows(15);
+    prompt.setDefaultValue(this.log_);
+    prompt.setVisible(true);
+  }
+
   /**
    * @param {?Player} player
    */
@@ -580,6 +599,10 @@ class Game {
     }
   };
 
+  log(text) {
+    this.log_ += util.formatTime(this.elapsedTimeMs) + ': ' + text + '\n';
+  }
+
   /**
    * @param {?Player} player
    * @param {?Position} position
@@ -588,8 +611,11 @@ class Game {
     if (player == null) {
       // Can we get here?
       if (position.currentPlayer != null) {
+        this.log('assignPosition with null player, selecting: ' +
+                position.currentPlayer.name);
         this.selectPlayer(position.currentPlayer);
       } else {
+        this.log('assignPosition with null player and none selected');
         this.writeStatus('Select a player before assigning a position');
       }
     } else if (player.available) {
@@ -608,6 +634,7 @@ class Game {
       this.sortAndRenderPlayers(false);
       this.started = true;
       this.update();
+      this.log(player.name + ' --> ' + (position ? position.name : 'null'));
     }
   }
 
