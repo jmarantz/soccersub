@@ -37,6 +37,11 @@ table {
     font-family: sans-serif;
 }
 
+.log-area {
+    overflow-y: auto;
+    height: 90%;
+}
+
 .modal-dialog-userInput {
     font-size: medium;
     width: 100%;
