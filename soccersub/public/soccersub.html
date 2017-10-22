@@ -1,109 +1,100 @@
 <!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML//EN">
 <html> <head>
-<link rel="icon" type="image/png" href="favicon.png">
-<title></title>
+  <link rel="icon" type="image/png" href="favicon.png">
+  <title></title>
 
-<link rel=stylesheet href=soccersub.css />
-<link rel="stylesheet" href="closure-library/closure/goog/css/dialog.css"/>
+  <link rel=stylesheet href=soccersub.css />
+  <link rel="stylesheet" href="closure-library/closure/goog/css/dialog.css"/>
 
-<!-- <script src="https://cdn.rawgit.com/google/closure-library/master/closure/goog/base.js"></script> -->
-<script src="closure-library/closure/goog/base.js"></script>
+  <!-- <script src="https://cdn.rawgit.com/google/closure-library/master/closure/goog/base.js"></script> -->
+  <script src="closure-library/closure/goog/base.js"></script>
 
-<!--
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-database.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-messaging.js"></script>
-<script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-storage.js"></script>
+  <!--
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-messaging.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-storage.js"></script>
 
-<script>
-  // Initialize Firebase
-  var config = {
-    apiKey: "AIzaSyAKXlxAhKL2Z8N2e7kJPoapOsDclCzto_Y",
-    authDomain: "soccersub-c9df8.firebaseapp.com",
-    databaseURL: "https://soccersub-c9df8.firebaseio.com",
-    storageBucket: "soccersub-c9df8.appspot.com",
-    messagingSenderId: "519834680032"
-  };
+    <script>
+      // Initialize Firebase
+      var config = {
+        apiKey: "AIzaSyAKXlxAhKL2Z8N2e7kJPoapOsDclCzto_Y",
+        authDomain: "soccersub-c9df8.firebaseapp.com",
+        databaseURL: "https://soccersub-c9df8.firebaseio.com",
+        storageBucket: "soccersub-c9df8.appspot.com",
+        messagingSenderId: "519834680032"
+      };
 
-  // Initialize the default app
-  var defaultApp = firebase.initializeApp(config);
+      // Initialize the default app
+      var defaultApp = firebase.initializeApp(config);
 
-  console.log(defaultApp.name);  // "[DEFAULT]"
+      console.log(defaultApp.name);  // "[DEFAULT]"
 
-  // You can retrieve services via the defaultApp variable...
-  var defaultStorage = defaultApp.storage();
-  var defaultDatabase = defaultApp.database();
+      // You can retrieve services via the defaultApp variable...
+      var defaultStorage = defaultApp.storage();
+      var defaultDatabase = defaultApp.database();
 
-  // ... or you can use the equivalent shorthand notation
-  //defaultStorage = firebase.storage();
-  //defaultDatabase = firebase.database();
-</script>
--->
-<!--
-<script src="util.js"></script>
-<script src="position.js"></script>
-<script src="player.js"></script>
-<script src="game.js"></script>
-<script src="main.js"></script>
--->
-<!-- <script src='auth.js'></script> -->
-  
-<!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
-<!--
+      // ... or you can use the equivalent shorthand notation
+      //defaultStorage = firebase.storage();
+      //defaultDatabase = firebase.database();
+    </script>
+  -->
+  <!-- <script src='auth.js'></script> -->
+
+  <!-- <meta name="viewport" content="width=device-width, initial-scale=1"> -->
+  <!--
     Trying to set a virtual width/height whose aspect ration is roughly
     that of an iPhone.  All the pixel values in the CSS file are based on
     this virtual viewport.  Note that these are not necessarily physical
     pixels.
   -->
-<meta name="viewport" content="initial-scale=1">
-
-
+  <meta name="viewport" content="initial-scale=1">
 </head>
 
 <body>
-<div>
-  <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
-  <span id="game_version">VERSION</span>
-  <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
-  <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
-</div>
-
-<hr/>
-
-<div id="field">
-</div>
-<hr/>
-<table style="display:inline-block">
-  <thead>
-    <tr id='table-head-row'>
-      <th>Player</th><th>Game Time</th>
-    </tr>
-    </thead>
-  <tbody id='table-body'>
-  </tbody>
-</table>
-<div style="display:inline-block; vertical-align:top; padding-top: 50px;">
-  <div style="margin-bottom:10px;">
-    <button type="button" class=inline-button id="adjust-roster">Adjust Roster</button>
-  </div>
-  <div style="margin-bottom:10px;">
-    <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
-  </div>
-  <!--<img src="futsal2.jpg" style="width:150px; margin-bottom: 50px;"/>-->
-  <div style="margin-bottom:10px;">
-    <button type="button" class=inline-button id="reset">Reset Game</button>
-  </div>
   <div>
-    <button type="button" class=inline-button id="show-log">Show Log</button>
+    <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
+    <span id="game_version">VERSION</span>
+    <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
+    <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
   </div>
-</div>
-<div id='status_bar'; style='font-size: medium;'></div>
 
-<script src="loader.js"></script>
-<!--<script src="soccersub.min.js"></script>-->
-<script>
-soccersubMain();
-</script>
+  <hr/>
+
+  <div id="field">
+  </div>
+  <hr/>
+  <table style="display:inline-block">
+    <thead>
+      <tr id='table-head-row'>
+        <th>Player</th><th>Game Time</th>
+      </tr>
+    </thead>
+    <tbody id='table-body'>
+    </tbody>
+  </table>
+  <div style="display:inline-block; vertical-align:top; padding-top: 50px;">
+    <div style="margin-bottom:10px;">
+      <button type="button" class=inline-button id="adjust-roster">Adjust Roster</button>
+    </div>
+    <div style="margin-bottom:10px;">
+      <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
+      </div>
+      <!--<img src="futsal2.jpg" style="width:150px; margin-bottom: 50px;"/>-->
+      <div style="margin-bottom:10px;">
+        <button type="button" class=inline-button id="reset">Reset Game</button>
+      </div>
+      <div>
+        <button type="button" class=inline-button id="show-log">Show Log</button>
+      </div>
+    </div>
+    <div id='status_bar'; style='font-size: medium;'></div>
+
+    <script src="loader.js"></script>
+  <!--<script src="soccersub.min.js"></script>-->
+  <script>
+  soccersubMain();
+  </script>
 </body> </html>

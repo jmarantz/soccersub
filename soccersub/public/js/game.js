@@ -43,6 +43,7 @@ class Game {
     this.resetTag = /** @type {!Element} */ (document.getElementById('reset'));
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
     this.showLogTag = /** @type {!Element} */ (document.getElementById('show-log'));
+    this.showLogTag.style.backgroundColor = 'white';
     util.handleTouch(this.showLogTag, this.bind(this.showLog));
     this.started = false;
     this.adjustRosterButton = /** @type {!Element} */ 
