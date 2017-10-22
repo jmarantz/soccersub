@@ -54,33 +54,34 @@
 </head>
 
 <body>
-  <div>
-    <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
-    <span id="game_version">VERSION</span>
-    <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
-    <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
-  </div>
-
-  <hr/>
-
-  <div id="field">
-  </div>
-  <hr/>
-  <table style="display:inline-block">
-    <thead>
-      <tr id='table-head-row'>
-        <th>Player</th><th>Game Time</th>
-      </tr>
-    </thead>
-    <tbody id='table-body'>
-    </tbody>
-  </table>
-  <div style="display:inline-block; vertical-align:top; padding-top: 50px;">
-    <div style="margin-bottom:10px;">
-      <button type="button" class=inline-button id="adjust-roster">Adjust Roster</button>
+  <div id='game'>
+    <div>
+      <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
+      <span id="game_version">VERSION</span>
+      <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
+      <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
     </div>
-    <div style="margin-bottom:10px;">
-      <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
+
+    <hr/>
+
+    <div id="field">
+    </div>
+    <hr/>
+    <table style="display:inline-block">
+      <thead>
+        <tr id='table-head-row'>
+          <th>Player</th><th>Game Time</th>
+        </tr>
+      </thead>
+      <tbody id='table-body'>
+      </tbody>
+    </table>
+    <div style="display:inline-block; vertical-align:top; padding-top: 50px;">
+      <div style="margin-bottom:10px;">
+        <button type="button" class=inline-button id="adjust-roster">Adjust Roster</button>
+      </div>
+      <div style="margin-bottom:10px;">
+        <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
       </div>
       <!--<img src="futsal2.jpg" style="width:150px; margin-bottom: 50px;"/>-->
       <div style="margin-bottom:10px;">
@@ -90,9 +91,14 @@
         <button type="button" class=inline-button id="show-log">Show Log</button>
       </div>
     </div>
-    <div id='status_bar'; style='font-size: medium;'></div>
+    <div id="status_bar"; style='font-size: medium;'></div>
+  </div>
+  <div id="log" style="display:none;">
+    <pre id="log-text" class='log-text'></pre>
+    <button type="button" class=inline-button id="show-game">Show Game</button>
+  </div>
 
-    <script src="loader.js"></script>
+  <script src="loader.js"></script>
   <!--<script src="soccersub.min.js"></script>-->
   <script>
   soccersubMain();

@@ -33,6 +33,10 @@ table {
 .dnd-target {
 }
 
+.log-text {
+    font-family: sans-serif;
+}
+
 .modal-dialog-userInput {
     font-size: medium;
     width: 100%;

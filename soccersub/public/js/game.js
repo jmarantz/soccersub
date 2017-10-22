@@ -9,7 +9,7 @@ const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
-const VERSION_STRING = 'v5';
+const VERSION_STRING = 'v6';
 
 class Game {
   /**
@@ -45,6 +45,12 @@ class Game {
     this.showLogTag = /** @type {!Element} */ (document.getElementById('show-log'));
     this.showLogTag.style.backgroundColor = 'white';
     util.handleTouch(this.showLogTag, this.bind(this.showLog));
+    this.gameDiv = document.getElementById('game');
+    this.logDiv = document.getElementById('log');
+    this.logText = document.getElementById('log-text');
+    this.showGameTag = /** @type {!Element} */ (document.getElementById('show-game'));
+    this.showGameTag.style.backgroundColor = 'white';
+    util.handleTouch(this.showGameTag, this.bind(this.showGame));
     this.started = false;
     this.adjustRosterButton = /** @type {!Element} */ 
         (document.getElementById('adjust-roster'));
@@ -523,11 +529,20 @@ class Game {
   }
 
   showLog() {
+/*
     const prompt = new goog.ui.Prompt(
       'Log', 'Log Viewer', (response) => prompt.dispose());
     prompt.setRows(15);
     prompt.setDefaultValue(this.log_);
     prompt.setVisible(true);
+*/
+    this.logDiv.style.display = 'block';
+    this.gameDiv.style.display = 'none';
+  }
+
+  showGame() {
+    this.logDiv.style.display = 'none';
+    this.gameDiv.style.display = 'block';
   }
 
   /**
@@ -601,7 +616,9 @@ class Game {
   };
 
   log(text) {
-    this.log_ += util.formatTime(this.elapsedTimeMs) + ': ' + text + '\n';
+    const msg = util.formatTime(this.elapsedTimeMs) + ': ' + text + '\n';
+    //this.log_ += msg;
+    this.logText.textContent += msg;
   }
 
   /**
