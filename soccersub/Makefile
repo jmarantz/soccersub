@@ -13,7 +13,7 @@ BUILD = $(CLOSURE_LIB)/closure/bin/build/closurebuilder.py \
 	  --root=public/js \
 	  --namespace="soccersubMain"
 
-deploy : deploy.timestamp
+deploy : public/deploy_timestamp.js
 xcompile : public/soccersub.min.js
 
 .PHONY: deploy compile jsopts
@@ -56,9 +56,9 @@ public/xxsoccersub.min.js : $(JSFILES) Makefile
 SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
 	public/futsal_floor.png
 
-deploy.timestamp : $(SRCS)
+public/deploy_timestamp.js : $(SRCS) $(JSFILES) Makefile
+	./write_deploy_timestamp.sh >$@
 	/usr/local/bin/firebase deploy --only hosting
-	touch $@
 
 git_setup :
 	git remote set-url origin git@github.com:jmarantz/quickstart-js.git

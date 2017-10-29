@@ -9,14 +9,14 @@ const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
-const VERSION_STRING = 'v6';
+let deployTimestamp = window['deployTimestamp'] || 'dev';
 
 class Game {
   /**
    * @param {!Lineup} lineup
    */
   constructor(lineup) {
-    document.getElementById('game_version').textContent = VERSION_STRING;
+    document.getElementById('game_version').textContent = deployTimestamp;
 
     /** @type {boolean} */
     this.showTimesAtPosition = false;
@@ -62,6 +62,11 @@ class Game {
     util.handleTouch(this.adjustPositionsButton, 
                      this.bind(this.adjustPositions));
 
+    const resetDragDrop = /** @type {!Element} */ 
+        (document.getElementById('reset-drag-drop'));
+    resetDragDrop.style.backgroundColor = 'white';
+    util.handleTouch(resetDragDrop, this.bind(this.resetDragDropElements));
+
     /** @type {number} */
     this.elapsedTimeMs;
     /** @type {number} */
@@ -84,12 +89,24 @@ class Game {
     this.started = false;
     /** @type {string} */
     this.log_ = '';
+    /** @type {number} */
+    this.updateCount = 0;
 
     /** @type {!DragDropGroup} */
+    this.playerDragGroup;
+    /** @type {!DragDropGroup} */
+    this.positionDropGroup;
+    /** @type {?function():undefined} */
+    this.dragRestore;
+    
+    this.resetDragDropElements();
+  }
+
+  resetDragDropElements() {
+    this.writeStatus('resetting drag/drop elements');
     this.playerDragGroup =  new goog.fx.DragDropGroup();
     goog.events.listen(this.playerDragGroup, 'dragstart', (e) => this.dragStart(e));
 
-    /** @type {!DragDropGroup} */
     this.positionDropGroup = new goog.fx.DragDropGroup();
     goog.events.listen(this.positionDropGroup, 'dragover', (e) => this.dragOver(e));
     goog.events.listen(this.positionDropGroup, 'dragout', (e) => this.dragOut(e));
@@ -102,8 +119,9 @@ class Game {
     this.positionDropGroup.addTarget(this.positionDropGroup);
     this.positionDropGroup.init();
 
-    /** @type {?function():undefined} */
     this.dragRestore = null;
+    this.constructPlayersAndPositions();
+
     if (!this.restore()) {
       this.reset();
     }
@@ -237,12 +255,12 @@ class Game {
   dragOver(event) {
     this.saveRestoreColor(event);
     event.dropTargetItem.element.style.backgroundColor = 'green';
-    this.log('dragOver');
+    //this.log('dragOver');
   }
 
   dragOut(event) {
     this.saveRestoreColor(null);
-    this.log('dragOut');
+    //this.log('dragOut');
   }
 
   dragStart(event) {
@@ -250,7 +268,7 @@ class Game {
     this.endDrag();
     this.dragElement = event.dragSourceItem.element;
     goog.style.setOpacity(event.dragSourceItem.element, 0.5);
-    this.log('dragStart');
+    //this.log('dragStart');
   }
 
   endDrag() {
@@ -263,11 +281,11 @@ class Game {
   dragEnd(event) {
     this.saveRestoreColor(event);
     this.endDrag();
-    this.log('dragEnd');
+    //this.log('dragEnd');
   }
 
   drop(event) {
-    this.log('drop');
+    //this.log('drop');
     this.saveRestoreColor(event);
 
     // We can drop positions over other positions, for one a player is moved
@@ -674,6 +692,7 @@ class Game {
   };
 
   update() {
+    //this.writeStatus('updating: ' + ++this.updateCount);
     if (this.timeRunning) {
       var timeMs = util.currentTimeMs();
       var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;

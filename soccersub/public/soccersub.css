@@ -46,3 +46,7 @@ table {
     font-size: medium;
     width: 100%;
 }
+
+#game_version {
+    font-size: 12px;
+}

@@ -36,7 +36,7 @@ class Position {
 
     this.element.style.lineHeight = 'normal';
     this.render();
-    util.handleTouch(this.element, game.bind(game.assignPosition, this));
+    //util.handleTouch(this.element, game.bind(game.assignPosition, this));
     
     // Now the table header entry, which we are just going to automatically
     // populate, and don't need to reference it after that.
