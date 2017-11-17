@@ -50,3 +50,17 @@ table {
 #game_version {
     font-size: 12px;
 }
+
+#drag-visual {
+    display: none;
+    font-family: sans-serif;
+    font-size: large;
+    background-color: purple;
+    color: white;
+    z-index: 1000;
+    position: absolute;
+    padding: 5px 5px 5px 5px;
+    border-width: 2px;
+    border-color: red;
+    border-style: solid;
+}

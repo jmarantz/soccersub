@@ -129,9 +129,8 @@ class Player {
     }
     this.timeInGameMs = playerMap.timeInGameMs;
     this.timeInShiftMs = playerMap.timeInShiftMs;
-    if (playerMap.hasOwnProperty('available')) {
-      this.available = playerMap.available;
-    }
+    this.available = !playerMap.hasOwnProperty('available') || 
+      playerMap.available;
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
     for (const positionName of this.lineup.positionNames) {
