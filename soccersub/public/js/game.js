@@ -47,9 +47,6 @@ class Game {
     /** @type {?Player} */
     this.dragPlayer = null;
 
-    /** @type {?Event} */
-    this.dragMoveEvent = null;
-
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
@@ -278,27 +275,20 @@ class Game {
       return;
     }
 
-    if (!this.dragMoveEvent) {
-      this.dragMoveEvent = e;
-      window.setTimeout(() => {
-        console.log('move-event timeout');
-        this.dragVisual.style.left = (this.dragMoveEvent.clientX - 25) + 'px';
-        this.dragVisual.style.top = (this.dragMoveEvent.clientY - 50) + 'px';
-        const position = this.findPositionAtEvent(this.dragMoveEvent);
-        if (this.dragOverPosition != position) {
-          if (this.dragOverPosition && 
-              this.dragOverPosition != this.dragStartPosition) {
-            this.dragOverPosition.element.style.backgroundColor =
-              this.dragSaveBackgroundColor;
-          }
-          this.dragOverPosition = position;
-          if (position && position != this.dragStartPosition) {
-            this.dragSaveBackgroundColor = position.element.style.backgroundColor;
-            position.element.style.backgroundColor = 'green';
-          }
-        }
-        this.dragMoveEvent = null;
-      }, 10);
+    this.dragVisual.style.left = (e.clientX - 25) + 'px';
+    this.dragVisual.style.top = (e.clientY - 50) + 'px';
+    const position = this.findPositionAtEvent(e);
+    if (this.dragOverPosition != position) {
+      if (this.dragOverPosition && 
+          this.dragOverPosition != this.dragStartPosition) {
+        this.dragOverPosition.element.style.backgroundColor =
+          this.dragSaveBackgroundColor;
+      }
+      this.dragOverPosition = position;
+      if (position && position != this.dragStartPosition) {
+        this.dragSaveBackgroundColor = position.element.style.backgroundColor;
+        position.element.style.backgroundColor = 'green';
+      }
     }
     e.preventDefault();
   }
@@ -704,8 +694,8 @@ class Game {
       if (timeSinceLastUpdate > 0) {
         this.elapsedTimeMs += timeSinceLastUpdate;
         this.timeOfLastUpdateMs = timeMs;
-        for (var i = 0; i < this.positions.length; ++i) {
-          this.positions[i].addTimeToShift(timeSinceLastUpdate);
+        for (const position of this.positions) {
+          position.addTimeToShift(timeSinceLastUpdate);
         }
         if (this.dragPlayer == null) {
           this.sortAndRenderPlayers(false);

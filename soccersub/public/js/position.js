@@ -1,5 +1,6 @@
 goog.module('soccersub.Position');
 const util = goog.require('soccersub.util');
+const googDom = goog.require('goog.dom');
 let Game = goog.forwardDeclare('soccersub.Game');
 let Player = goog.forwardDeclare('soccersub.Player');
 
@@ -21,22 +22,22 @@ class Position {
     // the field layout, which will be sensitive to touch events
     // for player assignment, and we will write the player in there
     // when assigned.
-    const element = document.getElementById(name);
-    if (!element) {
+    /** @type {!Element} */
+    this.element = goog.dom.getRequiredElement(name);
+    if (!this.element) {
       console.log('could not find element ' + name);
     }
 
-    // Rebuild the element in case this is a 'reset' and the HTML element
-    // already has a touch handler.
-    /** @type {!Element} */
-    this.element = element.cloneNode(true);
-    const parent = element.parentNode;
-    parent.removeChild(element);
-    parent.appendChild(this.element);
-
     this.element.style.lineHeight = 'normal';
+    const nameNode = document.createElement('b');
+    nameNode.textContent = this.name + ':';
+    this.element.appendChild(nameNode);
+    this.element.appendChild(document.createElement('br'));
+    /** @type {!Element} */
+    this.playerNode = document.createTextNode('');
+    this.element.appendChild(this.playerNode);
+
     this.render();
-    //util.handleTouch(this.element, game.bind(game.assignPosition, this));
     
     // Now the table header entry, which we are just going to automatically
     // populate, and don't need to reference it after that.
@@ -51,13 +52,11 @@ class Position {
    * @return {void}
    */
   render() {
-    let text = '<b>' + this.name + ':</b><br/>';
     if (this.currentPlayer) {
-      text += '' + this.currentPlayer.renderAtPosition();
+      this.playerNode.textContent = this.currentPlayer.renderAtPosition();
     } else {
-      text += '<i><b>NEEDS PLAYER</b></i>';
+      this.playerNode.textContent = 'NEEDS PLAYER'
     }
-    this.element.innerHTML = text;
   }
 
   /** @param {string} color */
