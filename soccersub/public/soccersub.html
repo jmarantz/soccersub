@@ -60,6 +60,19 @@
     <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
     <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
   </div>
+  <div id="time-adjust">
+    <div>
+      <button type="button" class="inline-button" id="sub-1-minute">-1m</button>
+      <button type="button" class="inline-button" id="sub-10-sec">-1s</button>
+      <button type="button" class="inline-button" id="sub-5-sec">-5s</button>
+      <button type="button" class="inline-button" id="sub-1-sec">-1s</buttaon>
+      <button type="button" class="inline-button" id="add-1-sec">+1s</button>
+      <button type="button" class="inline-button" id="add-5-sec">+5s</button>
+      <button type="button" class="inline-button" id="add-10-sec">+10s</button>
+      <button type="button" class="inline-button" id="add-1-minute">+1m</button>
+    </div>
+    <span>Cumulative adjusted time: <span id="time-adjust-cumulative">0<span>
+  </div>    
   <div id='game'>
 
     <hr/>
@@ -77,19 +90,10 @@
       </tbody>
     </table>
     <div style="display:inline-block; vertical-align:top; padding-top: 50px;">
-      <div style="margin-bottom:10px;">
-        <button type="button" class=inline-button id="adjust-roster">Adjust Roster</button>
-      </div>
-      <div style="margin-bottom:10px;">
-        <button type="button" class=inline-button id="adjust-positions">Adjust Positions</button>
-      </div>
-      <!--<img src="futsal2.jpg" style="width:150px; margin-bottom: 50px;"/>-->
-      <div style="margin-bottom:10px;">
-        <button type="button" class=inline-button id="reset">Reset Game</button>
-      </div>
-      <div style="margin-bottom:10px;">
-        <button type="button" class=inline-button id="show-log">Show Log</button>
-      </div>
+      <button type="button" class="vertical-button" id="adjust-roster">Adjust Roster</button>
+      <button type="button" class="vertical-button" id="adjust-positions">Adjust Positions</button>
+      <button type="button" class="vertical-button" id="reset">Reset Game</button>
+      <button type="button" class="vertical-button" id="show-log">Show Log</button>
     </div>
     <div id="status_bar"; style='font-size: medium;'></div>
   </div>

@@ -17,6 +17,13 @@ table {
 }
 .inline-button {
     font-size: medium;
+    background-color: white;
+}
+.vertical-button {
+    font-size: medium;
+    margin-bottom: 10px;
+    display: block;
+    background-color: white;
 }
 .futsal-floor {
     background-image: url(futsal_floor.png)

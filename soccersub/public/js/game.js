@@ -59,6 +59,14 @@ class Game {
     /** @type {!Element} */
     this.dragText = goog.dom.getRequiredElement('drag-text');
 
+    /** @type {!Element} */
+    this.timeAdjust = goog.dom.getRequiredElement('time-adjust');
+    /** @type {!Element} */
+    this.cumulativeAdjustedTime = 
+      goog.dom.getRequiredElement('time-adjust-cumulative');
+    /** @type {number} */
+    this.cumulativeAdjustedTimeSec = 0;
+
     //this.statusBarWriteMs = 0;
     /** @type {boolean} */
     this.timeoutPending = false;
@@ -67,29 +75,38 @@ class Game {
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
     /** @type {!Element} */
     this.showLogTag = goog.dom.getRequiredElement('show-log');
-    this.showLogTag.style.backgroundColor = 'white';
     util.handleTouch(this.showLogTag, this.bind(this.showLog));
     this.gameDiv = goog.dom.getRequiredElement('game');
     this.logDiv = goog.dom.getRequiredElement('log');
     this.logText = goog.dom.getRequiredElement('log-text');
     /** @type {!Element} */
     this.showGameTag = goog.dom.getRequiredElement('show-game');
-    this.showGameTag.style.backgroundColor = 'white';
     util.handleTouch(this.showGameTag, this.bind(this.showGame));
     this.started = false;
     /** @type {!Element} */
     this.adjustRosterButton = goog.dom.getRequiredElement('adjust-roster');
-    this.adjustRosterButton.style.backgroundColor = 'white';
     util.handleTouch(this.adjustRosterButton, this.bind(this.adjustRoster));
     /** @type {!Element} */
     this.adjustPositionsButton = goog.dom.getRequiredElement('adjust-positions');
-    this.adjustPositionsButton.style.backgroundColor = 'white';
     util.handleTouch(this.adjustPositionsButton, 
                      this.bind(this.adjustPositions));
     
-    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, true, this);
-    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, true, this);
-    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, true, this);
+    const setupTimeAdjust = (id, deltaSec) => {
+      util.handleTouch(goog.dom.getRequiredElement(id),
+                       () => this.adjustTime(deltaSec));
+    };
+    setupTimeAdjust('sub-1-minute', -60);
+    setupTimeAdjust('sub-10-sec', -10);
+    setupTimeAdjust('sub-5-sec', -5);
+    setupTimeAdjust('sub-1-sec', -1);
+    setupTimeAdjust('add-1-sec', 1);
+    setupTimeAdjust('add-5-sec', 5);
+    setupTimeAdjust('add-10-sec', 10);
+    setupTimeAdjust('add-1-minute', 60);
+
+    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, false, this);
+    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, false, this);
+    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, false, this);
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -168,6 +185,8 @@ class Game {
       this.sortAndRenderPlayers(false);
       this.timeRunning = false;
       this.started = false;
+      this.cumulativeAdjustedTimeSec = 0;
+      this.showAdjustedTime();
       //this.lineup.reset();
       this.update();
       this.log('reset');
@@ -429,6 +448,7 @@ class Game {
         }
       */
       this.elapsedTimeMs = map.elapsedTimeMs;
+      this.cumulativeAdjustedTimeSec = map.cumulativeAdjustedTimeSec || 0;
       this.timeRunning = map.timeRunning;
       this.started = map.started;
       this.timeOfLastUpdateMs = map.timeOfLastUpdateMs;
@@ -436,6 +456,7 @@ class Game {
       for (const player of this.activePlayers) {
         player.updateColor();
       }
+      this.showAdjustedTime();
       this.update();
       this.log('restore');
       return true;
@@ -465,6 +486,7 @@ class Game {
   save() {
     var map = {};
     map.elapsedTimeMs = this.elapsedTimeMs;
+    map.cumulativeAdjustedTimeSec = this.cumulativeAdjustedTimeSec;
     map.timeRunning = this.timeRunning;
     map.started = this.started;
     map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
@@ -518,13 +540,14 @@ class Game {
     if (this.timeRunning) {
       this.gameClockElement.style.backgroundColor = 'lightgreen';
       this.toggleClockButton.textContent = 'Stop Clock';
+      this.timeAdjust.style.display = 'none';
     } else {
       this.gameClockElement.style.backgroundColor = 'pink';
+      this.timeAdjust.style.display = 'block';
       if (this.elapsedTimeMs == 0) {
         this.toggleClockButton.textContent = 'Start Clock';
       } else {
         this.toggleClockButton.textContent = 'Resume Clock';
-        this.toggleClockButton.style.backgroundColor = 'white';
         background = 'red';
       }
     }
@@ -729,6 +752,23 @@ class Game {
       util.formatTime(this.elapsedTimeMs);
     this.save();
     this.resetTag.style.backgroundColor = this.started ? 'white': 'lightgray';
+  }
+
+  adjustTime(deltaSec) {
+    let deltaMs = deltaSec * 1000;
+    if (this.elapsedTimeMs + deltaMs < 0) {
+      deltaMs = -this.elapsedTimeMs;
+      deltaSec = deltaMs / 1000;
+    }
+    this.elapsedTimeMs += deltaMs;
+    this.cumulativeAdjustedTimeSec += deltaSec;
+    this.showAdjustedTime();
+    this.update();
+  }
+
+  showAdjustedTime() {
+    this.cumulativeAdjustedTime.textContent = '' + 
+      Math.round(this.cumulativeAdjustedTimeSec) + 'sec';
   }
 }
 
