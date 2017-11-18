@@ -33,7 +33,7 @@ class Position {
     nameNode.textContent = this.name + ':';
     this.element.appendChild(nameNode);
     this.element.appendChild(document.createElement('br'));
-    /** @type {!Element} */
+    /** @type {!Text} */
     this.playerNode = document.createTextNode('');
     this.element.appendChild(this.playerNode);
 

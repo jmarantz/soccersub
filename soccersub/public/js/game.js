@@ -47,6 +47,9 @@ class Game {
     /** @type {?Player} */
     this.dragPlayer = null;
 
+    /** @type {?Event} */
+    this.dragMoveEvent = null;
+
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
@@ -269,28 +272,34 @@ class Game {
     }
   }
 
-  dragMove(e) {
-    console.log('drag move: ' + e.clientX + ',' + e.clientY);
+  dragMove(event) {
+    console.log('drag move: ' + event.clientX + ',' + event.clientY);
     if (!this.dragPlayer) {
       return;
     }
 
-    this.dragVisual.style.left = (e.clientX - 25) + 'px';
-    this.dragVisual.style.top = (e.clientY - 50) + 'px';
-    const position = this.findPositionAtEvent(e);
-    if (this.dragOverPosition != position) {
-      if (this.dragOverPosition && 
-          this.dragOverPosition != this.dragStartPosition) {
-        this.dragOverPosition.element.style.backgroundColor =
-          this.dragSaveBackgroundColor;
-      }
-      this.dragOverPosition = position;
-      if (position && position != this.dragStartPosition) {
-        this.dragSaveBackgroundColor = position.element.style.backgroundColor;
-        position.element.style.backgroundColor = 'green';
-      }
+    if (!this.dragMoveEvent) {
+      window.requestAnimationFrame(() => {
+        this.dragVisual.style.left = (this.dragMoveEvent.clientX - 25) + 'px';
+        this.dragVisual.style.top = (this.dragMoveEvent.clientY - 50) + 'px';
+        const position = this.findPositionAtEvent(this.dragMoveEvent);
+        if (this.dragOverPosition != position) {
+          if (this.dragOverPosition && 
+              this.dragOverPosition != this.dragStartPosition) {
+            this.dragOverPosition.element.style.backgroundColor =
+              this.dragSaveBackgroundColor;
+          }
+          this.dragOverPosition = position;
+          if (position && position != this.dragStartPosition) {
+            this.dragSaveBackgroundColor = position.element.style.backgroundColor;
+            position.element.style.backgroundColor = 'green';
+          }
+        }
+        this.dragMoveEvent = null;
+      });
     }
-    e.preventDefault();
+    event.preventDefault();
+    this.dragMoveEvent = event;
   }
 
   dragEnd(e) {
