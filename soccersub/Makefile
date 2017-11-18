@@ -54,7 +54,7 @@ public/xxsoccersub.min.js : $(JSFILES) Makefile
 		awk '{print "<script src=\"" $$1 "\"></script>"}'
 
 SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
-	public/futsal_floor.png
+	public/DownLeft32.png
 
 public/deploy_timestamp.js : $(SRCS) $(JSFILES) Makefile
 	./write_deploy_timestamp.sh >$@

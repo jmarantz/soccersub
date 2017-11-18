@@ -283,9 +283,8 @@ class Game {
 
     if (!this.dragMoveEvent) {
       window.requestAnimationFrame(() => {
-        const width = this.dragVisual.clientWidth;
         const height = this.dragVisual.clientHeight;
-        this.dragVisual.style.left = (this.dragMoveEvent.clientX + - width/2) + 'px';
+        this.dragVisual.style.left = this.dragMoveEvent.clientX + 'px';
         this.dragVisual.style.top = (this.dragMoveEvent.clientY - height) + 'px';
         const position = this.findPositionAtEvent(this.dragMoveEvent);
         if (this.dragOverPosition != position) {
