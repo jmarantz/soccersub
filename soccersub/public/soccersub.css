@@ -53,8 +53,6 @@ table {
 
 #drag-visual {
     display: none;
-    font-family: sans-serif;
-    font-size: large;
     background-color: purple;
     color: white;
     z-index: 1000;
@@ -63,4 +61,16 @@ table {
     border-width: 2px;
     border-color: red;
     border-style: solid;
+}
+
+#drag-arrow {
+    margin: auto;
+    display: block;
+}
+
+#drag-text {
+    font-family: sans-serif;
+    font-size: large;
+    text-align: center;
+    margin: auto;
 }

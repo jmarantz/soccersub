@@ -56,6 +56,9 @@ class Game {
     /** @type {!Element} */
     this.dragVisual = goog.dom.getRequiredElement('drag-visual');
 
+    /** @type {!Element} */
+    this.dragText = goog.dom.getRequiredElement('drag-text');
+
     //this.statusBarWriteMs = 0;
     /** @type {boolean} */
     this.timeoutPending = false;
@@ -265,7 +268,7 @@ class Game {
       ? this.dragStartPosition.currentPlayer : this.findPlayerAtEvent(e);
     if (this.dragPlayer) {
       this.dragVisual.style.display = 'block';
-      this.dragVisual.textContent = this.dragPlayer.name;
+      this.dragText.textContent = this.dragPlayer.name;
       this.dragMove(e);
 
       this.selectPlayer(this.dragPlayer);
@@ -280,8 +283,10 @@ class Game {
 
     if (!this.dragMoveEvent) {
       window.requestAnimationFrame(() => {
-        this.dragVisual.style.left = (this.dragMoveEvent.clientX - 25) + 'px';
-        this.dragVisual.style.top = (this.dragMoveEvent.clientY - 50) + 'px';
+        const width = this.dragVisual.clientWidth;
+        const height = this.dragVisual.clientHeight;
+        this.dragVisual.style.left = (this.dragMoveEvent.clientX + - width/2) + 'px';
+        this.dragVisual.style.top = (this.dragMoveEvent.clientY - height) + 'px';
         const position = this.findPositionAtEvent(this.dragMoveEvent);
         if (this.dragOverPosition != position) {
           if (this.dragOverPosition && 
