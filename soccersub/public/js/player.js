@@ -37,6 +37,8 @@ class Player {
     this.currentPosition;
     /** @type {?Element} */
     this.nameElement = null;    // initialized on render.
+    /** @type {?Element} */
+    this.element = null;        // all the visualization for a player.
     /** @type {!Element} */
     this.gameTimeElement = document.createElement('td');
     /** @type {number} */
@@ -253,6 +255,15 @@ class Player {
     }
     this.updateColor();
     tableBody.appendChild(row);
+    this.element = row;
+  }
+
+  /** @return {?ClientRect} */
+  boundingBox() {
+    if (!this.element) {
+      return null;
+    }
+    return this.element.getBoundingClientRect();
   }
 
   /**

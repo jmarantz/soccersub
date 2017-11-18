@@ -38,6 +38,9 @@ class Game {
     /** @type {?Player} */
     this.dragPlayer = null;
 
+    /** @type {?Event} */
+    this.dragMoveEvent = null;
+
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
@@ -72,10 +75,9 @@ class Game {
     util.handleTouch(this.adjustPositionsButton, 
                      this.bind(this.adjustPositions));
     
-    /** @type {!Array<!goog.events.Key>} */
-    this.positionListeners = [];
-    /** @type {!Array<!goog.events.Key>} */
-    this.playerListeners = [];
+    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, true, this);
+    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, true, this);
+    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, true, this);
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -193,18 +195,12 @@ class Game {
     this.positions = [];
     const field = goog.dom.getRequiredElement('field');
     field.innerHTML = '';
-    this.positionListeners.forEach(goog.events.unlistenByKey);
-    this.positionListeners = [];
     for (const row of this.lineup.positionNames) {
       const tableRow = this.makeTableRow(field);
       for (const positionName of row) {
         if (positionName) {
           this.makePositionElement(tableRow, positionName);
           const position = new Position(positionName, headRow, this);
-          //this.positionDropGroup.addItem(position.element, position);
-          //this.positionMap.set(td, position);
-          this.setupDragEvents((e) => this.dragStartPosition(position, e), 
-                               position.element);
           this.positions.push(position);
           util.handleTouch(
             position.element, this.bind(this.selectPosition, position));
@@ -226,46 +222,71 @@ class Game {
     }
   }
 
-  setupDragEvents(startFn, element) {
-    goog.events.listen(element, 'touchstart', startFn);
-    goog.events.listen(element, 'touchmove', (e) => this.dragMove(e));
-    goog.events.listen(element, 'touchend', (e) => this.dragEnd(e));
+  findPositionAtEvent(e) {
+    for (const position of this.positions) {
+      if (util.inside(e.clientX, e.clientY, position.boundingBox())) {
+        return position;
+      }
+    }
+    return null;
   }
 
-  dragStartPosition(position, e) {
-    if (position.currentPlayer) {
-      this.dragStartPlayer(position.currentPlayer, e);
+  findPlayerAtEvent(e) {
+    for (const player of this.activePlayers) {
+      if (util.inside(e.clientX, e.clientY, player.boundingBox())) {
+        return player;
+      }
+    }
+    return null;
+  }
+
+  dragStart(e) {
+    console.log('drag start: ' + e.clientX + ',' + e.clientY);
+    this.cleanupDrag();
+    const position = this.findPositionAtEvent(e);
+    this.dragPlayer = position ? position.currentPlayer : 
+      this.findPlayerAtEvent(e);
+    if (this.dragPlayer) {
+      this.dragVisual.style.display = 'block';
+      this.dragVisual.textContent = this.dragPlayer.name;
+      this.dragMove(e);
+
+      this.selectPlayer(this.dragPlayer);
     }
   }
 
-  dragStartPlayer(player, e) {
-    //console.log('drag start: ' + e.clientX + ',' + e.clientY);
-    this.dragPlayer = player;
-    this.dragVisual.style.display = 'block';
-    this.dragVisual.textContent = player.name;
-    this.dragMove(e);
-
-    this.selectPlayer(player);
-  }
-
   dragMove(e) {
-    //console.log('drag move: ' + e.clientX + ',' + e.clientY);
-    this.dragVisual.style.left = e.clientX + 'px';
-    this.dragVisual.style.top = e.clientY + 'px';
+    console.log('drag move: ' + e.clientX + ',' + e.clientY);
+    if (!this.dragPlayer) {
+      return;
+    }
+
+    if (!this.dragMoveEvent) {
+      window.setTimeout(() => {
+        console.log('move-event timeout');
+        this.dragVisual.style.left = Math.max(0, e.clientX - 25) + 'px';
+        this.dragVisual.style.top = Math.max(0, e.clientY - 50) + 'px';
+        this.dragMoveEvent = null;
+      }, 10);
+    }
+    this.dragMoveEvent = e;
     e.preventDefault();
   }
 
   dragEnd(e) {
-    //console.log('drag end: ' + e.clientX + ',' + e.clientY);
-
-    for (const position of this.positions) {
-      const box = position.element.getBoundingClientRect();
-      if ((e.clientX >= box.left) && (e.clientY >= box.top) &&
-          (e.clientX <= box.right) && (e.clientY <= box.bottom)) {
-        this.assignPosition(this.dragPlayer, position);
-        break;
-      }
+    console.log('drag end: ' + e.clientX + ',' + e.clientY);
+    if (!this.dragPlayer) {
+      return;
     }
+
+    const position = this.findPositionAtEvent(e);
+    if (position) {
+      this.assignPosition(this.dragPlayer, position);
+    }
+    this.cleanupDrag();
+  }
+
+  cleanupDrag() {
     this.dragPlayer = null;
     this.dragVisual.style.display = 'none';
     if (this.dragElement) {
@@ -444,13 +465,9 @@ class Game {
       this.activePlayers = players;
       var tableBody = goog.dom.getRequiredElement('table-body');
       tableBody.innerHTML = '';
-      this.playerListeners.forEach(goog.events.unlistenByKey);
-      this.playerListeners = [];
       for (const player of this.activePlayers) {
         if (!player.currentPosition) {
           player.render(tableBody);
-          this.setupDragEvents((e) => this.dragStartPlayer(player, e), 
-                               player.nameElement);
         }
       }
     }
@@ -660,7 +677,7 @@ class Game {
         for (var i = 0; i < this.positions.length; ++i) {
           this.positions[i].addTimeToShift(timeSinceLastUpdate);
         }
-        if (this.dragElement == null) {
+        if (this.dragPlayer == null) {
           this.sortAndRenderPlayers(false);
         }
       }

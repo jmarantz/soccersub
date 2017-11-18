@@ -86,6 +86,14 @@ class Position {
       this.render();
     }
   }
+
+  /** @return {?ClientRect} */
+  boundingBox() {
+    if (!this.element) {
+      return null;
+    }
+    return this.element.getBoundingClientRect();
+  }
 }
 
 exports = Position;

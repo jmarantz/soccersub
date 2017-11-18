@@ -52,3 +52,16 @@ exports.formatTime = (timeMs) => {
   return '' + minutes + ':' + seconds;
 };
 
+/**
+ * @param {number} x
+ * @param {number} y
+ * @param {?ClientRect} box
+ * @return {boolean}
+ */
+exports.inside = (x, y, box) => {
+  if (!box) {
+    return false;
+  }
+  return (x >= box.left) && (y >= box.top) && 
+    (x <= box.right) && (y <= box.bottom);
+}
