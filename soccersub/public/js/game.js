@@ -35,6 +35,15 @@ class Game {
     /** @type {?Element} */
     this.dragElement = null;
 
+    /** @type {?Position} */
+    this.dragOverPosition = null;
+    
+    /** @type {?Position} */
+    this.dragStartPosition = null;
+    
+    /** @type {string} */
+    this.dragSaveBackgroundColor = '';
+    
     /** @type {?Player} */
     this.dragPlayer = null;
 
@@ -222,18 +231,26 @@ class Game {
     }
   }
 
-  findPositionAtEvent(e) {
+  /**
+   * @param {!Event} event
+   * @return {?Position}
+   */
+  findPositionAtEvent(event) {
     for (const position of this.positions) {
-      if (util.inside(e.clientX, e.clientY, position.boundingBox())) {
+      if (util.inside(event.clientX, event.clientY, position.boundingBox())) {
         return position;
       }
     }
     return null;
   }
 
-  findPlayerAtEvent(e) {
+  /**
+   * @param {!Event} event
+   * @return {?Player}
+   */
+  findPlayerAtEvent(event) {
     for (const player of this.activePlayers) {
-      if (util.inside(e.clientX, e.clientY, player.boundingBox())) {
+      if (util.inside(event.clientX, event.clientY, player.boundingBox())) {
         return player;
       }
     }
@@ -243,9 +260,9 @@ class Game {
   dragStart(e) {
     console.log('drag start: ' + e.clientX + ',' + e.clientY);
     this.cleanupDrag();
-    const position = this.findPositionAtEvent(e);
-    this.dragPlayer = position ? position.currentPlayer : 
-      this.findPlayerAtEvent(e);
+    this.dragStartPosition = this.findPositionAtEvent(e);
+    this.dragPlayer = this.dragStartPosition
+      ? this.dragStartPosition.currentPlayer : this.findPlayerAtEvent(e);
     if (this.dragPlayer) {
       this.dragVisual.style.display = 'block';
       this.dragVisual.textContent = this.dragPlayer.name;
@@ -262,14 +279,27 @@ class Game {
     }
 
     if (!this.dragMoveEvent) {
+      this.dragMoveEvent = e;
       window.setTimeout(() => {
         console.log('move-event timeout');
-        this.dragVisual.style.left = Math.max(0, e.clientX - 25) + 'px';
-        this.dragVisual.style.top = Math.max(0, e.clientY - 50) + 'px';
+        this.dragVisual.style.left = (this.dragMoveEvent.clientX - 25) + 'px';
+        this.dragVisual.style.top = (this.dragMoveEvent.clientY - 50) + 'px';
+        const position = this.findPositionAtEvent(this.dragMoveEvent);
+        if (this.dragOverPosition != position) {
+          if (this.dragOverPosition && 
+              this.dragOverPosition != this.dragStartPosition) {
+            this.dragOverPosition.element.style.backgroundColor =
+              this.dragSaveBackgroundColor;
+          }
+          this.dragOverPosition = position;
+          if (position && position != this.dragStartPosition) {
+            this.dragSaveBackgroundColor = position.element.style.backgroundColor;
+            position.element.style.backgroundColor = 'green';
+          }
+        }
         this.dragMoveEvent = null;
       }, 10);
     }
-    this.dragMoveEvent = e;
     e.preventDefault();
   }
 
