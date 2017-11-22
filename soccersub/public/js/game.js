@@ -84,6 +84,14 @@ class Game {
     util.handleTouch(this.showGameTag, this.bind(this.showGame));
     this.started = false;
     /** @type {!Element} */
+    this.makeSubsButton = goog.dom.getRequiredElement('make-subs');
+    util.handleTouch(this.makeSubsButton, () => this.makeSubs());
+    this.makeSubsButton.style.backgroundColor = 'lightgray';
+    /** @type {!Element} */
+    this.cancelSubsButton = goog.dom.getRequiredElement('cancel-subs');
+    util.handleTouch(this.cancelSubsButton, () => this.cancelSubs());
+    this.cancelSubsButton.style.backgroundColor = 'lightgray';
+    /** @type {!Element} */
     this.adjustRosterButton = goog.dom.getRequiredElement('adjust-roster');
     util.handleTouch(this.adjustRosterButton, this.bind(this.adjustRoster));
     /** @type {!Element} */
@@ -332,8 +340,10 @@ class Game {
     }
 
     const position = this.findPositionAtEvent(e);
-    if (position) {
-      this.assignPosition(this.dragPlayer, position);
+    if (position && (this.dragPlayer.currentPosition != position)) {
+      this.addPendingAssignment(this.dragPlayer, position);
+      this.makeSubsButton.style.backgroundColor = 'white';
+      this.cancelSubsButton.style.backgroundColor = 'white';
     }
     this.cleanupDrag();
   }
@@ -521,7 +531,7 @@ class Game {
       var tableBody = goog.dom.getRequiredElement('table-body');
       tableBody.innerHTML = '';
       for (const player of this.activePlayers) {
-        if (!player.currentPosition) {
+        if (!player.currentPosition && !player.nextPosition) {
           player.render(tableBody);
         }
       }
@@ -675,38 +685,60 @@ class Game {
   }
 
   /**
-   * @param {?Player} player
-   * @param {?Position} position
+   * @param {!Player} player
+   * @param {!Position} position
    */
-  assignPosition(player, position) {
-    if (player == null) {
-      // Can we get here?
-      if (position.currentPlayer != null) {
-        this.log('assignPosition with null player, selecting: ' +
-                position.currentPlayer.name);
-        this.selectPlayer(position.currentPlayer);
-      } else {
-        this.log('assignPosition with null player and none selected');
-        this.writeStatus('Select a player before assigning a position');
+  addPendingAssignment(player, position) {
+    if (player.available && position.nextPlayer != player) {
+      position.setNextPlayer(player);
+      player.setNextPosition(position);
+      this.writeStatus(player.status());
+      this.sortAndRenderPlayers(false);
+    }
+  }
+
+  makeSubs() {
+    // Make a first-pass over the planned substitutions, where we
+    // collect all the subs we intend to make in a local array.  This
+    // is becasue if you make the subs in the first pass, and you are
+    // trying to get players to swap positions, the sanity logic can
+    // erase a pending assignments that would be not make sense by
+    // itself.
+    const subs = [];
+    for (const position of this.positions) {
+      const player = position.nextPlayer;
+      if (player && player.available) {
+        subs.push([position, player]);
       }
-    } else if (player.available) {
-      //const previousPosition = player.currentPosition;
+    }
+
+    // Now walk through the collected substitution list and execute them.
+    for (const [position, player] of subs) {
       player.setPosition(position, true);
       this.writeStatus(player.status());
-      if (position != null) {
-        position.setPlayer(player);
-      }
-      //if (previousPosition != null) {
-      //  previousPosition.setPlayer(null);
-      //}
-
-      // Unselect the player so we are less likely to double-assign.
-      //this.selectPlayer(null);
-      this.sortAndRenderPlayers(false);
-      this.started = true;
-      this.update();
+      position.setPlayer(player);
       this.log(player.name + ' --> ' + (position ? position.name : 'null'));
     }
+    this.makeSubsButton.style.backgroundColor = 'lightgray';
+    this.cancelSubsButton.style.backgroundColor = 'lightgray';
+    this.sortAndRenderPlayers(false);
+    this.started = true;
+    this.update();
+  }
+  
+  cancelSubs() {
+    for (const position of this.positions) {
+      if (position.nextPlayer) {
+        if (position.nextPlayer.nextPosition == position) {
+          position.nextPlayer.setNextPosition(null);
+        }
+        position.setNextPlayer(null);
+      }
+      position.render();
+    }
+    this.makeSubsButton.style.backgroundColor = 'lightgray';
+    this.cancelSubsButton.style.backgroundColor = 'lightgray';
+    this.sortAndRenderPlayers(false);
   }
 
   /**

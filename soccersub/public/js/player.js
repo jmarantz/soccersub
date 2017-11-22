@@ -35,6 +35,8 @@ class Player {
     this.elementAtPosition;
     /** @type {?Position} */
     this.currentPosition;
+    /** @type {?Position} */
+    this.nextPosition;
     /** @type {?Element} */
     this.nameElement = null;    // initialized on render.
     /** @type {?Element} */
@@ -55,6 +57,7 @@ class Player {
     this.elementAtPosition = {};
     /** @type {?Position} */
     this.currentPosition = null;
+    this.nextPosition = null;
     this.selected = false;
 /*
     for (let i = 0; i < this.lineup.positionNames.length; ++i) {
@@ -151,6 +154,7 @@ class Player {
        (p) => p.currentPosition ? p.currentPosition.name : null,
        (p, positionName) => {
          p.currentPosition = null;
+         p.nextPosition = null;
          if (positionName) {
            p.currentPosition = p.game.findPosition(positionName);
          }
@@ -268,14 +272,34 @@ class Player {
 
   /**
    * @param {?Position} position
+   */
+  setNextPosition(position) {
+    if (this.nextPosition != position) {
+      if (this.nextPosition && this.nextPosition.nextPlayer == this) {
+        this.nextPosition.setNextPlayer(null);
+        this.nextPosition.render();
+      }
+      this.nextPosition = position;
+    }
+  }
+
+  /**
+   * @param {?Position} position
    * @param {boolean} clearTimeInShift
    */
   setPosition(position, clearTimeInShift) {
     if (clearTimeInShift && this.currentPosition) {
       this.timeInShiftMs = 0;
     }
+    if (this.nextPosition) {
+      if (this.nextPosition.nextPlayer == this) {
+        this.nextPosition.setNextPlayer(null);
+      }
+      this.nextPosition = null;
+    }
+
     if (this.currentPosition != position) {
-      if (this.currentPosition != null) {
+      if (this.currentPosition) {
         const oldPos = this.currentPosition;
         this.currentPosition = null;
         oldPos.setPlayer(null);
@@ -313,14 +337,18 @@ class Player {
   }
 
   /**
+   * @param {boolean} verbose
    * @return {string}
    */
-  renderAtPosition() {
+  renderAtPosition(verbose) {
     if (this.selected) {
       this.game.writeStatus(this.status());
     }
-    return this.name + ' ' + util.formatTime(this.timeInShiftMs) + ' ' +
-      this.formatGameTime();
+    let str = this.name + ' ' + util.formatTime(this.timeInShiftMs);
+    if (verbose) {
+      str += ' ' + this.formatGameTime();
+    }
+    return str;
   }
 
   /** @return {string} */

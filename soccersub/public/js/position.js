@@ -4,6 +4,8 @@ const googDom = goog.require('goog.dom');
 let Game = goog.forwardDeclare('soccersub.Game');
 let Player = goog.forwardDeclare('soccersub.Player');
 
+const rightArrow = '&rarr;';
+
 class Position {
   /**
    * @param {string} name
@@ -15,6 +17,8 @@ class Position {
     this.name = name;
     /** @type {?Player} */
     this.currentPlayer = null;
+    /** @type {?Player} */
+    this.nextPlayer = null;
 
     // The position shows up twice in the DOM, once in the field
     // layout, and once as a table header for the players, so we 
@@ -33,8 +37,10 @@ class Position {
     nameNode.textContent = this.name + ':';
     this.element.appendChild(nameNode);
     this.element.appendChild(document.createElement('br'));
-    /** @type {!Text} */
-    this.playerNode = document.createTextNode('');
+    // type {!Text}
+    //this.playerNode = document.createTextNode('');
+    /** @type {!Element} */
+    this.playerNode = document.createElement('span');
     this.element.appendChild(this.playerNode);
 
     this.render();
@@ -52,17 +58,30 @@ class Position {
    * @return {void}
    */
   render() {
+    let text = '';
     if (this.currentPlayer) {
-      this.playerNode.textContent = this.currentPlayer.renderAtPosition();
-    } else {
-      this.playerNode.textContent = 'NEEDS PLAYER'
+      const verbose = !this.nextPlayer;
+      text = this.currentPlayer.renderAtPosition(verbose);
+    } else if (!this.nextPlayer) {
+      text = 'NEEDS PLAYER'
     }
+    if (this.nextPlayer) {
+      //text += ' > ' + this.nextPlayer.name;
+      text += ' ' + rightArrow + ' ' + this.nextPlayer.name;
+    }
+    this.playerNode.innerHTML = text;
   }
 
   /** @param {string} color */
   setBackgroundColor(color) {
     this.element.style.backgroundColor = color;
     // this.element.style.opacity = 0.5;
+  }
+
+  /** @param {?Player} player */
+  setNextPlayer(player) {
+    this.nextPlayer = player;
+    this.render();
   }
 
   /** @param {?Player} player */
@@ -74,6 +93,7 @@ class Position {
         oldPlayer.setPosition(null, true);
       }
       this.currentPlayer = player;
+      this.nextPlayer = null;
       this.render();
     }
   }
