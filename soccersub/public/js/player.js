@@ -91,13 +91,14 @@ class Player {
       msg += 'unavailable';
     }
     msg += ']';
-    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
-      const positionName = this.lineup.positionNames[i];
-      if ((this.currentPosition == null) ||
-          (this.currentPosition.name != positionName)) {
-        const timeMs = this.timeAtPositionMs[positionName] || 0;
-        if (timeMs && (timeMs != 0)) {
-          msg += " " + positionName + ": " + util.formatTime(timeMs);
+    for (const row of this.lineup.getActivePositionNames()) {
+      for (const positionName of row) {
+        if ((this.currentPosition == null) ||
+            (this.currentPosition.name != positionName)) {
+          const timeMs = this.timeAtPositionMs[positionName] || 0;
+          if (timeMs && (timeMs != 0)) {
+            msg += " " + positionName + ": " + util.formatTime(timeMs);
+          }
         }
       }
     }
@@ -138,8 +139,10 @@ class Player {
       playerMap.available;
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
-    for (const positionName of this.lineup.positionNames) {
-      this.timeAtPositionMs[positionName] = playerMap[positionName] || 0;
+    for (const row of this.lineup.getActivePositionNames()) {
+      for (const positionName of row) {
+        this.timeAtPositionMs[positionName] = playerMap[positionName] || 0;
+      }
     }
     return playerMap.currentPosition;
   }
@@ -160,12 +163,14 @@ class Player {
          }
        }],
     ];
-    for (const positionName of lineup.positionNames) {
-      fields.push([
-        positionName, 
-        (p) => p.timeAtPositionMs[positionName] || 0,
-        (p, v) => p.timeAtPositionMs[positionName] = v || 0
-      ]);
+    for (const row of lineup.getActivePositionNames()) {
+      for (const positionName of row) {
+        fields.push([
+          positionName, 
+          (p) => p.timeAtPositionMs[positionName] || 0,
+          (p, v) => p.timeAtPositionMs[positionName] = v || 0
+        ]);
+      }
     }
   }
 
@@ -180,11 +185,13 @@ class Player {
     playerMap.available = this.available;
     playerMap.currentPosition = this.currentPosition
       ? this.currentPosition.name : null;
-    for (let i = 0; i < this.lineup.positionNames.length; ++i) {
-      const positionName = this.lineup.positionNames[i];
-      const timeMs = this.timeAtPositionMs[positionName];
-      if (timeMs) {
-        playerMap[positionName] = timeMs;
+
+    for (const row of this.lineup.getActivePositionNames()) {       
+      for (const positionName of row) {
+        const timeMs = this.timeAtPositionMs[positionName];
+        if (timeMs) {
+          playerMap[positionName] = timeMs;
+        }
       }
     }
   }
@@ -250,8 +257,7 @@ class Player {
     this.renderGameTime();
     row.appendChild(this.gameTimeElement);
     if (this.game.showTimesAtPosition) {
-      for (let i = 0; i < this.lineup.positionNames.length; ++i) {
-        const positionName = this.lineup.positionNames[i];
+      for (const positionName of this.lineup.getActivePositionNames()) {
         const td = document.createElement('td');
         row.appendChild(td);
         this.elementAtPosition[positionName] = td;

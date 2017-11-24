@@ -23,11 +23,10 @@ class Game {
     this.debugSorting = false;
 
     // Set up HTML element connections & handlers.
-    this.gameClockElement = document.getElementById('game_clock');
+    this.gameClockElement = goog.dom.getRequiredElement('game_clock');
     /** @type {!Element} */
-    this.toggleClockButton = 
-      /** @type {!Element} */ (document.getElementById('clock_toggle'));
-    util.handleTouch(this.toggleClockButton, this.bind(this.toggleClock));
+    this.toggleClockButton = util.setupButton('clock_toggle',
+                                              () => this.toggleClock());
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
@@ -78,26 +77,20 @@ class Game {
     util.handleTouch(this.showLogTag, this.bind(this.showLog));
     this.gameDiv = goog.dom.getRequiredElement('game');
     this.logDiv = goog.dom.getRequiredElement('log');
+    this.lineupDiv = goog.dom.getRequiredElement('lineup');
     this.logText = goog.dom.getRequiredElement('log-text');
-    /** @type {!Element} */
-    this.showGameTag = goog.dom.getRequiredElement('show-game');
-    util.handleTouch(this.showGameTag, this.bind(this.showGame));
+    util.setupButton('show-game1', () => this.showGame());
+    util.setupButton('show-game2', () => this.resetLineupAndShowGame());
     this.started = false;
     /** @type {!Element} */
-    this.makeSubsButton = goog.dom.getRequiredElement('make-subs');
-    util.handleTouch(this.makeSubsButton, () => this.makeSubs());
+    this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     /** @type {!Element} */
-    this.cancelSubsButton = goog.dom.getRequiredElement('cancel-subs');
-    util.handleTouch(this.cancelSubsButton, () => this.cancelSubs());
+    this.cancelSubsButton = util.setupButton('cancel-subs', 
+                                             () => this.cancelSubs());
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
-    /** @type {!Element} */
-    this.adjustRosterButton = goog.dom.getRequiredElement('adjust-roster');
-    util.handleTouch(this.adjustRosterButton, this.bind(this.adjustRoster));
-    /** @type {!Element} */
-    this.adjustPositionsButton = goog.dom.getRequiredElement('adjust-positions');
-    util.handleTouch(this.adjustPositionsButton, 
-                     this.bind(this.adjustPositions));
+    util.setupButton('adjust-roster', () => this.adjustRoster());
+    util.setupButton('adjust-positions', () => this.adjustPositions());
     
     const setupTimeAdjust = (id, deltaSec) => {
       util.handleTouch(goog.dom.getRequiredElement(id),
@@ -196,6 +189,7 @@ class Game {
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
       //this.lineup.reset();
+      //this.lineup.render(goog.dom.getRequiredElement('positions'));
       this.update();
       this.log('reset');
     } catch (err) {
@@ -234,8 +228,8 @@ class Game {
     this.positions = [];
     const field = goog.dom.getRequiredElement('field');
     field.innerHTML = '';
-    for (const row of this.lineup.positionNames) {
-      const tableRow = this.makeTableRow(field);
+    for (const row of this.lineup.getActivePositionNames()) {
+      const tableRow = util.makeSingleRowTable(field);
       for (const positionName of row) {
         if (positionName) {
           this.makePositionElement(tableRow, positionName);
@@ -583,6 +577,10 @@ class Game {
   }
 
   adjustPositions() {
+    this.logDiv.style.display = 'none';
+    this.gameDiv.style.display = 'none';
+    this.lineupDiv.style.display = 'block';
+/*
     const prompt = new goog.ui.Prompt(
       'Position Entry',
       'Positions names in lines, each position separated by comma',
@@ -598,17 +596,27 @@ class Game {
     prompt.setRows(15);
     prompt.setDefaultValue(this.lineup.getPositionsAsText());
     prompt.setVisible(true);
+*/
   }
 
   showLog() {
     this.logDiv.style.display = 'block';
     this.gameDiv.style.display = 'none';
+    this.lineupDiv.style.display = 'none';
     window.scrollTo(0, document.body.scrollHeight);
   }
 
   showGame() {
     this.logDiv.style.display = 'none';
     this.gameDiv.style.display = 'block';
+    this.lineupDiv.style.display = 'none';
+  }
+
+  resetLineupAndShowGame() {
+    this.save();
+    this.constructPlayersAndPositions();
+    this.restore();
+    this.showGame();
   }
 
   /**

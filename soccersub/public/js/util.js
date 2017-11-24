@@ -15,6 +15,19 @@ exports.storageAvailable = (type) => {
 };
 
 /**
+ * Finds a button by ID, and binds a callback to it, and returns the
+ * element.
+ * @param {string} id
+ * @param {!function():undefined} callback
+ * @return {!Element}
+ */
+exports.setupButton = (id, callback) => {
+  const button = goog.dom.getRequiredElement(id);
+  exports.handleTouch(button, callback);
+  return button;
+};
+
+/**
  * @param {!Element} element
  * @param {function()} func
  */
@@ -65,3 +78,18 @@ exports.inside = (x, y, box) => {
   return (x >= box.left) && (y >= box.top) && 
     (x <= box.right) && (y <= box.bottom);
 }
+
+/**
+ * @param {!Element} parent
+ * @return {!Element} 
+ */
+exports.makeSingleRowTable = (parent) => {
+  const table = document.createElement('table');
+  table.className = 'field-row';
+  parent.appendChild(table);
+  const tbody = document.createElement('tbody');
+  table.appendChild(tbody);
+  const tr = document.createElement('tr');
+  tbody.appendChild(tr);
+  return tr;
+};

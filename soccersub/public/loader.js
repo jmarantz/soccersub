@@ -1,5 +1,5 @@
-goog.loadModuleFromUrl("js/lineup.js");
 goog.loadModuleFromUrl("js/util.js");
+goog.loadModuleFromUrl("js/lineup.js");
 goog.loadModuleFromUrl("js/player.js");
 goog.loadModuleFromUrl("js/position.js");
 goog.loadModuleFromUrl("js/map_section.js");

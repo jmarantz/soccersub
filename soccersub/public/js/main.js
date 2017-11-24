@@ -64,15 +64,8 @@ var santosRedPlayerNames = [
 //var defaultPlayerNames = chscPlayerNames;
 var defaultPlayerNames = cosmosPlayerNames;
 
-var defaultPositionNames = [
-  ['striker'],
-  ['left_mid', 'center_mid', 'right_mid'],
-  ['left_back', 'right_back'],
-  ['keeper'],
-];
-
 const soccersubMain = () => {
-  const lineup = new Lineup(defaultPositionNames, defaultPlayerNames);
+  const lineup = new Lineup(5, defaultPlayerNames);
   new Game(lineup);
 };
 goog.exportSymbol('soccersubMain', soccersubMain);

@@ -1,16 +1,87 @@
 goog.module('soccersub.Lineup');
 
+const util = goog.require('soccersub.util');
+
+// To make it easier to maniplate plans without having to awkwardly
+// type too much on phones, we statically define a set of positions to
+// accomodate several different team configurations given a number of
+// players (e.g. 9v9, 11v11, 5v5 for Futsal).  More can be added, e.g. if
+// this is used for a 7v7 team.
+//
+// 
+
+/**
+ * A position is associated with a row, where the keeper is row 0, first
+ * line of defense is row 1, etc.  Some rows may be empty in a given
+ * configuration, accomodating optional diamond-configs at defense or mid.
+ * @typedef {!Array<!Array<string>>}
+ */
+let Positions;
+
+/**
+ * Maps the number of allowed players (e.g. 5, 9, 11) into a list of positions
+ * for that game.  The UI can display the abbreviated forms of positions, which
+ * are also maintained here.
+ *
+ * @type {!Object<number, !Positions>}
+ */
+const configurations = {
+  5: [['Keeper'],
+      ['Left Back', 'Center Back', 'Right Back'],
+      ['Left Mid', 'Right Mid'],
+      ['Left Forward', 'Striker', 'Right Forward']],
+  9: [['Keeper'],
+      ['Left Back', 'Center Back', 'Right Back'],
+      ['Left Mid', 'Center Mid', 'Right Mid'],
+      ['Left Forward', 'Striker', 'Right Forward']],
+  11: [['Keeper'],
+       ['Sweeper'],
+       ['Left Back', 'Left Center Back', 'Right Center Back', 'Right Back'],
+       ['Stopper'],
+       ['Center Defensive Mid'],
+       ['Left Mid', 'Center Mid', 'Right Mid'], ['Center Attacking Mid'],
+       ['Left Forward', 'Striker', 'Right Forward']],
+};
+// TODO(jmarantz): add more positions to 9v9 configuration.
+
+// Abbreviations used for terse display on the game field.\
+const abbrevs = {
+  'Center Attacking Mid': 'CAM',
+  'Center Back': 'CB',
+  'Center Defending Mid': 'CDM',
+  'Center Mid': 'CM',
+  'Keeper': 'GK',
+  'Left Back': 'LB',
+  'Left Center Back': 'LCB',
+  'Left Forward': 'LF',
+  'Left Mid': 'LM',
+  'Right Back': 'RB',
+  'Right Center Back': 'LCB',
+  'Right Forward': 'RF',
+  'Right Mid': 'RM',
+  'Stopper': 'Sp',
+  'Striker': 'Sk',
+  'Sweeper': 'Sw',
+};
+
 class Lineup {
   /**
-   * @param {!Array<!Array<string>>} defaultPositionNames
+   * @param {number} defaultNumberOfPlayers
    * @param {!Array<string>} defaultPlayerNames
    */
-  constructor(defaultPositionNames, defaultPlayerNames) {
-    this.defaultPositionNames = defaultPositionNames;
+  constructor(defaultNumberOfPlayers, defaultPlayerNames) {
     this.defaultPlayerNames = defaultPlayerNames;
-    this.positionNames = defaultPositionNames;
+    /** @private {!Set<string>} */
+    this.activePositionNames_ = new Set();
     this.playerNames = defaultPlayerNames;
     this.unavailablePlayerNames = [];
+    /** @private {number} */
+    this.numberOfPlayers_ = defaultNumberOfPlayers;
+    util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
+    util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
+    util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
+    this.render();
+    //this.defaultPositionNames = [];
   }
 
   /*reset() {
@@ -24,9 +95,17 @@ class Lineup {
    */
   restore(map) {
     this.playerNames = map.playerNames;
-    this.positionNames = map.positionNames;
+    this.activePositionNames_.clear();
+    this.numberOfPlayers_ = map.numberOfPlayers || 5;
+    for (const row of map.positionNames) {
+      for (const positionName of row) {
+        this.activePositionNames_.add(positionName);
+      }
+    }
+    this.render();
     this.unavailablePlayerNames = map.unavailablePlayerNames || [];
-    if ((this.playerNames.length == 0) || (this.positionNames.length == 0)) {
+    if ((this.playerNames.length == 0) || 
+        (this.activePositionNames_.size == 0)) {
       return false;
     }
     return true;
@@ -37,8 +116,9 @@ class Lineup {
    */
   save(map) {
     map.playerNames = this.playerNames;
-    map.positionNames = this.positionNames;
+    map.positionNames = this.getActivePositionNames();
     map.unavailablePlayerNames = this.unavailablePlayerNames;
+    map.numberOfPlayers = this.numberOfPlayers_;
   }
 
   /**
@@ -73,26 +153,128 @@ class Lineup {
     }
   }
 
+  // **
+  // * return {string}
+  // *
+  // getPositionsAsText() {
+  //   const transformRow = (row) => {
+  //     if (row instanceof Array) {
+  //       return row.join(', ');
+  //     }
+  //     return '' + row;
+  //   };
+  //   return this.positionNames.map(transformRow).join('\n');
+  // }
+
+  // **
+  //  * @param {string} positions
+  //  *
+  // setPositionsFromText(positions) {
+  //   const rows = positions.split('\n');
+  //   this.positionNames = rows.map((row) => row.split(',').map(
+  //     (position) => position.trim()));
+  // }
+
+  // /**
+  //  * @param {string} positionAndAbbreviation
+  //  * @return {string} positionAndAbbreviation
+  //  */
+  // static positionName(positionAndAbbreviation) {
+  //   const a = positionAndAbbreviation.split('.');
+  //   if (a.length >= 1) {
+  //     return a[0];
+  //   }
+  //   return positionAndAbbreviation;
+  // }
+   
+  // /**
+  //  * @param {string} positionAndAbbreviation
+  //  * @return {string} positionAndAbbreviation
+  //  */
+  // static abbrev(positionAndAbbreviation) {
+  //   const a = positionAndAbbreviation.split('.');
+  //   if (a.length >= 2) {
+  //     return a[1];
+  //   }
+  //   return '?';
+  // }
+
   /**
-   * @return {string}
+   * Returns whether the current lineup configuration is valid.  Technically
+   * this is a question of whether there's a keeper or not.  However for now
+   * we just check to see if there are the correct number of players.
+   *
+   * @return {boolean}
    */
-  getPositionsAsText() {
-    const transformRow = (row) => {
-      if (row instanceof Array) {
-        return row.join(', ');
-      }
-      return '' + row;
-    };
-    return this.positionNames.map(transformRow).join('\n');
+  isValid() {
+    return this.activePositionNames_.size == this.numberOfPlayers_;
   }
 
   /**
-   * @param {string} positions
+   * @return {!Array<!Array<string>>}
    */
-  setPositionsFromText(positions) {
-    const rows = positions.split('\n');
-    this.positionNames = rows.map((row) => row.split(',').map(
-      (position) => position.trim()));
+  getActivePositionNames() {
+    const a = [];
+    const rows = configurations[this.numberOfPlayers_];
+    if (rows) {
+      for (var r = rows.length - 1; r >= 0; --r) {
+        const row = rows[r];
+        const ra = [];
+        for (const positionName of row) {
+          if (this.activePositionNames_.has(positionName)) {
+            ra.push(positionName);
+          }
+        }
+        a.push(ra);
+      }
+    }
+    return a;
+  }
+
+  /**
+   * Renders into a div all the possible players for the given configuration.
+   */
+  render() {
+    const div = goog.dom.getRequiredElement('positions');
+    div.innerHTML = '';
+    //div.elementMap_.clear();
+    const rows = configurations[this.numberOfPlayers_];
+    if (rows) {
+      for (var r = rows.length - 1; r >= 0; --r) {
+        const row = rows[r];
+        const tableRow = util.makeSingleRowTable(div);
+        for (const positionName of row) {
+          const td = document.createElement('td');
+          //td.className = 'player';
+          //td.id = name;
+          tableRow.appendChild(td);
+          td.textContent = positionName + '(' + abbrevs[positionName] + ')';
+          if (!this.activePositionNames_.has(positionName)) {
+            td.style.color = 'lightgray';
+          }              
+          util.handleTouch(td, () => {
+            if (this.activePositionNames_.has(positionName)) {
+              td.style.color = 'lightgray';
+              this.activePositionNames_.delete(positionName);
+            } else {
+              td.style.color = 'black';
+              this.activePositionNames_.add(positionName);
+            }
+          });
+        }
+      }
+    }
+  }
+
+  /**
+   * Renders into a div all the possible players for the given configuration.
+   * @param {number} numberOfPlayers
+   * @private
+   */
+  setNumberOfPlayers_(numberOfPlayers) {
+    this.numberOfPlayers_ = numberOfPlayers;
+    this.render();
+    //this.save();
   }
 }
 
