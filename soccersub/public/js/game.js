@@ -4,7 +4,6 @@ const googDom = goog.require('goog.dom');
 const Lineup = goog.require('soccersub.Lineup');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
-const Prompt = goog.require('goog.ui.Prompt');
 const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
@@ -72,15 +71,15 @@ class Game {
     /** @type {!Element} */
     this.resetTag = goog.dom.getRequiredElement('reset');
     util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
-    /** @type {!Element} */
-    this.showLogTag = goog.dom.getRequiredElement('show-log');
-    util.handleTouch(this.showLogTag, this.bind(this.showLog));
-    this.gameDiv = goog.dom.getRequiredElement('game');
-    this.logDiv = goog.dom.getRequiredElement('log');
-    this.positionsDiv = goog.dom.getRequiredElement('positions-panel');
+    const gameDiv = goog.dom.getRequiredElement('game');
+    /** @private {!Array<!Element>} */
+    this.panels_ = [
+      gameDiv,
+      goog.dom.getRequiredElement('log'),
+      goog.dom.getRequiredElement('positions-panel'),
+      goog.dom.getRequiredElement('players-panel'),
+    ];
     this.logText = goog.dom.getRequiredElement('log-text');
-    util.setupButton('show-game1', () => this.showGame());
-    util.setupButton('show-game2', () => this.resetLineupAndShowGame());
     this.started = false;
     /** @type {!Element} */
     this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
@@ -89,8 +88,14 @@ class Game {
     this.cancelSubsButton = util.setupButton('cancel-subs', 
                                              () => this.cancelSubs());
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
-    util.setupButton('adjust-roster', () => this.adjustRoster());
-    util.setupButton('adjust-positions', () => this.adjustPositions());
+
+    util.setupButton('show-game1', () => this.showPanel_('game'));
+    util.setupButton('show-game2', () => this.resetLineupAndShowGame_());
+    util.setupButton('show-game3', () => this.resetLineupAndShowGame_());
+    util.setupButton('adjust-roster', () => this.showPanel_('players-panel'));
+    util.setupButton('adjust-positions',
+                     () => this.showPanel_('positions-panel'));
+    util.setupButton('show-log', () => this.showLog_());
     
     const setupTimeAdjust = (id, deltaSec) => {
       util.handleTouch(goog.dom.getRequiredElement(id),
@@ -105,9 +110,9 @@ class Game {
     setupTimeAdjust('add-10-sec', 10);
     setupTimeAdjust('add-1-minute', 60);
 
-    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, false, this);
-    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, false, this);
-    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, false, this);
+    goog.events.listen(gameDiv, 'touchstart', this.dragStart, false, this);
+    goog.events.listen(gameDiv, 'touchmove', this.dragMove, false, this);
+    goog.events.listen(gameDiv, 'touchend', this.dragEnd, false, this);
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -188,8 +193,6 @@ class Game {
       this.started = false;
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
-      //this.lineup.reset();
-      //this.lineup.render(goog.dom.getRequiredElement('positions'));
       this.update();
       this.log('reset');
     } catch (err) {
@@ -240,6 +243,10 @@ class Game {
         }
       }
     }
+    this.constructPlayers();
+  }
+
+  constructPlayers() {
     this.activePlayers = [];
     this.playerMap = new Map();
     for (const name of this.lineup.playerNames) {
@@ -371,8 +378,7 @@ class Game {
 
     // Iterate over the new set of active players, pulling player records from
     // the current inactive & active maps.
-    for (var i = 0; i < this.lineup.playerNames.length; ++i) {
-      const name = this.lineup.playerNames[i];
+    for (const name of this.lineup.playerNames) {
       let player = previouslyActivePlayers.get(name);
       if (player) {
         previouslyActivePlayers.delete(player.name);
@@ -433,7 +439,7 @@ class Game {
       this.constructPlayersAndPositions();
       for (const player of this.playerMap.values()) {
         const positionName = player.restore(map);
-        if (positionName) {
+        if (positionName && player.available) {
           const position = this.findPosition(positionName);
           // position can be null here if the list of positions is adjusted
           // mid-game.
@@ -558,6 +564,17 @@ class Game {
     document.body.style.backgroundColor = background;
   }
 
+  /** 
+    * @private
+    * @param {string} id
+    */
+  showPanel_(id) {
+    for (const panel of this.panels_) {
+      panel.style.display = (panel.id == id) ? 'block' : 'none';
+    }
+  }
+
+/*
   adjustRoster() {
     const prompt = new goog.ui.Prompt(
       'Roster Entry',
@@ -575,31 +592,29 @@ class Game {
     prompt.setDefaultValue(this.lineup.getPlayersAsText());
     prompt.setVisible(true);
   }
+*/
 
-  adjustPositions() {
-    this.logDiv.style.display = 'none';
-    this.gameDiv.style.display = 'none';
-    this.positionsDiv.style.display = 'block';
-  }
-
-  showLog() {
-    this.logDiv.style.display = 'block';
-    this.gameDiv.style.display = 'none';
-    this.positionsDiv.style.display = 'none';
+  /** @private */
+  showLog_() {
+    this.showPanel_('log');
     window.scrollTo(0, document.body.scrollHeight);
   }
 
-  showGame() {
-    this.logDiv.style.display = 'none';
-    this.gameDiv.style.display = 'block';
-    this.positionsDiv.style.display = 'none';
-  }
-
-  resetLineupAndShowGame() {
+  /** @private */
+  resetLineupAndShowGame_() {
     this.save();
     this.constructPlayersAndPositions();
     this.restore();
-    this.showGame();
+    this.showPanel_('game');
+  }
+
+  /** @private */
+  resetPlayersAndShowGame_() {
+    this.constructPlayers();
+    this.save();
+    this.constructPlayersAndPositions();
+    this.restore();
+    this.showPanel_('game');
   }
 
   /**

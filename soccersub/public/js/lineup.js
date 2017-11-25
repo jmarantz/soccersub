@@ -1,5 +1,6 @@
 goog.module('soccersub.Lineup');
 
+const Prompt = goog.require('goog.ui.Prompt');
 const util = goog.require('soccersub.util');
 
 // To make it easier to maniplate plans without having to awkwardly
@@ -73,30 +74,31 @@ class Lineup {
     this.defaultPlayerNames = defaultPlayerNames;
     /** @private {!Set<string>} */
     this.activePositionNames_ = new Set();
-    this.playerNames = defaultPlayerNames;
-    this.unavailablePlayerNames = [];
+    /** @type {!Set<string>} */
+    this.playerNames = new Set(defaultPlayerNames);
+    /** @type {!Set<string>} */
+    this.unavailablePlayerNames = new Set();
     /** @private {number} */
     this.numberOfPlayers_ = defaultNumberOfPlayers;
     util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
     util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
     util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
+    util.setupButton('add-players', () => this.addPlayers_());
     this.positionsDiv = goog.dom.getRequiredElement('positions');
-    this.statusDiv = goog.dom.getRequiredElement('positions-status');
-    this.render();
-    //this.defaultPositionNames = [];
+    this.positionsStatusDiv = goog.dom.getRequiredElement('positions-status');
+    this.playersTbody = goog.dom.getRequiredElement('players-tbody');
+    this.renderPositions_();
+    this.renderPlayers_();
   }
-
-  /*reset() {
-    this.positionNames = this.defaultPositionNames;
-    this.playerNames = this.defaultPlayerNames;
-  }*/
 
   /**
    * @param {!Object} map
    * @return {boolean}
    */
   restore(map) {
-    this.playerNames = map.playerNames;
+    this.playerNames = new Set(map.playerNames);
+    this.unavailablePlayerNames = new Set(
+      map.unavailablePlayerNames || []);
     this.activePositionNames_.clear();
     this.numberOfPlayers_ = map.numberOfPlayers || 5;
     for (const row of map.positionNames) {
@@ -105,9 +107,9 @@ class Lineup {
       }
     }
     this.annotateStatus();
-    this.render();
-    this.unavailablePlayerNames = map.unavailablePlayerNames || [];
-    if ((this.playerNames.length == 0) || 
+    this.renderPositions_();
+    this.renderPlayers_();
+    if ((this.playerNames.size == 0) || 
         (this.activePositionNames_.size == 0)) {
       return false;
     }
@@ -116,54 +118,22 @@ class Lineup {
 
   annotateStatus() {
     if (this.activePositionNames_.size == this.numberOfPlayers_) {
-      this.statusDiv.style.backgroundColor = 'lightgreen';
+      this.positionsStatusDiv.style.backgroundColor = 'lightgreen';
     } else {
-      this.statusDiv.style.backgroundColor = 'pink';
+      this.positionsStatusDiv.style.backgroundColor = 'pink';
     }
-    this.statusDiv.textContent = '' + this.activePositionNames_.size + ' of ' +
-      this.numberOfPlayers_ + ' positions defined.';
+    this.positionsStatusDiv.textContent = '' + this.activePositionNames_.size +
+      ' of ' + this.numberOfPlayers_ + ' positions defined.';
   }
 
   /**
    * @param {!Object} map
    */
   save(map) {
-    map.playerNames = this.playerNames;
+    map.playerNames = [...this.playerNames];
+    map.unavailablePlayerNames = [...this.unavailablePlayerNames];
     map.positionNames = this.getActivePositionNames();
-    map.unavailablePlayerNames = this.unavailablePlayerNames;
     map.numberOfPlayers = this.numberOfPlayers_;
-  }
-
-  /**
-   * @return {string}
-   */
-  getPlayersAsText() {
-    let names = this.playerNames.sort().join('\n');
-    if (this.unavailablePlayerNames.length) {
-      names += (this.playerNames.length ? '\n#' : '#');
-      names += this.unavailablePlayerNames.sort().join('\n#');
-    }
-    return names;
-  }
-
-  /**
-   * @param {string} names
-   */
-  setPlayersFromText(names) {
-    this.playerNames = [];
-    this.unavailablePlayerNames = [];
-    for (let player of names.split('\n')) {
-      if (player) {
-        if (player[0] == '#') {
-          player = player.substring(1);
-          if (player) {
-            this.unavailablePlayerNames.push(player);
-          }
-        } else {
-          this.playerNames.push(player);
-        }
-      }
-    }
   }
 
   /**
@@ -189,8 +159,9 @@ class Lineup {
 
   /**
    * Renders into a div all the possible players for the given configuration.
+   * @private
    */
-  render() {
+  renderPositions_() {
     this.positionsDiv.innerHTML = '';
     const rows = configurations[this.numberOfPlayers_];
     const legalPositionsForConfig = new Set();
@@ -201,8 +172,6 @@ class Lineup {
         for (const positionName of row) {
           legalPositionsForConfig.add(positionName);
           const td = document.createElement('td');
-          //td.className = 'player';
-          //td.id = name;
           tableRow.appendChild(td);
           td.textContent = positionName + '(' + abbrevs[positionName] + ')';
           if (!this.activePositionNames_.has(positionName)) {
@@ -232,8 +201,97 @@ class Lineup {
    */
   setNumberOfPlayers_(numberOfPlayers) {
     this.numberOfPlayers_ = numberOfPlayers;
-    this.render();
+    this.renderPositions_();
     this.annotateStatus();
+  }
+
+  /**
+   * Renders into a div all the known players, in rows of 4.
+   * @private
+   */
+  renderPlayers_() {
+    this.playersTbody.innerHTML = '';
+    const numColumns = 2;
+    let index = 0;
+    const allPlayers = [...this.playerNames].concat(
+      [...this.unavailablePlayerNames]);
+    let tr = null;
+    for (const playerName of allPlayers) {
+      let available = (index < this.playerNames.size);
+      const addColumn = () => {
+        const td = document.createElement('td');
+        tr.appendChild(td);
+        return td;
+      };
+
+      if ((index % numColumns) == 0) {
+        tr = document.createElement('tr');
+        this.playersTbody.appendChild(tr);
+      } else {
+        addColumn().style.width = '50px';
+      }
+      ++index;
+
+      /** @type {!Element} */
+      let playerElement;
+
+      // Delete button.
+      const addButton = (imageSrc, command, color) => {
+        const img = document.createElement('img');
+        img.src = imageSrc;
+        img.width = 32;
+        addColumn().appendChild(img);
+        util.handleTouch(img, () => {
+          if (command == 'enable') {
+            this.playerNames.add(playerName);
+          } else {
+            this.playerNames.delete(playerName);
+          }
+          if (command == 'disable') {
+            this.unavailablePlayerNames.add(playerName);
+          } else {
+            this.unavailablePlayerNames.delete(playerName);
+          }
+          playerElement.style.color = color;
+        });
+      };
+      
+      addButton('Red_X.png', 'delete', 'red');
+      //addButton('Checkmark-Yellow-300x300.jpg', 'disable', 'gold');
+      addButton('48px-Gnome-face-sick.svg.png', 'disable', 'gold');
+      addButton('GreenCheck.png', 'enable', 'darkgreen');
+
+      playerElement = document.createElement('td');
+      tr.appendChild(playerElement);
+      playerElement.textContent = playerName;
+      playerElement.style.color = available ? 'green' : 'gold';
+    }
+  }
+
+  /** @private */
+  addPlayers_() {
+    const prompt = new goog.ui.Prompt(
+      'Add Players',
+      'Entry names of players, one per line',
+      (response) => {
+        if (response) {
+          let added = false;
+          for (let name of response.split('\n')) {
+            name = name.trim();
+            if (name && !this.playerNames.has(name) && 
+                !this.unavailablePlayerNames.has(name)) {
+              added = true;
+              this.playerNames.add(name);
+            }
+          }
+          if (added) {
+            this.renderPlayers_();
+          }
+        }
+        prompt.dispose();
+      });
+    prompt.setRows(10);
+    prompt.setVisible(true);
   }
 }
 

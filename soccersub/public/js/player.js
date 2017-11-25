@@ -52,7 +52,7 @@ class Player {
     this.timeInGameMs = 0;
     this.timeInShiftMs = 0;
     this.percentageInGameNotKeeper = 0;
-    this.available = true;  
+    this.available = this.lineup.playerNames.has(this.name);
     this.timeAtPositionMs = {};
     this.elementAtPosition = {};
     /** @type {?Position} */
@@ -135,8 +135,7 @@ class Player {
     }
     this.timeInGameMs = playerMap.timeInGameMs;
     this.timeInShiftMs = playerMap.timeInShiftMs;
-    this.available = !playerMap.hasOwnProperty('available') || 
-      playerMap.available;
+    this.available = this.lineup.playerNames.has(this.name);
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
     for (const row of this.lineup.getActivePositionNames()) {
@@ -152,7 +151,6 @@ class Player {
     let fields = [
       ['timeInGameMs', (p) => p.timeInGameMs, (p, v) => p.timeInGameMs = v],
       ['timeInShiftMs', (p) => p.timeInShiftMs, (p, v) => p.timeInShiftMs = v],
-      ['available', (p) => p.available, (p, v) => p.available = v],
       ['currentPosition', 
        (p) => p.currentPosition ? p.currentPosition.name : null,
        (p, positionName) => {
@@ -182,7 +180,6 @@ class Player {
     gameMap[DB_PREFIX + this.name] = playerMap;
     playerMap.timeInGameMs = this.timeInGameMs;
     playerMap.timeInShiftMs = this.timeInShiftMs;
-    playerMap.available = this.available;
     playerMap.currentPosition = this.currentPosition
       ? this.currentPosition.name : null;
 
