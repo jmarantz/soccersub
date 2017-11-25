@@ -49,7 +49,7 @@ const configurations = {
 const abbrevs = {
   'Center Attacking Mid': 'CAM',
   'Center Back': 'CB',
-  'Center Defending Mid': 'CDM',
+  'Center Defensive Mid': 'CDM',
   'Center Mid': 'CM',
   'Keeper': 'GK',
   'Left Back': 'LB',
@@ -60,9 +60,9 @@ const abbrevs = {
   'Right Center Back': 'LCB',
   'Right Forward': 'RF',
   'Right Mid': 'RM',
-  'Stopper': 'Sp',
-  'Striker': 'Sk',
-  'Sweeper': 'Sw',
+  'Stopper': 'Stp',
+  'Striker': 'Str',
+  'Sweeper': 'Swp',
 };
 
 class Lineup {
@@ -257,7 +257,6 @@ class Lineup {
       };
       
       addButton('Red_X.png', 'delete', 'red');
-      //addButton('Checkmark-Yellow-300x300.jpg', 'disable', 'gold');
       addButton('48px-Gnome-face-sick.svg.png', 'disable', 'gold');
       addButton('GreenCheck.png', 'enable', 'darkgreen');
 
@@ -292,6 +291,14 @@ class Lineup {
       });
     prompt.setRows(10);
     prompt.setVisible(true);
+  }
+
+  /**
+   * @param {string} positionName
+   * @return {string}
+   */
+  static abbrev(positionName) {
+    return abbrevs[positionName] || positionName;
   }
 }
 

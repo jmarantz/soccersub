@@ -236,7 +236,8 @@ class Game {
       for (const positionName of row) {
         if (positionName) {
           this.makePositionElement(tableRow, positionName);
-          const position = new Position(positionName, headRow, this);
+          const abbrev = Lineup.abbrev(positionName);
+          const position = new Position(positionName, abbrev, headRow, this);
           this.positions.push(position);
           util.handleTouch(
             position.element, this.bind(this.selectPosition, position));

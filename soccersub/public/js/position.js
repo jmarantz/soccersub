@@ -9,10 +9,11 @@ const rightArrow = '&rarr;';
 class Position {
   /**
    * @param {string} name
+   * @param {string} abbrev
    * @param {!Element} headRow
    * @param {!Game} game
    */
-  constructor(name, headRow, game) {
+  constructor(name, abbrev, headRow, game) {
     /** @type {string} */
     this.name = name;
     /** @type {?Player} */
@@ -34,9 +35,9 @@ class Position {
 
     this.element.style.lineHeight = 'normal';
     const nameNode = document.createElement('b');
-    nameNode.textContent = this.name + ':';
+    nameNode.textContent = abbrev + ': ';
     this.element.appendChild(nameNode);
-    this.element.appendChild(document.createElement('br'));
+    //this.element.appendChild(document.createElement('br'));
     // type {!Text}
     //this.playerNode = document.createTextNode('');
     /** @type {!Element} */
@@ -63,7 +64,7 @@ class Position {
       const verbose = !this.nextPlayer;
       text = this.currentPlayer.renderAtPosition(verbose);
     } else if (!this.nextPlayer) {
-      text = 'NEEDS PLAYER'
+      text = 'needs player'
     }
     if (this.nextPlayer) {
       //text += ' > ' + this.nextPlayer.name;
