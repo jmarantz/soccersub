@@ -77,7 +77,7 @@ class Game {
     util.handleTouch(this.showLogTag, this.bind(this.showLog));
     this.gameDiv = goog.dom.getRequiredElement('game');
     this.logDiv = goog.dom.getRequiredElement('log');
-    this.lineupDiv = goog.dom.getRequiredElement('lineup');
+    this.positionsDiv = goog.dom.getRequiredElement('positions-panel');
     this.logText = goog.dom.getRequiredElement('log-text');
     util.setupButton('show-game1', () => this.showGame());
     util.setupButton('show-game2', () => this.resetLineupAndShowGame());
@@ -579,37 +579,20 @@ class Game {
   adjustPositions() {
     this.logDiv.style.display = 'none';
     this.gameDiv.style.display = 'none';
-    this.lineupDiv.style.display = 'block';
-/*
-    const prompt = new goog.ui.Prompt(
-      'Position Entry',
-      'Positions names in lines, each position separated by comma',
-      (response) => {
-        if (response) {
-          this.lineup.setPositionsFromText(response);
-          this.save();
-          this.constructPlayersAndPositions();
-          this.restore();
-        }
-        prompt.dispose();
-      });
-    prompt.setRows(15);
-    prompt.setDefaultValue(this.lineup.getPositionsAsText());
-    prompt.setVisible(true);
-*/
+    this.positionsDiv.style.display = 'block';
   }
 
   showLog() {
     this.logDiv.style.display = 'block';
     this.gameDiv.style.display = 'none';
-    this.lineupDiv.style.display = 'none';
+    this.positionsDiv.style.display = 'none';
     window.scrollTo(0, document.body.scrollHeight);
   }
 
   showGame() {
     this.logDiv.style.display = 'none';
     this.gameDiv.style.display = 'block';
-    this.lineupDiv.style.display = 'none';
+    this.positionsDiv.style.display = 'none';
   }
 
   resetLineupAndShowGame() {

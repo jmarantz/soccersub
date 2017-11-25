@@ -80,6 +80,8 @@ class Lineup {
     util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
     util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
     util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
+    this.positionsDiv = goog.dom.getRequiredElement('positions');
+    this.statusDiv = goog.dom.getRequiredElement('positions-status');
     this.render();
     //this.defaultPositionNames = [];
   }
@@ -102,6 +104,7 @@ class Lineup {
         this.activePositionNames_.add(positionName);
       }
     }
+    this.annotateStatus();
     this.render();
     this.unavailablePlayerNames = map.unavailablePlayerNames || [];
     if ((this.playerNames.length == 0) || 
@@ -109,6 +112,16 @@ class Lineup {
       return false;
     }
     return true;
+  }
+
+  annotateStatus() {
+    if (this.activePositionNames_.size == this.numberOfPlayers_) {
+      this.statusDiv.style.backgroundColor = 'lightgreen';
+    } else {
+      this.statusDiv.style.backgroundColor = 'pink';
+    }
+    this.statusDiv.textContent = '' + this.activePositionNames_.size + ' of ' +
+      this.numberOfPlayers_ + ' positions defined.';
   }
 
   /**
@@ -153,63 +166,6 @@ class Lineup {
     }
   }
 
-  // **
-  // * return {string}
-  // *
-  // getPositionsAsText() {
-  //   const transformRow = (row) => {
-  //     if (row instanceof Array) {
-  //       return row.join(', ');
-  //     }
-  //     return '' + row;
-  //   };
-  //   return this.positionNames.map(transformRow).join('\n');
-  // }
-
-  // **
-  //  * @param {string} positions
-  //  *
-  // setPositionsFromText(positions) {
-  //   const rows = positions.split('\n');
-  //   this.positionNames = rows.map((row) => row.split(',').map(
-  //     (position) => position.trim()));
-  // }
-
-  // /**
-  //  * @param {string} positionAndAbbreviation
-  //  * @return {string} positionAndAbbreviation
-  //  */
-  // static positionName(positionAndAbbreviation) {
-  //   const a = positionAndAbbreviation.split('.');
-  //   if (a.length >= 1) {
-  //     return a[0];
-  //   }
-  //   return positionAndAbbreviation;
-  // }
-   
-  // /**
-  //  * @param {string} positionAndAbbreviation
-  //  * @return {string} positionAndAbbreviation
-  //  */
-  // static abbrev(positionAndAbbreviation) {
-  //   const a = positionAndAbbreviation.split('.');
-  //   if (a.length >= 2) {
-  //     return a[1];
-  //   }
-  //   return '?';
-  // }
-
-  /**
-   * Returns whether the current lineup configuration is valid.  Technically
-   * this is a question of whether there's a keeper or not.  However for now
-   * we just check to see if there are the correct number of players.
-   *
-   * @return {boolean}
-   */
-  isValid() {
-    return this.activePositionNames_.size == this.numberOfPlayers_;
-  }
-
   /**
    * @return {!Array<!Array<string>>}
    */
@@ -235,15 +191,15 @@ class Lineup {
    * Renders into a div all the possible players for the given configuration.
    */
   render() {
-    const div = goog.dom.getRequiredElement('positions');
-    div.innerHTML = '';
-    //div.elementMap_.clear();
+    this.positionsDiv.innerHTML = '';
     const rows = configurations[this.numberOfPlayers_];
+    const legalPositionsForConfig = new Set();
     if (rows) {
       for (var r = rows.length - 1; r >= 0; --r) {
         const row = rows[r];
-        const tableRow = util.makeSingleRowTable(div);
+        const tableRow = util.makeSingleRowTable(this.positionsDiv);
         for (const positionName of row) {
+          legalPositionsForConfig.add(positionName);
           const td = document.createElement('td');
           //td.className = 'player';
           //td.id = name;
@@ -260,10 +216,13 @@ class Lineup {
               td.style.color = 'black';
               this.activePositionNames_.add(positionName);
             }
+            this.annotateStatus();
           });
         }
       }
     }
+    this.activePositionNames_ = new Set([...legalPositionsForConfig].filter(
+      positionName => this.activePositionNames_.has(positionName)));
   }
 
   /**
@@ -274,7 +233,7 @@ class Lineup {
   setNumberOfPlayers_(numberOfPlayers) {
     this.numberOfPlayers_ = numberOfPlayers;
     this.render();
-    //this.save();
+    this.annotateStatus();
   }
 }
 
