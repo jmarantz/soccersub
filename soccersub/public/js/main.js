@@ -1,6 +1,6 @@
 goog.module('soccersubMain');
 
-const Game = goog.require('soccersub.Game');
+const SoccerSub = goog.require('soccersub.SoccerSub');
 const Lineup = goog.require('soccersub.Lineup');
 
 var cosmosPlayerNames = [
@@ -66,7 +66,7 @@ var defaultPlayerNames = cosmosPlayerNames;
 
 const soccersubMain = () => {
   const lineup = new Lineup(5, defaultPlayerNames);
-  new Game(lineup);
+  new SoccerSub(lineup);
 };
 goog.exportSymbol('soccersubMain', soccersubMain);
 window['soccersubMain'] = soccersubMain;

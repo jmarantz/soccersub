@@ -9,17 +9,20 @@ const util = goog.require('soccersub.util');
 
 let deployTimestamp = window['deployTimestamp'] || 'dev';
 
+/** Maintains the state of a single game. */
 class Game {
   /**
    * @param {!Lineup} lineup
+   * @param {function(string)} writeStatus
+   * @param {function(string)} writeLog
    */
-  constructor(lineup) {
-    goog.dom.getRequiredElement('game_version').textContent = deployTimestamp;
-
+  constructor(lineup, writeStatus, writeLog) {
+    /** @type {function(string)} */
+    this.writeStatus = writeStatus;
+    /** @private {function(string)} */
+    this.writeLog_ = writeLog;
     /** @type {boolean} */
     this.showTimesAtPosition = false;
-    /** @type {boolean} */
-    this.debugSorting = false;
 
     // Set up HTML element connections & handlers.
     this.gameClockElement = goog.dom.getRequiredElement('game_clock');
@@ -32,28 +35,18 @@ class Game {
 
     /** @type {?Element} */
     this.dragElement = null;
-
     /** @type {?Position} */
     this.dragOverPosition = null;
-    
     /** @type {?Position} */
     this.dragStartPosition = null;
-    
     /** @type {string} */
     this.dragSaveBackgroundColor = '';
-    
     /** @type {?Player} */
     this.dragPlayer = null;
-
     /** @type {?Event} */
     this.dragMoveEvent = null;
-
-    /** @type {!Element} */
-    this.statusBar = goog.dom.getRequiredElement('status_bar');
-
     /** @type {!Element} */
     this.dragVisual = goog.dom.getRequiredElement('drag-visual');
-
     /** @type {!Element} */
     this.dragText = goog.dom.getRequiredElement('drag-text');
 
@@ -65,21 +58,13 @@ class Game {
     /** @type {number} */
     this.cumulativeAdjustedTimeSec = 0;
 
-    //this.statusBarWriteMs = 0;
     /** @type {boolean} */
     this.timeoutPending = false;
     /** @type {!Element} */
-    this.resetTag = goog.dom.getRequiredElement('reset');
-    util.handleTouch(this.resetTag, this.bind(this.confirmAndReset));
-    const gameDiv = goog.dom.getRequiredElement('game');
-    /** @private {!Array<!Element>} */
-    this.panels_ = [
-      gameDiv,
-      goog.dom.getRequiredElement('log'),
-      goog.dom.getRequiredElement('positions-panel'),
-      goog.dom.getRequiredElement('players-panel'),
-    ];
-    this.logText = goog.dom.getRequiredElement('log-text');
+    this.resetTag = util.setupButton('reset', () => this.confirmAndReset());
+    /** @type {!Element} */
+    this.gameDiv = goog.dom.getRequiredElement('game');
+    /** @type {boolean} */
     this.started = false;
     /** @type {!Element} */
     this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
@@ -89,14 +74,6 @@ class Game {
                                              () => this.cancelSubs());
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
 
-    util.setupButton('show-game1', () => this.showPanel_('game'));
-    util.setupButton('show-game2', () => this.resetLineupAndShowGame_());
-    util.setupButton('show-game3', () => this.resetLineupAndShowGame_());
-    util.setupButton('adjust-roster', () => this.showPanel_('players-panel'));
-    util.setupButton('adjust-positions',
-                     () => this.showPanel_('positions-panel'));
-    util.setupButton('show-log', () => this.showLog_());
-    
     const setupTimeAdjust = (id, deltaSec) => {
       util.handleTouch(goog.dom.getRequiredElement(id),
                        () => this.adjustTime(deltaSec));
@@ -110,9 +87,9 @@ class Game {
     setupTimeAdjust('add-10-sec', 10);
     setupTimeAdjust('add-1-minute', 60);
 
-    goog.events.listen(gameDiv, 'touchstart', this.dragStart, false, this);
-    goog.events.listen(gameDiv, 'touchmove', this.dragMove, false, this);
-    goog.events.listen(gameDiv, 'touchend', this.dragEnd, false, this);
+    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, false, this);
+    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, false, this);
+    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, false, this);
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -132,34 +109,12 @@ class Game {
     this.lineup = lineup;
     /** @type {boolean} */
     this.timeRunning = false;
-    /** @type {boolean} */
-    this.started = false;
-    /** @type {string} */
-    this.log_ = '';
     /** @type {number} */
     this.updateCount = 0;
 
     this.constructPlayersAndPositions();
     if (!this.restore()) {
       this.reset();
-    }
-  }
-
-  bind(func, ...optArgs) {
-    var game = this;
-    return function(...laterArgs) {
-      var args = optArgs.concat(laterArgs);
-      var result = null;
-      try {
-        if (args.length) {
-          result = func.apply(game, args);
-        } else {
-          result = func.apply(game);
-        }
-      } catch (err) {
-        game.writeStatus('ERROR: ' + err + '\n' + err.stack);
-      }
-      return result;
     }
   }
 
@@ -194,25 +149,10 @@ class Game {
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
       this.update();
-      this.log('reset');
+      this.writeLog_('reset');
     } catch (err) {
       this.writeStatus('ERROR: ' + err + '\n' + err.stack);
     }
-  }
-
-  /**
-   * @param {!Element} field
-   * @return {!Element} 
-   */
-  makeTableRow(field) {
-    const table = document.createElement('table');
-    table.className = 'field-row';
-    field.appendChild(table);
-    const tbody = document.createElement('tbody');
-    table.appendChild(tbody);
-    const tr = document.createElement('tr');
-    tbody.appendChild(tr);
-    return tr;
   }
 
   /**
@@ -240,7 +180,7 @@ class Game {
           const position = new Position(positionName, abbrev, headRow, this);
           this.positions.push(position);
           util.handleTouch(
-            position.element, this.bind(this.selectPosition, position));
+            position.element, () => this.selectPosition(position));
         }
       }
     }
@@ -414,21 +354,21 @@ class Game {
    */
   restore() {
     if (!util.storageAvailable('localStorage')) {
-      this.log('restore failed: local storage not available');
+      this.writeLog_('restore failed: local storage not available');
       return false;
     }
 
     try {
       var storedGame = window.localStorage.game;
       if (!storedGame) {
-        this.log('restore failed: no "game" entry in localStorage');
+        this.writeLog_('restore failed: no "game" entry in localStorage');
         return false;
       }
       var map = /** @type {!Object} */ (JSON.parse(storedGame));
 
       this.rendered = false;
       if (!this.lineup.restore(map)) {
-        this.log('restore failed: lineup restore failure');
+        this.writeLog_('restore failed: lineup restore failure');
         return false;
       }
 /*
@@ -469,10 +409,10 @@ class Game {
       }
       this.showAdjustedTime();
       this.update();
-      this.log('restore');
+      this.writeLog_('restore');
       return true;
     } catch (err) {
-      this.log('restore failed: exception caught: ' + err);
+      this.writeLog_('restore failed: exception caught: ' + err);
       return false;
     }
   }
@@ -565,59 +505,6 @@ class Game {
     document.body.style.backgroundColor = background;
   }
 
-  /** 
-    * @private
-    * @param {string} id
-    */
-  showPanel_(id) {
-    for (const panel of this.panels_) {
-      panel.style.display = (panel.id == id) ? 'block' : 'none';
-    }
-  }
-
-/*
-  adjustRoster() {
-    const prompt = new goog.ui.Prompt(
-      'Roster Entry',
-      'Entry names of players, prefixing unavailable ones with #',
-      (response) => {
-        if (response) {
-          this.lineup.setPlayersFromText(response);
-          this.save();
-          this.constructPlayersAndPositions();
-          this.restore();
-        }
-        prompt.dispose();
-      });
-    prompt.setRows(15);
-    prompt.setDefaultValue(this.lineup.getPlayersAsText());
-    prompt.setVisible(true);
-  }
-*/
-
-  /** @private */
-  showLog_() {
-    this.showPanel_('log');
-    window.scrollTo(0, document.body.scrollHeight);
-  }
-
-  /** @private */
-  resetLineupAndShowGame_() {
-    this.save();
-    this.constructPlayersAndPositions();
-    this.restore();
-    this.showPanel_('game');
-  }
-
-  /** @private */
-  resetPlayersAndShowGame_() {
-    this.constructPlayers();
-    this.save();
-    this.constructPlayersAndPositions();
-    this.restore();
-    this.showPanel_('game');
-  }
-
   /**
    * @param {?Player} player
    */
@@ -684,13 +571,6 @@ class Game {
     }
   };
 
-  log(text) {
-    const msg = util.formatTime(this.elapsedTimeMs) + ': ' + text + '\n';
-    //this.log_ += msg;
-    this.logText.textContent += msg;
-    this.writeStatus(msg);
-  }
-
   /**
    * @param {!Player} player
    * @param {!Position} position
@@ -724,7 +604,7 @@ class Game {
       player.setPosition(position, true);
       this.writeStatus(player.status());
       position.setPlayer(player);
-      this.log(player.name + ' --> ' + (position ? position.name : 'null'));
+      this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
     }
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
@@ -746,14 +626,6 @@ class Game {
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
     this.sortAndRenderPlayers(false);
-  }
-
-  /**
-   * @param {string} text
-   */
-  writeStatus(text) {
-    this.statusBar.textContent = text;
-    //this.statusBarWriteMs = currentTimeMs();
   }
 
   updateTimer() {
@@ -778,14 +650,9 @@ class Game {
       }
       if (!this.timeoutPending) {
         this.timeoutPending = true;
-        window.setTimeout(this.bind(this.updateTimer), 1000);
+        window.setTimeout(() => this.updateTimer(), 1000);
       }
     }
-    /*if ((this.statusBarWriteMs != 0) &&
-      (timeMs - this.statusBarWriteMs) > 5000) {
-      this.statusBar.textContent = ' ';
-      this.statusBarWriteMs = 0;
-      }*/
     this.redrawClock();
     this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
       util.formatTime(this.elapsedTimeMs);
