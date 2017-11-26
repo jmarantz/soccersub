@@ -74,3 +74,17 @@ table {
     font-family: sans-serif;
     font-size: large;
 }
+
+.roster-available {
+    color: darkgreen;
+    font-face: bold;
+}
+
+.roster-unavailable {
+    color: gold;
+    font-style: italic;
+}
+
+.roster-deleted {
+    color: darkred;
+}

@@ -217,7 +217,6 @@ class Lineup {
       [...this.unavailablePlayerNames]);
     let tr = null;
     for (const playerName of allPlayers) {
-      let available = (index < this.playerNames.size);
       const addColumn = () => {
         const td = document.createElement('td');
         tr.appendChild(td);
@@ -232,38 +231,52 @@ class Lineup {
       }
       ++index;
 
-      /** @type {!Element} */
-      let playerElement;
-
-      // Delete button.
-      const addButton = (imageSrc, command, color) => {
-        const img = document.createElement('img');
-        img.src = imageSrc;
-        img.width = 32;
-        addColumn().appendChild(img);
-        util.handleTouch(img, () => {
-          if (command == 'enable') {
-            this.playerNames.add(playerName);
-          } else {
-            this.playerNames.delete(playerName);
-          }
-          if (command == 'disable') {
-            this.unavailablePlayerNames.add(playerName);
-          } else {
-            this.unavailablePlayerNames.delete(playerName);
-          }
-          playerElement.style.color = color;
-        });
-      };
-      
-      addButton('Red_X.png', 'delete', 'red');
-      addButton('48px-Gnome-face-sick.svg.png', 'disable', 'gold');
-      addButton('GreenCheck.png', 'enable', 'darkgreen');
-
-      playerElement = document.createElement('td');
-      tr.appendChild(playerElement);
+      const img = document.createElement('img');
+      img.width = 32;
+      addColumn().appendChild(img);
+      const playerElement = addColumn();
       playerElement.textContent = playerName;
-      playerElement.style.color = available ? 'green' : 'gold';
+      this.renderPlayer_(playerName, img, playerElement);
+
+      const rotate = () =>
+            this.rotatePlayerState_(playerName, img, playerElement);
+      util.handleTouch(img, rotate);
+      util.handleTouch(playerElement, rotate);
+    }
+  }
+
+  /**
+   * @param {string} playerName
+   * @param {!Element} img
+   * @param {!Element} playerElement
+   */
+  rotatePlayerState_(playerName, img, playerElement) {
+    if (this.playerNames.has(playerName)) {
+      this.playerNames.delete(playerName);
+      this.unavailablePlayerNames.add(playerName);
+    } else if (this.unavailablePlayerNames.has(playerName)) {
+      this.unavailablePlayerNames.delete(playerName);
+    } else {
+      this.playerNames.add(playerName);
+    }
+    this.renderPlayer_(playerName, img, playerElement);
+  }
+
+  /**
+   * @param {string} playerName
+   * @param {!Element} img
+   * @param {!Element} playerElement
+   */
+  renderPlayer_(playerName, img, playerElement) {
+    if (this.playerNames.has(playerName)) {
+      img.src = 'GreenCheck.png';
+      playerElement.className = 'roster-available';
+    } else if (this.unavailablePlayerNames.has(playerName)) {
+      img.src = '48px-Gnome-face-sick.svg.png';
+      playerElement.className = 'roster-unavailable';
+    } else {
+      img.src = 'Red_X.png';
+      playerElement.className = 'roster-deleted';
     }
   }
 
