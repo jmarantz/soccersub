@@ -244,9 +244,9 @@ class Player {
 
   /**
    * @param {!Element} tableBody
+   * @param {!Element} row
    */
-  render(tableBody) {
-    const row = document.createElement('tr');
+  render(tableBody, row) {
     this.nameElement = document.createElement('td');
     this.nameElement.textContent = this.name;
     row.appendChild(this.nameElement);
@@ -262,15 +262,18 @@ class Player {
     }
     this.updateColor();
     tableBody.appendChild(row);
-    this.element = row;
   }
 
-  /** @return {?ClientRect} */
-  boundingBox() {
-    if (!this.element) {
-      return null;
-    }
-    return this.element.getBoundingClientRect();
+  /** 
+   * @param {number} x
+   * @param {number} y
+   * @return {boolean}
+   */
+  inside(x, y) {
+    return (this.nameElement && 
+            util.inside(x, y, this.nameElement.getBoundingClientRect())) ||
+      (this.gameTimeElement && 
+        util.inside(x, y, this.gameTimeElement.getBoundingClientRect()));
   }
 
   /**

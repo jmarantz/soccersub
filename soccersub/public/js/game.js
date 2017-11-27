@@ -63,7 +63,7 @@ class Game {
     /** @type {!Element} */
     this.resetTag = util.setupButton('reset', () => this.confirmAndReset());
     /** @type {!Element} */
-    this.gameDiv = goog.dom.getRequiredElement('game');
+    this.gameDiv = goog.dom.getRequiredElement('game-panel');
     /** @type {boolean} */
     this.started = false;
     /** @type {!Element} */
@@ -111,11 +111,6 @@ class Game {
     this.timeRunning = false;
     /** @type {number} */
     this.updateCount = 0;
-
-    this.constructPlayersAndPositions();
-    if (!this.restore()) {
-      this.reset();
-    }
   }
 
   /**
@@ -201,6 +196,7 @@ class Game {
       player.available = false;
       this.playerMap.set(name, player);
     }
+    this.lineup.modified = false;
   }
 
   /**
@@ -222,7 +218,7 @@ class Game {
    */
   findPlayerAtEvent(event) {
     for (const player of this.activePlayers) {
-      if (util.inside(event.clientX, event.clientY, player.boundingBox())) {
+      if (player.inside(event.clientX, event.clientY)) {
         return player;
       }
     }
@@ -471,10 +467,23 @@ class Game {
       this.activePlayers = players;
       var tableBody = goog.dom.getRequiredElement('table-body');
       tableBody.innerHTML = '';
+      let row;
+      let index = 0;
+      const numColumns = 2;
       for (const player of this.activePlayers) {
-        if (!player.currentPosition && !player.nextPosition) {
-          player.render(tableBody);
+        if (player.currentPosition || player.nextPosition) {
+          continue;
         }
+        if ((index % numColumns) == 0) {
+          row = document.createElement('tr');
+          tableBody.appendChild(row);
+        } else {
+          const td = document.createElement('td');
+          row.appendChild(td);
+          td.style.width = '10px';
+        }
+        ++index;
+        player.render(tableBody, row);
       }
     }
   }
@@ -502,7 +511,7 @@ class Game {
         background = 'red';
       }
     }
-    document.body.style.backgroundColor = background;
+    this.gameDiv.style.backgroundColor = background;
   }
 
   /**

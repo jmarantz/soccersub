@@ -89,6 +89,8 @@ class Lineup {
     this.playersTbody = goog.dom.getRequiredElement('players-tbody');
     this.renderPositions_();
     this.renderPlayers_();
+    /** @type {boolean} */
+    this.modified = false;
   }
 
   /**
@@ -186,6 +188,7 @@ class Lineup {
               this.activePositionNames_.add(positionName);
             }
             this.annotateStatus();
+            this.modified = true;
           });
         }
       }
@@ -260,6 +263,7 @@ class Lineup {
       this.playerNames.add(playerName);
     }
     this.renderPlayer_(playerName, img, playerElement);
+    this.modified = true;
   }
 
   /**
@@ -298,6 +302,7 @@ class Lineup {
           }
           if (added) {
             this.renderPlayers_();
+            this.modified = true;
           }
         }
         prompt.dispose();

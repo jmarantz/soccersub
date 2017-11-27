@@ -73,10 +73,19 @@
     </div>
     <span>Cumulative adjusted time: <span id="time-adjust-cumulative">0<span>
   </div>    
-  <div id='game'>
-
+  <div class="tab">
+    <button class="tablinks active" id="show-game")">Game</button>
+    <button class="tablinks" id="show-roster")>Roster</button>
+    <button class="tablinks" id="show-positions")>Postions</button>
+    <button class="tablinks" id="show-log")>Log</button>
+  </div>
+  <div id="game-panel" class="tabcontent">
+    <div class="top-button-bar">
+      <button type="button" class="inline-button" id="make-subs">Make Subs</button>
+      <button type="button" class="inline-button" id="cancel-subs">Cancel Subs</button>
+      <button type="button" class="inline-button" id="reset">Reset Game</button>
+    </div>
     <hr/>
-
     <div id="field">
     </div>
     <hr/>
@@ -89,24 +98,14 @@
       <tbody id='table-body'>
       </tbody>
     </table>
-    <div style="display:inline-block; vertical-align:top; padding-top: 50px;">
-      <button type="button" class="vertical-button" id="make-subs">Make Subs</button>
-      <button type="button" class="vertical-button" id="cancel-subs">Cancel Subs</button>
-      <button type="button" class="vertical-button" id="adjust-roster">Adjust Roster</button>
-      <button type="button" class="vertical-button" id="adjust-positions">Adjust Positions</button>
-      <button type="button" class="vertical-button" id="reset">Reset Game</button>
-      <button type="button" class="vertical-button" id="show-log">Show Log</button>
-    </div>
     <div id="status_bar"; style='font-size: medium;'></div>
   </div>
-  <div id="log" style="display:none;">
-    <button type="button" class="inline-button" id="show-game1">Show Game</button>
+  <div id="log-panel" style="display:none;" class="tabcontent">
     <div class="log-area">
       <pre id="log-text" class="log-text"></pre>
     </div>
   </div>
-  <div id="positions-panel" style="display:none;">
-    <button type="button" class="vertical-button" id="show-game2">Show Game</button>
+  <div id="positions-panel" style="display:none;" class="tabcontent">
     <div id="positions-status"></div>
     <div>
       <button type="button" class="inline-button" id="5v5">5v5</button>
@@ -115,8 +114,7 @@
     </div>
     <div id="positions"></div>
   </div>
-  <div id="players-panel" style="display:none;">
-    <button type="button" class="vertical-button" id="show-game3">Show Game</button>
+  <div id="roster-panel" style="display:none;" class="tabcontent">
     <div id="players-status"></div>
     <div>
       <button type="button" class="inline-button" id="add-players">Add Players...</button>

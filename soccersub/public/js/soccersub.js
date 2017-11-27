@@ -22,26 +22,23 @@ class SoccerSub {
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
-    this.game = new Game(lineup, (text) => this.log(text), 
-                         (text) => this.writeStatus(text));
+    this.game = new Game(lineup, (text) => this.writeStatus(text),
+                         (text) => this.log(text));
     goog.dom.getRequiredElement('game_version').textContent = deployTimestamp;
 
     /** @private {!Array<!Element>} */
     this.panels_ = [
       this.game.gameDiv,
-      goog.dom.getRequiredElement('log'),
+      goog.dom.getRequiredElement('log-panel'),
       goog.dom.getRequiredElement('positions-panel'),
-      goog.dom.getRequiredElement('players-panel'),
+      goog.dom.getRequiredElement('roster-panel'),
     ];
     this.logText = goog.dom.getRequiredElement('log-text');
     this.started = false;
 
-    util.setupButton('show-game1', () => this.showPanel_('game'));
-    util.setupButton('show-game2', () => this.resetLineupAndShowGame_());
-    util.setupButton('show-game3', () => this.resetLineupAndShowGame_());
-    util.setupButton('adjust-roster', () => this.showPanel_('players-panel'));
-    util.setupButton('adjust-positions',
-                     () => this.showPanel_('positions-panel'));
+    util.setupButton('show-game', () => this.showGame_());
+    util.setupButton('show-roster', () => this.showPanel_('roster'));
+    util.setupButton('show-positions', () => this.showPanel_('positions'));
     util.setupButton('show-log', () => this.showLog_());
     
     /** @type {!Lineup} */
@@ -61,12 +58,19 @@ class SoccerSub {
 
   /** 
     * @private
-    * @param {string} id
+    * @param {string} name
     */
-  showPanel_(id) {
+  showPanel_(name) {
+    const panelId = name + '-panel';
     for (const panel of this.panels_) {
-      panel.style.display = (panel.id == id) ? 'block' : 'none';
+      panel.style.display = (panel.id == panelId) ? 'block' : 'none';
     }
+    // Get all elements with class="tablinks" and remove the class "active"
+    for (const tablink of document.getElementsByClassName('tablinks')) {
+      tablink.className = tablink.className.replace(' active', '');
+    }
+    const buttonId = 'show-' + name;
+    goog.dom.getRequiredElement(buttonId).className += ' active';
   }
 
   /** @private */
@@ -76,10 +80,12 @@ class SoccerSub {
   }
 
   /** @private */
-  resetLineupAndShowGame_() {
-    this.game.save();
-    this.game.constructPlayersAndPositions();
-    this.game.restore();
+  showGame_() {
+    if (this.lineup.modified) {
+      this.game.save();
+      this.game.constructPlayersAndPositions();
+      this.game.restore();
+    }
     this.showPanel_('game');
   }
 
