@@ -24,8 +24,8 @@ class SoccerSub {
 
     this.game = new Game(lineup, (text) => this.writeStatus(text),
                          (text) => this.log(text));
-    goog.dom.getRequiredElement('game_version').textContent = deployTimestamp;
-
+    setTimeout(SoccerSub.clearVersionDisplay, 2000);
+    
     /** @private {!Array<!Element>} */
     this.panels_ = [
       this.game.gameDiv,
@@ -54,6 +54,11 @@ class SoccerSub {
 
   nsave() {
     //this.storage.saveToLocalStorage();
+  }
+
+  static clearVersionDisplay() {
+    const version = goog.dom.getRequiredElement('soccersub-version');
+    version.style.display = 'none';
   }
 
   /** 

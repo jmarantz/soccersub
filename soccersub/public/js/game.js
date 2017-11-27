@@ -25,10 +25,8 @@ class Game {
     this.showTimesAtPosition = false;
 
     // Set up HTML element connections & handlers.
-    this.gameClockElement = goog.dom.getRequiredElement('game_clock');
-    /** @type {!Element} */
-    this.toggleClockButton = util.setupButton('clock_toggle',
-                                              () => this.toggleClock());
+    this.gameClockElement = goog.dom.getRequiredElement('game-clock');
+    util.handleTouch(this.gameClockElement, () => this.toggleClock());
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
@@ -394,16 +392,9 @@ class Game {
             player.setPosition(position, false);
             position.setPlayer(player);
           }
-          //this.writeStatus(player.status());
         }
       }
 
-      /*
-        for (var i = 0; i < this.positions.length; ++i) {
-        var position = this.position[i];
-        position.restore();
-        }
-      */
       this.elapsedTimeMs = map.elapsedTimeMs;
       this.cumulativeAdjustedTimeSec = map.cumulativeAdjustedTimeSec || 0;
       this.timeRunning = map.timeRunning;
@@ -512,14 +503,12 @@ class Game {
     let adjustDisplay = 'none';
     if (this.timeRunning) {
       this.gameClockElement.style.backgroundColor = 'lightgreen';
-      this.toggleClockButton.textContent = 'Stop Clock';
     } else {
       this.gameClockElement.style.backgroundColor = 'pink';
       this.timeAdjust.style.display = 'block';
       if (this.elapsedTimeMs == 0) {
-        this.toggleClockButton.textContent = 'Start Clock';
+        this.gameClockElement.innerHTML = 'Start<br>Clock';
       } else {
-        this.toggleClockButton.textContent = 'Resume Clock';
         adjustDisplay = 'block';
         background = 'red';
       }
@@ -691,8 +680,8 @@ class Game {
       }
     }
     this.redrawClock();
-    this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
-      util.formatTime(this.elapsedTimeMs);
+    this.gameClockElement.innerHTML = this.clockStarted ? 
+      util.formatTime(this.elapsedTimeMs) : 'Start<br>Clock';
     this.save();
     const started = this.clockStarted || this.assignmentsMade;
     this.resetTag.style.backgroundColor = started ? 'white': 'lightgray';
