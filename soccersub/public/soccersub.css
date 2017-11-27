@@ -18,13 +18,16 @@ table {
 .inline-button {
     font-size: medium;
     background-color: white;
+    min-height: 40px;
 }
 .vertical-button {
     font-size: medium;
     margin-bottom: 10px;
     display: block;
     background-color: white;
+    min-height: 40px;
 }
+
 .futsal-floor {
     background-image: url(futsal_floor.png)
 }
@@ -127,4 +130,5 @@ div.tab button.active {
 }
 
 .top-button-bar {
+    margin-bottom: 5px;
 }
