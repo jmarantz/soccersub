@@ -132,3 +132,7 @@ div.tab button.active {
 .top-button-bar {
     margin-bottom: 5px;
 }
+
+#time-adjust button {
+    padding: 3;
+}

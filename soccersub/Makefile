@@ -57,7 +57,7 @@ public/xxsoccersub.min.js : $(JSFILES) Makefile
 SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
 	public/DownLeft32.png
 
-public/deploy_timestamp.js : $(SRCS) $(JSFILES) Makefile
+public/deploy_timestamp.js : $(SRCS) $(JSFILES) Makefile firebase.json
 	./write_deploy_timestamp.sh >$@
 	/usr/local/bin/firebase deploy --only hosting
 
