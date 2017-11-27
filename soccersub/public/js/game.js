@@ -497,10 +497,10 @@ class Game {
 
   redrawClock() {
     var background = 'white';
+    let adjustDisplay = 'none';
     if (this.timeRunning) {
       this.gameClockElement.style.backgroundColor = 'lightgreen';
       this.toggleClockButton.textContent = 'Stop Clock';
-      this.timeAdjust.style.display = 'none';
     } else {
       this.gameClockElement.style.backgroundColor = 'pink';
       this.timeAdjust.style.display = 'block';
@@ -508,9 +508,11 @@ class Game {
         this.toggleClockButton.textContent = 'Start Clock';
       } else {
         this.toggleClockButton.textContent = 'Resume Clock';
+        adjustDisplay = 'block';
         background = 'red';
       }
     }
+    this.timeAdjust.style.display = adjustDisplay;
     this.gameDiv.style.backgroundColor = background;
   }
 
