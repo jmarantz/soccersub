@@ -1,4 +1,5 @@
 goog.module('soccersub.Game');
+
 const Dialog = goog.require('goog.ui.Dialog');
 const googDom = goog.require('goog.dom');
 const Lineup = goog.require('soccersub.Lineup');
@@ -615,7 +616,8 @@ class Game {
       player.setPosition(position, true);
       this.writeStatus(player.status());
       position.setPlayer(player);
-      this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
+      this.writeLog_(player.name + ' --> ' + 
+                     (position ? position.name : 'null'));
     }
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
