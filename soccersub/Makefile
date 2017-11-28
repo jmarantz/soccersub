@@ -53,7 +53,8 @@ public/soccersub.min.js : $(JSFILES) Makefile
 	  --compiler_jar=$(COMPILER_JAR) \
 	  --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
 	  --output_mode=compiled \
-	  --compiler_flags="--warning_level=VERBOSE" >$@
+	  --compiler_flags="--warning_level=VERBOSE" \
+	  --output_file=$@ 2>&1 | grep -v ButtonSet
 
 public/xxsoccersub.min.js : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-$(CLOSURE_VERSION).jar \
