@@ -54,32 +54,31 @@
 </head>
 
 <body>
+  <span id="soccersub-version">VERSION</span>
   <div>
-    <button type="button" class=inline-button id=clock_toggle>Start Clock</button>
-    <span id="game_version">VERSION</span>
-    <span id='game_clock' style='float:right;'><b>Game Clock:</b></span>
-    <!-- <span id='remaining_in_half'><b>Remaining in Half:</b></span> -->
-  </div>
-  <div id="time-adjust">
-    <div>
-      <button type="button" class="inline-button" id="sub-1-minute">-1m</button>
-      <button type="button" class="inline-button" id="sub-10-sec">-1s</button>
-      <button type="button" class="inline-button" id="sub-5-sec">-5s</button>
-      <button type="button" class="inline-button" id="sub-1-sec">-1s</button>
-      <button type="button" class="inline-button" id="add-1-sec">+1s</button>
-      <button type="button" class="inline-button" id="add-5-sec">+5s</button>
-      <button type="button" class="inline-button" id="add-10-sec">+10s</button>
-      <button type="button" class="inline-button" id="add-1-minute">+1m</button>
-    </div>
-    <span>Cumulative adjusted time: <span id="time-adjust-cumulative">0<span>
-  </div>    
-  <div class="tab">
-    <button class="tablinks active" id="show-game")">Game</button>
-    <button class="tablinks" id="show-roster")>Roster</button>
-    <button class="tablinks" id="show-positions")>Postions</button>
-    <button class="tablinks" id="show-log")>Log</button>
+    <span class="tab">
+      <button class="tablinks active" id="show-game")">Game</button>
+      <button class="tablinks" id="show-roster")>Roster</button>
+      <button class="tablinks" id="show-positions")>Postions</button>
+      <button class="tablinks" id="show-log")>Log</button>
+    </span>
+    <span id="game-clock">Start Clock</span>
+    <div style="clear: both"></div>
   </div>
   <div id="game-panel" class="tabcontent">
+    <div id="time-adjust">
+      <div>
+        <button type="button" class="inline-button" id="sub-1-minute">-1m</button>
+        <button type="button" class="inline-button" id="sub-10-sec">-1s</button>
+        <button type="button" class="inline-button" id="sub-5-sec">-5s</button>
+        <button type="button" class="inline-button" id="sub-1-sec">-1s</button>
+        <button type="button" class="inline-button" id="add-1-sec">+1s</button>
+        <button type="button" class="inline-button" id="add-5-sec">+5s</button>
+        <button type="button" class="inline-button" id="add-10-sec">+10s</button>
+        <button type="button" class="inline-button" id="add-1-minute">+1m</button>
+      </div>
+      <span>Cumulative adjusted time: <span id="time-adjust-cumulative">0<span>
+    </div>    
     <div class="top-button-bar">
       <button type="button" class="inline-button" id="make-subs">Make Subs</button>
       <button type="button" class="inline-button" id="cancel-subs">Cancel Subs</button>
@@ -130,6 +129,10 @@
   </div>
 
   <script src="deploy_timestamp.js"></script>
+  <script>
+      document.getElementById('soccersub-version').textContent =
+          'Deployed on ' + deployTimestamp;
+  </script>
   <script src="deps.js"></script>
   <!--<script src="soccersub.min.js"></script>-->
   <script>

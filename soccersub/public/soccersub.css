@@ -18,13 +18,16 @@ table {
 .inline-button {
     font-size: medium;
     background-color: white;
+    min-height: 40px;
 }
 .vertical-button {
     font-size: medium;
     margin-bottom: 10px;
     display: block;
     background-color: white;
+    min-height: 40px;
 }
+
 .futsal-floor {
     background-image: url(futsal_floor.png)
 }
@@ -55,7 +58,8 @@ table {
 }
 
 #game_version {
-    font-size: 12px;
+    font-size: large;
+    font-weight: bold;
 }
 
 #drag-visual {
@@ -90,14 +94,14 @@ table {
 }
 
 /* Style the tab */
-div.tab {
+span.tab {
     overflow: hidden;
-    border: 1px solid #ccc;
+    /*border: 1px solid #ccc;*/
     background-color: #f1f1f1;
 }
 
 /* Style the buttons inside the tab */
-div.tab button {
+span.tab button {
     font-size: medium;
     background-color: inherit;
     float: left;
@@ -109,22 +113,37 @@ div.tab button {
 }
 
 /* Change background color of buttons on hover */
-div.tab button:hover {
+span.tab button:hover {
     background-color: #ddd;
 }
 
 /* Create an active/current tablink class */
-div.tab button.active {
+span.tab button.active {
     background-color: #ccc;
 }
 
 /* Style the tab content */
 .tabcontent {
-    /*display: none;*/
     padding: 6px 12px;
     border: 1px solid #ccc;
     border-top: none;
 }
 
 .top-button-bar {
+    margin-bottom: 5px;
+}
+
+#time-adjust button {
+    padding: 3;
+}
+
+#game-clock {
+    padding: 5px;
+    border-width: 2px;
+    border-style: solid;
+    border-color: black;
+    float: right;
+    text-align: center;
+    border-radius: 5px;
+    line-height: normal;
 }

@@ -10,6 +10,12 @@
         "key" : "Cache-Control",
         "value" : "max-age=30"
       } ]
+    }, {
+      "source" : "**/*.@(css)",
+      "headers" : [ {
+        "key" : "Cache-Control",
+        "value" : "max-age=30"
+      } ]
     } ]
   }
 }

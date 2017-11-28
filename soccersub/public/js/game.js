@@ -26,10 +26,8 @@ class Game {
     this.showTimesAtPosition = false;
 
     // Set up HTML element connections & handlers.
-    this.gameClockElement = goog.dom.getRequiredElement('game_clock');
-    /** @type {!Element} */
-    this.toggleClockButton = util.setupButton('clock_toggle',
-                                              () => this.toggleClock());
+    this.gameClockElement = goog.dom.getRequiredElement('game-clock');
+    util.handleTouch(this.gameClockElement, () => this.toggleClock());
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
@@ -66,7 +64,9 @@ class Game {
     /** @type {!Element} */
     this.gameDiv = goog.dom.getRequiredElement('game-panel');
     /** @type {boolean} */
-    this.started = false;
+    this.clockStarted = false;
+    /** @type {boolean} */
+    this.assignmentsMade = false;
     /** @type {!Element} */
     this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
     this.makeSubsButton.style.backgroundColor = 'lightgray';
@@ -141,7 +141,8 @@ class Game {
       this.constructPlayersAndPositions();
       this.sortAndRenderPlayers(false);
       this.timeRunning = false;
-      this.started = false;
+      this.clockStarted = false;
+      this.assignmentsMade = false;
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
       this.update();
@@ -280,15 +281,22 @@ class Game {
 
     const position = this.findPositionAtEvent(e);
     if (position && (this.dragPlayer.currentPosition != position)) {
-      this.addPendingAssignment(this.dragPlayer, position);
-      this.makeSubsButton.style.backgroundColor = 'white';
-      this.cancelSubsButton.style.backgroundColor = 'white';
+      if (this.clockStarted) {
+        this.addPendingAssignment(this.dragPlayer, position);
+        this.makeSubsButton.style.backgroundColor = 'white';
+        this.cancelSubsButton.style.backgroundColor = 'white';
+      } else {
+        this.assignPlayerToPosition(this.dragPlayer, position);
+        this.completeAssignments();
+      }
     }
     this.cleanupDrag();
   }
 
   cleanupDrag() {
     this.dragPlayer = null;
+    this.dragSaveBackgroundColor = '';
+    this.dragOverPosition = null;
     this.dragVisual.style.display = 'none';
     if (this.dragElement) {
       goog.style.setOpacity(this.dragElement, 1.0);
@@ -385,20 +393,14 @@ class Game {
             player.setPosition(position, false);
             position.setPlayer(player);
           }
-          //this.writeStatus(player.status());
         }
       }
 
-      /*
-        for (var i = 0; i < this.positions.length; ++i) {
-        var position = this.position[i];
-        position.restore();
-        }
-      */
       this.elapsedTimeMs = map.elapsedTimeMs;
       this.cumulativeAdjustedTimeSec = map.cumulativeAdjustedTimeSec || 0;
       this.timeRunning = map.timeRunning;
-      this.started = map.started;
+      this.clockStarted = !!map.clockStarted;
+      this.assignmentsMade = !!map.assignmentsMade;
       this.timeOfLastUpdateMs = map.timeOfLastUpdateMs;
       this.sortAndRenderPlayers(true);
       for (const player of this.activePlayers) {
@@ -436,7 +438,8 @@ class Game {
     map.elapsedTimeMs = this.elapsedTimeMs;
     map.cumulativeAdjustedTimeSec = this.cumulativeAdjustedTimeSec;
     map.timeRunning = this.timeRunning;
-    map.started = this.started;
+    map.clockStarted = this.clockStarted;
+    map.assignmentsMade = this.assignmentsMade;
     map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
     this.lineup.save(map);
     const playerSection = Player.dbSection(this.lineup);
@@ -490,7 +493,7 @@ class Game {
   }
 
   toggleClock() {
-    this.started = true;
+    this.clockStarted = true;
     this.timeRunning = !this.timeRunning;
     this.timeOfLastUpdateMs = util.currentTimeMs();
     this.update();
@@ -501,14 +504,12 @@ class Game {
     let adjustDisplay = 'none';
     if (this.timeRunning) {
       this.gameClockElement.style.backgroundColor = 'lightgreen';
-      this.toggleClockButton.textContent = 'Stop Clock';
     } else {
       this.gameClockElement.style.backgroundColor = 'pink';
       this.timeAdjust.style.display = 'block';
       if (this.elapsedTimeMs == 0) {
-        this.toggleClockButton.textContent = 'Start Clock';
+        this.gameClockElement.innerHTML = 'Start<br>Clock';
       } else {
-        this.toggleClockButton.textContent = 'Resume Clock';
         adjustDisplay = 'block';
         background = 'red';
       }
@@ -581,7 +582,7 @@ class Game {
         }
       }
     }
-  };
+  }
 
   /**
    * @param {!Player} player
@@ -589,6 +590,9 @@ class Game {
    */
   addPendingAssignment(player, position) {
     if (player.available && position.nextPlayer != player) {
+      if (position.nextPlayer) {
+        position.nextPlayer.nextPosition = null;
+      }
       position.setNextPlayer(player);
       player.setNextPosition(position);
       this.writeStatus(player.status());
@@ -610,22 +614,32 @@ class Game {
         subs.push([position, player]);
       }
     }
-
     // Now walk through the collected substitution list and execute them.
     for (const [position, player] of subs) {
-      player.setPosition(position, true);
-      this.writeStatus(player.status());
-      position.setPlayer(player);
-      this.writeLog_(player.name + ' --> ' + 
-                     (position ? position.name : 'null'));
+      this.assignPlayerToPosition(player, position);
     }
+    this.completeAssignments();
+  }
+
+  /**
+   * @param {!Player} player
+   * @param {!Position} position
+   */
+  assignPlayerToPosition(player, position) {
+    player.setPosition(position, true);
+    this.writeStatus(player.status());
+    position.setPlayer(player);
+    this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
+  }
+  
+  completeAssignments() {
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
     this.sortAndRenderPlayers(false);
-    this.started = true;
+    this.assignmentsMade = true;
     this.update();
   }
-  
+
   cancelSubs() {
     for (const position of this.positions) {
       if (position.nextPlayer) {
@@ -667,10 +681,11 @@ class Game {
       }
     }
     this.redrawClock();
-    this.gameClockElement.innerHTML = '<b>Game Clock: </b>' +
-      util.formatTime(this.elapsedTimeMs);
+    this.gameClockElement.innerHTML = this.clockStarted ? 
+      util.formatTime(this.elapsedTimeMs) : 'Start<br>Clock';
     this.save();
-    this.resetTag.style.backgroundColor = this.started ? 'white': 'lightgray';
+    const started = this.clockStarted || this.assignmentsMade;
+    this.resetTag.style.backgroundColor = started ? 'white': 'lightgray';
   }
 
   adjustTime(deltaSec) {
