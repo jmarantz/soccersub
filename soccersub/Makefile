@@ -30,9 +30,6 @@ jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
 
 
-build :
-	$(BUILD)
-
 # Describes where the public files are located relative to the closure
 # library.
 export PREFIX = ../../../../public
@@ -47,12 +44,15 @@ public/loader.js :
 		awk '{print "goog.loadModuleFromUrl(\"" $$1 "\");"}' \
 		> public/loader.js
 
+deps : public/deps.js
 compile : public/soccersub.min.js
+.PHONY : deps compile
+
 public/soccersub.min.js : $(JSFILES) Makefile
 	$(BUILD) \
 	  --compiler_jar=$(COMPILER_JAR) \
 	  --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
-	  --output_mode=list \
+	  --output_mode=compiled \
 	  --compiler_flags="--warning_level=VERBOSE" >$@
 
 public/xxsoccersub.min.js : $(JSFILES) Makefile
