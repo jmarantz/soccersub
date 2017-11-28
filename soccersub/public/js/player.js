@@ -5,10 +5,6 @@ const util = goog.require('soccersub.util');
 let Game = goog.forwardDeclare('soccersub.Game');
 let Position = goog.forwardDeclare('soccersub.Position');
 
-//const googString = goog.require('goog.string');
-//goog.module('Player');
-//const Game = goog.require('Game');
-
 const DB_PREFIX = 'player:';
 
 class Player {

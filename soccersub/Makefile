@@ -37,7 +37,7 @@ build :
 # library.
 export PREFIX = ../../../../public
 
-public/deps.js : Makefile ./gendeps.sh
+public/deps.js : Makefile ./gendeps.sh $(JSFILES)
 	$(BUILD) | ./gendeps.sh >$@
 
 public/loader.js :
