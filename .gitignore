@@ -6,4 +6,5 @@
 .idea
 **/*.min.js
 deploy.timestamp
-
+**/closure-library
+**/opt.html
