@@ -38,7 +38,7 @@ public/deps.js : Makefile ./gendeps.sh $(JSFILES)
 	$(BUILD) | ./gendeps.sh >$@
 
 deps : public/deps.js
-compile : public/soccersub.min.js public/opt.html public/debug.html
+compile : public/soccersub.min.js public/opt.html
 .PHONY : deps compile
 
 public/opt.html : public/soccersub.html Makefile
@@ -69,7 +69,7 @@ public/xxsoccersub.min.js : $(JSFILES) Makefile
 SRCS = public/soccersub.min.js public/soccersub.css public/soccersub.html \
 	public/DownLeft32.png
 
-public/deploy_timestamp.js : $(SRCS) $(JSFILES) Makefile firebase.json
+public/deploy_timestamp.js : compile firebase.json $(SRCS) $(JSFILES) Makefile 
 	./write_deploy_timestamp.sh >$@
 	/usr/local/bin/firebase deploy --only hosting
 
