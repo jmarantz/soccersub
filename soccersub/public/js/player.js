@@ -129,8 +129,8 @@ class Player {
       this.reset();
       return null;
     }
-    this.timeInGameMs = playerMap.timeInGameMs;
-    this.timeInShiftMs = playerMap.timeInShiftMs;
+    this.timeInGameMs = playerMap['timeInGameMs'];
+    this.timeInShiftMs = playerMap['timeInShiftMs'];
     this.available = this.lineup.playerNames.has(this.name);
     // timeAtPositionMs ...
     this.timeAtPositionMs = {};
@@ -139,7 +139,7 @@ class Player {
         this.timeAtPositionMs[positionName] = playerMap[positionName] || 0;
       }
     }
-    return playerMap.currentPosition;
+    return playerMap['currentPosition']
   }
 
   /** @param {!Lineup} lineup */
@@ -174,9 +174,9 @@ class Player {
   save(gameMap) {
     const playerMap = {};
     gameMap[DB_PREFIX + this.name] = playerMap;
-    playerMap.timeInGameMs = this.timeInGameMs;
-    playerMap.timeInShiftMs = this.timeInShiftMs;
-    playerMap.currentPosition = this.currentPosition
+    playerMap['timeInGameMs'] = this.timeInGameMs;
+    playerMap['timeInShiftMs'] = this.timeInShiftMs;
+    playerMap['currentPosition'] = this.currentPosition
       ? this.currentPosition.name : null;
 
     for (const row of this.lineup.getActivePositionNames()) {       

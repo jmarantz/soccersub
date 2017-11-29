@@ -3,7 +3,7 @@
   const modules = [];
   const addDep = (file, module) => {
     modules.push(module);
-    goog.addDependency('../../../../public/js/' + file, [module], [], opts);
+    goog.addDependency('../../../js/' + file, [module], [], opts);
   };
 
   addDep('util.js', 'soccersub.util');

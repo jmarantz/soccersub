@@ -98,12 +98,12 @@ class Lineup {
    * @return {boolean}
    */
   restore(map) {
-    this.playerNames = new Set(map.playerNames);
+    this.playerNames = new Set(map['playerNames']);
     this.unavailablePlayerNames = new Set(
-      map.unavailablePlayerNames || []);
+      map['unavailablePlayerNames'] || []);
     this.activePositionNames_.clear();
-    this.numberOfPlayers_ = map.numberOfPlayers || 5;
-    for (const row of map.positionNames) {
+    this.numberOfPlayers_ = map['numberOfPlayers'] || 5;
+    for (const row of map['positionNames']) {
       for (const positionName of row) {
         this.activePositionNames_.add(positionName);
       }
@@ -132,10 +132,10 @@ class Lineup {
    * @param {!Object} map
    */
   save(map) {
-    map.playerNames = [...this.playerNames];
-    map.unavailablePlayerNames = [...this.unavailablePlayerNames];
-    map.positionNames = this.getActivePositionNames();
-    map.numberOfPlayers = this.numberOfPlayers_;
+    map['playerNames'] = [...this.playerNames];
+    map['unavailablePlayerNames'] = [...this.unavailablePlayerNames];
+    map['positionNames'] = this.getActivePositionNames();
+    map['numberOfPlayers'] = this.numberOfPlayers_;
   }
 
   /**

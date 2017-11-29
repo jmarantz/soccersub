@@ -32,21 +32,19 @@ jsopts : $(JSFILES) Makefile
 
 # Describes where the public files are located relative to the closure
 # library.
-export PREFIX = ../../../../public
+export PREFIX = ../../..
 
 public/deps.js : Makefile ./gendeps.sh $(JSFILES)
 	$(BUILD) | ./gendeps.sh >$@
 
-public/loader.js :
-	$(BUILD) | \
-		grep -v closure-library/ | \
-		sed -e s@public/@@g | \
-		awk '{print "goog.loadModuleFromUrl(\"" $$1 "\");"}' \
-		> public/loader.js
-
 deps : public/deps.js
-compile : public/soccersub.min.js
+compile : public/soccersub.min.js public/opt.html public/debug.html
 .PHONY : deps compile
+
+public/opt.html : public/soccersub.html Makefile
+	sed -e 's@<script src="closure-library/closure/goog/base.js"></script>@@' \
+	    -e 's@deps.js@soccersub.min.js@' \
+		< $< > $@
 
 public/soccersub.min.js : $(JSFILES) Makefile
 	$(BUILD) \

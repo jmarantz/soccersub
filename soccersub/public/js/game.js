@@ -364,7 +364,7 @@ class Game {
     }
 
     try {
-      var storedGame = window.localStorage.game;
+      var storedGame = window.localStorage['game'];
       if (!storedGame) {
         this.writeLog_('restore failed: no "game" entry in localStorage');
         return false;
@@ -396,12 +396,12 @@ class Game {
         }
       }
 
-      this.elapsedTimeMs = map.elapsedTimeMs;
-      this.cumulativeAdjustedTimeSec = map.cumulativeAdjustedTimeSec || 0;
-      this.timeRunning = map.timeRunning;
-      this.clockStarted = !!map.clockStarted;
-      this.assignmentsMade = !!map.assignmentsMade;
-      this.timeOfLastUpdateMs = map.timeOfLastUpdateMs;
+      this.elapsedTimeMs = map['elapsedTimeMs'];
+      this.cumulativeAdjustedTimeSec = map['cumulativeAdjustedTimeSec'] || 0;
+      this.timeRunning = map['timeRunning'];
+      this.clockStarted = !!map['clockStarted'];
+      this.assignmentsMade = !!map['assignmentsMade'];
+      this.timeOfLastUpdateMs = map['timeOfLastUpdateMs'];
       this.sortAndRenderPlayers(true);
       for (const player of this.activePlayers) {
         player.updateColor();
@@ -435,18 +435,18 @@ class Game {
 
   save() {
     var map = {};
-    map.elapsedTimeMs = this.elapsedTimeMs;
-    map.cumulativeAdjustedTimeSec = this.cumulativeAdjustedTimeSec;
-    map.timeRunning = this.timeRunning;
-    map.clockStarted = this.clockStarted;
-    map.assignmentsMade = this.assignmentsMade;
-    map.timeOfLastUpdateMs = this.timeOfLastUpdateMs;
+    map['elapsedTimeMs'] = this.elapsedTimeMs;
+    map['cumulativeAdjustedTimeSec'] = this.cumulativeAdjustedTimeSec;
+    map['timeRunning'] = this.timeRunning;
+    map['clockStarted'] = this.clockStarted;
+    map['assignmentsMade'] = this.assignmentsMade;
+    map['timeOfLastUpdateMs'] = this.timeOfLastUpdateMs;
     this.lineup.save(map);
     const playerSection = Player.dbSection(this.lineup);
     for (const player of this.playerMap.values()) {
       player.save(map);
     }
-    window.localStorage.game = JSON.stringify(map);
+    window.localStorage['game'] = JSON.stringify(map);
   };
 
   /** @private */
