@@ -228,7 +228,7 @@ class Game {
   }
 
   dragStart(e) {
-    console.log('drag start: ' + e.clientX + ',' + e.clientY);
+    //console.log('drag start: ' + e.clientX + ',' + e.clientY);
     this.cleanupDrag();
     this.dragStartPosition = this.findPositionAtEvent(e);
     this.dragPlayer = this.dragStartPosition
@@ -243,7 +243,7 @@ class Game {
   }
 
   dragMove(event) {
-    console.log('drag move: ' + event.clientX + ',' + event.clientY);
+    //console.log('drag move: ' + event.clientX + ',' + event.clientY);
     if (!this.dragPlayer) {
       return;
     }
@@ -274,7 +274,7 @@ class Game {
   }
 
   dragEnd(e) {
-    console.log('drag end: ' + e.clientX + ',' + e.clientY);
+    //console.log('drag end: ' + e.clientX + ',' + e.clientY);
     if (!this.dragPlayer) {
       return;
     }
