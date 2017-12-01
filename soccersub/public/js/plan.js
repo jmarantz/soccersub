@@ -12,12 +12,6 @@ class Plan {
     this.minutesRemainingInHalf = 24;
     /** @type {number} */
     this.minutesRemainingInGame = 48;
-    /** @type {number} */
-    this.numFieldPositions = lineup.getNumPositions();
-    /** @type {number} */
-    this.fieldPlayers = this.lineup.getNumPlayers() - 1;
-    /** @type {number} */
-    this.shiftDurationMinutes = this.minutesRemainingInHalf / this.fieldPlayers;
   }
 
   render() {
@@ -44,31 +38,52 @@ class Plan {
       }
     }
 
-    // Pick a player ordering at random.
+    // Pick a player ordering at random.  Player N-2 will be goalie for the
+    // first half.  Player N-1 will be goalie for the second half.  We can
+    // intereractively swap players later, with drag & drop, to get the
+    // right goalies.
     const players = [...this.lineup.playerNames];
+    const numFieldPlayers = players.length - 1;
+    const numFieldPositions = this.lineup.getNumPositions() - 1;
+    const shiftMinutes = this.minutesRemainingInHalf / numFieldPlayers;
     util.shuffle(players);
-    const shiftSec = Math.ceil(this.shiftDurationMinutes * 60);
-    const numPositions = this.lineup.getActivePositionNames().length;
+    let keeper = players[numFieldPlayers];
+    const shiftSec = shiftMinutes * 60;
     
-    const assignments = players.slice(0, numPositions);
+    const assignments = players.slice(0, numFieldPositions);
     let positionToSwap = 0;
-    let nextPlayer = numPositions % players.length;
+    let nextPlayer = numFieldPositions % numFieldPlayers;
     
-    const halfSec = 60 * this.minutesRemainingInHalf;
-    for (let sec = 0; sec < halfSec; sec += shiftSec) {
+    // Subtract one to avoid a 1-second shift at end due to rounding error.
+    const halfSec = 60 * this.minutesRemainingInHalf - 1;
+    const gameSec = 60 * this.minutesRemainingInGame - 1;
+    let half = 0;
+
+    for (let sec = 0; sec < gameSec; sec += shiftSec) {
+      if ((half == 0) && (sec >= halfSec)) {
+        ++half;
+        sec = halfSec + 1;
+        const tr = document.createElement('tr');
+        tbody.appendChild(tr);
+        const td = document.createElement('td');
+        tr.appendChild(td);
+        td.className = 'plan-divider';
+        td.setAttribute('colspan', numFieldPlayers + 2);
+        players[numFieldPlayers] = players[numFieldPlayers - 1];
+        players[numFieldPlayers - 1] = keeper;
+        keeper = players[numFieldPlayers];
+      }
+
       const tr = document.createElement('tr');
       tbody.appendChild(tr);
-      let td = document.createElement('td');
-      tr.appendChild(td);
-      td.textContent = util.formatTime(sec * 1000);
-      for (let i = 0; i < numPositions; ++i) {
-        td = document.createElement('td');
-        tr.appendChild(td);
-        td.textContent = assignments[i];
+      addTextElement(tr, util.formatTime(sec * 1000), 'td');
+      for (let i = 0; i < numFieldPositions; ++i) {
+        addTextElement(tr, assignments[i], 'td');
       }
+      addTextElement(tr, keeper, 'td');
       assignments[positionToSwap] = players[nextPlayer];
-      positionToSwap = (positionToSwap + 1) % numPositions;
-      nextPlayer = (nextPlayer + 1) % players.length;
+      positionToSwap = (positionToSwap + 1) % numFieldPositions;
+      nextPlayer = (nextPlayer + 1) % numFieldPlayers;
     }
   }
 

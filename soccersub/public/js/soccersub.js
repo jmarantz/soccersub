@@ -38,7 +38,7 @@ class SoccerSub {
     this.logText = goog.dom.getRequiredElement('log-text');
     this.started = false;
 
-    util.setupButton('show-game', () => this.showGame_());
+    util.setupButton('show-game', () => this.showPanel_('game'));
     util.setupButton('show-roster', () => this.showPanel_('roster'));
     util.setupButton('show-positions', () => this.showPanel_('positions'));
     util.setupButton('show-log', () => this.showLog_());
@@ -72,6 +72,13 @@ class SoccerSub {
     * @param {string} name
     */
   showPanel_(name) {
+    if (this.lineup.modified) {
+      this.game.save();
+      this.game.constructPlayersAndPositions();
+      this.game.restore();
+      this.plan_.render();
+    }
+
     const panelId = name + '-panel';
     for (const panel of this.panels_) {
       panel.style.display = (panel.id == panelId) ? 'block' : 'none';
@@ -88,16 +95,6 @@ class SoccerSub {
   showLog_() {
     this.showPanel_('log');
     window.scrollTo(0, document.body.scrollHeight);
-  }
-
-  /** @private */
-  showGame_() {
-    if (this.lineup.modified) {
-      this.game.save();
-      this.game.constructPlayersAndPositions();
-      this.game.restore();
-    }
-    this.showPanel_('game');
   }
 
   log(text) {

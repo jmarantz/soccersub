@@ -147,3 +147,8 @@ span.tab button.active {
     border-radius: 5px;
     line-height: normal;
 }
+
+.plan-divider {
+    background-color: darkblue;
+    height: 3px;
+}
