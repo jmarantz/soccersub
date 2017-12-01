@@ -24,7 +24,7 @@ xcompile : public/soccersub.min.js
 JSFILES = public/js/soccersub.js public/js/game.js public/js/position.js \
 	public/js/player.js public/js/main.js public/js/lineup.js \
 	public/js/util.js public/js/storage.js public/js/array_section.js \
-	public/js/map_section.js
+	public/js/map_section.js public/js/plan.js
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help

@@ -3,6 +3,7 @@ const Dialog = goog.require('goog.ui.Dialog');
 const googDom = goog.require('goog.dom');
 const Game = goog.require('soccersub.Game');
 const Lineup = goog.require('soccersub.Lineup');
+const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
 const Storage = goog.require('soccersub.Storage');
@@ -32,6 +33,7 @@ class SoccerSub {
       goog.dom.getRequiredElement('log-panel'),
       goog.dom.getRequiredElement('positions-panel'),
       goog.dom.getRequiredElement('roster-panel'),
+      goog.dom.getRequiredElement('plan-panel'),
     ];
     this.logText = goog.dom.getRequiredElement('log-text');
     this.started = false;
@@ -40,16 +42,20 @@ class SoccerSub {
     util.setupButton('show-roster', () => this.showPanel_('roster'));
     util.setupButton('show-positions', () => this.showPanel_('positions'));
     util.setupButton('show-log', () => this.showLog_());
+    util.setupButton('show-plan', () => this.showPanel_('plan'));
     
     /** @type {!Lineup} */
     this.lineup = lineup;
     /** @type {string} */
     this.log_ = '';
+    /** @type {!Plan} */
+    this.plan_ = new Plan(lineup);
 
     this.game.constructPlayersAndPositions();
     if (!this.game.restore()) {
       this.game.reset();
     }
+    this.plan_.render();
   }
 
   nsave() {

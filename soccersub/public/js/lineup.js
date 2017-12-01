@@ -78,8 +78,8 @@ class Lineup {
     this.playerNames = new Set(defaultPlayerNames);
     /** @type {!Set<string>} */
     this.unavailablePlayerNames = new Set();
-    /** @private {number} */
-    this.numberOfPlayers_ = defaultNumberOfPlayers;
+    /** @type {number} */
+    this.numberOfPlayers = defaultNumberOfPlayers;
     util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
     util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
     util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
@@ -102,7 +102,7 @@ class Lineup {
     this.unavailablePlayerNames = new Set(
       map['unavailablePlayerNames'] || []);
     this.activePositionNames_.clear();
-    this.numberOfPlayers_ = map['numberOfPlayers'] || 5;
+    this.numberOfPlayers = map['numberOfPlayers'] || 5;
     for (const row of map['positionNames']) {
       for (const positionName of row) {
         this.activePositionNames_.add(positionName);
@@ -119,13 +119,13 @@ class Lineup {
   }
 
   annotateStatus() {
-    if (this.activePositionNames_.size == this.numberOfPlayers_) {
+    if (this.activePositionNames_.size == this.numberOfPlayers) {
       this.positionsStatusDiv.style.backgroundColor = 'lightgreen';
     } else {
       this.positionsStatusDiv.style.backgroundColor = 'pink';
     }
     this.positionsStatusDiv.textContent = '' + this.activePositionNames_.size +
-      ' of ' + this.numberOfPlayers_ + ' positions defined.';
+      ' of ' + this.numberOfPlayers + ' positions defined.';
   }
 
   /**
@@ -135,7 +135,25 @@ class Lineup {
     map['playerNames'] = [...this.playerNames];
     map['unavailablePlayerNames'] = [...this.unavailablePlayerNames];
     map['positionNames'] = this.getActivePositionNames();
-    map['numberOfPlayers'] = this.numberOfPlayers_;
+    map['numberOfPlayers'] = this.numberOfPlayers;
+  }
+
+  /**
+   * @return {number}
+   */
+  getNumPositions() {
+    let numPositions = 0;
+    for (const row of this.getActivePositionNames()) {
+      numPositions += row.length;
+    }      
+    return numPositions;
+  }
+
+  /**
+   * @return {number}
+   */
+  getNumPlayers() {
+    return this.playerNames.size;
   }
 
   /**
@@ -143,7 +161,7 @@ class Lineup {
    */
   getActivePositionNames() {
     const a = [];
-    const rows = configurations[this.numberOfPlayers_];
+    const rows = configurations[this.numberOfPlayers];
     if (rows) {
       for (var r = rows.length - 1; r >= 0; --r) {
         const row = rows[r];
@@ -165,7 +183,7 @@ class Lineup {
    */
   renderPositions_() {
     this.positionsDiv.innerHTML = '';
-    const rows = configurations[this.numberOfPlayers_];
+    const rows = configurations[this.numberOfPlayers];
     const legalPositionsForConfig = new Set();
     if (rows) {
       for (var r = rows.length - 1; r >= 0; --r) {
@@ -203,7 +221,7 @@ class Lineup {
    * @private
    */
   setNumberOfPlayers_(numberOfPlayers) {
-    this.numberOfPlayers_ = numberOfPlayers;
+    this.numberOfPlayers = numberOfPlayers;
     this.renderPositions_();
     this.annotateStatus();
   }

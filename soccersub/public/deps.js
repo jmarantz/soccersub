@@ -8,6 +8,7 @@
 
   addDep('util.js', 'soccersub.util');
   addDep('lineup.js', 'soccersub.Lineup');
+  addDep('plan.js', 'soccersub.Plan');
   addDep('player.js', 'soccersub.Player');
   addDep('position.js', 'soccersub.Position');
   addDep('map_section.js', 'soccersub.MapSection');
