@@ -16,12 +16,15 @@ class Game {
    * @param {!Lineup} lineup
    * @param {function(string)} writeStatus
    * @param {function(string)} writeLog
+   * @param {function()} save
    */
-  constructor(lineup, writeStatus, writeLog) {
+  constructor(lineup, writeStatus, writeLog, save) {
     /** @type {function(string)} */
     this.writeStatus = writeStatus;
     /** @private {function(string)} */
     this.writeLog_ = writeLog;
+    /** @private {function()} */
+    this.save_ = save;
     /** @type {boolean} */
     this.showTimesAtPosition = false;
 
@@ -355,65 +358,49 @@ class Game {
   }
 
   /**
+   * @param {!Object} map
    * @return {boolean}
    */
-  restore() {
-    if (!util.storageAvailable('localStorage')) {
-      this.writeLog_('restore failed: local storage not available');
+  restore(map) {
+    this.rendered = false;
+    if (!this.lineup.restore(map)) {
+      this.writeLog_('restore failed: lineup restore failure');
       return false;
     }
-
-    try {
-      var storedGame = window.localStorage['game'];
-      if (!storedGame) {
-        this.writeLog_('restore failed: no "game" entry in localStorage');
-        return false;
-      }
-      var map = /** @type {!Object} */ (JSON.parse(storedGame));
-
-      this.rendered = false;
-      if (!this.lineup.restore(map)) {
-        this.writeLog_('restore failed: lineup restore failure');
-        return false;
-      }
-/*
+    /*
       const playerSection = Player.dbSection(this.lineup);
       for (const player of this.playerMap.values()) {
-        player.restore(map);
+      player.restore(map);
       }
-*/
-      this.constructPlayersAndPositions();
-      for (const player of this.playerMap.values()) {
-        const positionName = player.restore(map);
-        if (positionName && player.available) {
-          const position = this.findPosition(positionName);
-          // position can be null here if the list of positions is adjusted
-          // mid-game.
-          if (position) {
-            player.setPosition(position, false);
-            position.setPlayer(player);
-          }
+    */
+    this.constructPlayersAndPositions();
+    for (const player of this.playerMap.values()) {
+      const positionName = player.restore(map);
+      if (positionName && player.available) {
+        const position = this.findPosition(positionName);
+        // position can be null here if the list of positions is adjusted
+        // mid-game.
+        if (position) {
+          player.setPosition(position, false);
+          position.setPlayer(player);
         }
       }
-
-      this.elapsedTimeMs = map['elapsedTimeMs'];
-      this.cumulativeAdjustedTimeSec = map['cumulativeAdjustedTimeSec'] || 0;
-      this.timeRunning = map['timeRunning'];
-      this.clockStarted = !!map['clockStarted'];
-      this.assignmentsMade = !!map['assignmentsMade'];
-      this.timeOfLastUpdateMs = map['timeOfLastUpdateMs'];
-      this.sortAndRenderPlayers(true);
-      for (const player of this.activePlayers) {
-        player.updateColor();
-      }
-      this.showAdjustedTime();
-      this.update();
-      this.writeLog_('restore');
-      return true;
-    } catch (err) {
-      this.writeLog_('restore failed: exception caught: ' + err);
-      return false;
     }
+
+    this.elapsedTimeMs = map['elapsedTimeMs'];
+    this.cumulativeAdjustedTimeSec = map['cumulativeAdjustedTimeSec'] || 0;
+    this.timeRunning = map['timeRunning'];
+    this.clockStarted = !!map['clockStarted'];
+    this.assignmentsMade = !!map['assignmentsMade'];
+    this.timeOfLastUpdateMs = map['timeOfLastUpdateMs'];
+    this.sortAndRenderPlayers(true);
+    for (const player of this.activePlayers) {
+      player.updateColor();
+    }
+    this.showAdjustedTime();
+    this.update();
+    this.writeLog_('restore');
+    return true;
   }
 
   /**
@@ -433,8 +420,8 @@ class Game {
     //this.storage.saveToLocalStorage();
   }
 
-  save() {
-    var map = {};
+  /** @param {!Object} map */
+  save(map) {
     map['elapsedTimeMs'] = this.elapsedTimeMs;
     map['cumulativeAdjustedTimeSec'] = this.cumulativeAdjustedTimeSec;
     map['timeRunning'] = this.timeRunning;
@@ -446,8 +433,7 @@ class Game {
     for (const player of this.playerMap.values()) {
       player.save(map);
     }
-    window.localStorage['game'] = JSON.stringify(map);
-  };
+  }
 
   /** @private */
   computePercentageInGameNotKeeper_() {
@@ -683,7 +669,7 @@ class Game {
     this.redrawClock();
     this.gameClockElement.innerHTML = this.clockStarted ? 
       util.formatTime(this.elapsedTimeMs) : 'Start<br>Clock';
-    this.save();
+    //this.save_();****
     const started = this.clockStarted || this.assignmentsMade;
     this.resetTag.style.backgroundColor = started ? 'white': 'lightgray';
   }

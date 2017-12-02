@@ -23,8 +23,9 @@ class SoccerSub {
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
+    const saver = () => this.save();
     this.game = new Game(lineup, (text) => this.writeStatus(text),
-                         (text) => this.log(text));
+                         (text) => this.log(text), saver);
     setTimeout(SoccerSub.clearVersionDisplay, 2000);
     
     /** @private {!Array<!Element>} */
@@ -49,13 +50,14 @@ class SoccerSub {
     /** @type {string} */
     this.log_ = '';
     /** @type {!Plan} */
-    this.plan_ = new Plan(lineup);
+  this.plan_ = new Plan(lineup, saver);
 
     this.game.constructPlayersAndPositions();
-    if (!this.game.restore()) {
+    if (!this.restore()) {
       this.game.reset();
+      this.plan_.reset();
+      this.plan_.render();
     }
-    this.plan_.render();
   }
 
   nsave() {
@@ -73,10 +75,17 @@ class SoccerSub {
     */
   showPanel_(name) {
     if (this.lineup.modified) {
-      this.game.save();
+      // This little dance with save/construct/restore is needed to
+      // keep assignment continuity across change in roster or
+      // position. However we don't have to persist this -- we can
+      // just use a temp map.  Then we save everything fully including
+      // a revised plan below.
+      const map = {};
+      this.game.save(map);
       this.game.constructPlayersAndPositions();
-      this.game.restore();
+      this.game.restore(map);
       this.plan_.render();
+      this.save();
     }
 
     const panelId = name + '-panel';
@@ -110,6 +119,36 @@ class SoccerSub {
   writeStatus(text) {
     this.statusBar.textContent = text;
     //this.statusBarWriteMs = currentTimeMs();
+  }
+
+  save() {
+    var map = {};
+    this.game.save(map);
+    this.plan_.save(map);
+    window.localStorage['game'] = JSON.stringify(map);
+  }
+
+  /**
+   * @return {boolean}
+   */
+  restore() {
+    if (!util.storageAvailable('localStorage')) {
+      this.log('restore failed: local storage not available');
+      return false;
+    }
+
+    try {
+      var storedGame = window.localStorage['game'];
+      if (!storedGame) {
+        this.log('restore failed: no "game" entry in localStorage');
+        return false;
+      }
+      var map = /** @type {!Object} */ (JSON.parse(storedGame));
+      return this.game.restore(map) && this.plan_.restore(map);
+    } catch (err) {
+      this.log('restore failed: exception caught: ' + err);
+    }
+    return false;
   }
 }
 

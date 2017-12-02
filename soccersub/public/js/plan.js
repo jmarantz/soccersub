@@ -4,14 +4,86 @@ const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
 
 class Plan {
-  /** @param {!Lineup} lineup */
-  constructor(lineup) {
+  /**
+   * @param {!Lineup} lineup
+   * @param {function()} save
+   */
+  constructor(lineup, save) {
     /** @type {!Lineup} lineup */
     this.lineup = lineup;
     /** @type {number} */
     this.minutesRemainingInHalf = 24;
     /** @type {number} */
     this.minutesRemainingInGame = 48;
+    /** @private {function()} */
+    this.save_ = save;
+    /** @private {!Array<string>} */
+    this.players_ = [];
+    util.setupButton('reset-plan', () => this.reset());
+  }
+
+  // Resets the player-list from the lineup and randomizes.
+  reset() {
+    this.players_ = [...this.lineup.playerNames];
+    util.shuffle(this.players_);
+    this.render();
+    this.save_();
+  }
+
+  /** @param {!Object} map */
+  save(map) {
+    map['plan'] = this.players_;
+  }
+
+  /** 
+   * @param {!Object} map
+   * @return {boolean}
+*/
+  restore(map) {
+    this.players_ = map['plan'] || [];
+    this.render();
+    return true;
+  }
+
+  // Freshens player list while trying to avoid changing the position
+  // of existing players.
+  freshenPlayerList() {
+    console.log('old: ' + this.players_);
+
+    // Do a first pass over the existing players, making a note of new players
+    // and deleted players based on the set in lineup.
+    const newPlayerSet = new Set(this.lineup.playerNames);
+    const deletedPlayerSet = new Set();
+    for (const player of this.players_) {
+      if (newPlayerSet.has(player)) {
+        newPlayerSet.delete(player);
+      } else {
+        deletedPlayerSet.add(player);
+      }
+    }
+
+    // Now do another pass, building the freshened list, and 
+    // replacing this.players_ with it.
+    const newPlayerPool = [...newPlayerSet];
+    let poolIndex = 0;
+    const newPlayerList = [];
+    for (const player of this.players_) {
+      if (deletedPlayerSet.has(player)) {
+        if (poolIndex < newPlayerPool.length) {
+          newPlayerList.push(newPlayerPool[poolIndex++]);
+        }
+      } else {
+        newPlayerList.push(player);
+      }
+    }
+    for (; poolIndex < newPlayerPool.length; ++poolIndex) {
+      newPlayerList.push(newPlayerPool[poolIndex]);
+    }
+    this.players_ = newPlayerList;
+    if (this.players_.length != this.lineup.playerNames.size) {
+      debugger;
+    }
+    console.log('new: ' + this.players_);
   }
 
   render() {
@@ -19,6 +91,8 @@ class Plan {
     thead.innerHTML = '';
     const tbody = googDom.getRequiredElement('player-matrix-body');
     tbody.innerHTML = '';
+
+    this.freshenPlayerList();
 
     const addTextElement = (parent, text, type) => {
       const item = document.createElement(type);
@@ -42,15 +116,13 @@ class Plan {
     // first half.  Player N-1 will be goalie for the second half.  We can
     // intereractively swap players later, with drag & drop, to get the
     // right goalies.
-    const players = [...this.lineup.playerNames];
-    const numFieldPlayers = players.length - 1;
+    const numFieldPlayers = this.players_.length - 1;
     const numFieldPositions = this.lineup.getNumPositions() - 1;
     const shiftMinutes = this.minutesRemainingInHalf / numFieldPlayers;
-    util.shuffle(players);
-    let keeper = players[numFieldPlayers];
+    let keeper = this.players_[numFieldPlayers];
     const shiftSec = shiftMinutes * 60;
     
-    const assignments = players.slice(0, numFieldPositions);
+    const assignments = this.players_.slice(0, numFieldPositions);
     let positionToSwap = 0;
     let nextPlayer = numFieldPositions % numFieldPlayers;
     
@@ -58,6 +130,12 @@ class Plan {
     const halfSec = 60 * this.minutesRemainingInHalf - 1;
     const gameSec = 60 * this.minutesRemainingInGame - 1;
     let half = 0;
+
+    const swapKeepers = () => {
+      this.players_[numFieldPlayers] = this.players_[numFieldPlayers - 1];
+      this.players_[numFieldPlayers - 1] = keeper;
+      keeper = this.players_[numFieldPlayers];
+    };
 
     for (let sec = 0; sec < gameSec; sec += shiftSec) {
       if ((half == 0) && (sec >= halfSec)) {
@@ -69,9 +147,7 @@ class Plan {
         tr.appendChild(td);
         td.className = 'plan-divider';
         td.setAttribute('colspan', numFieldPlayers + 2);
-        players[numFieldPlayers] = players[numFieldPlayers - 1];
-        players[numFieldPlayers - 1] = keeper;
-        keeper = players[numFieldPlayers];
+        swapKeepers();
       }
 
       const tr = document.createElement('tr');
@@ -81,10 +157,11 @@ class Plan {
         addTextElement(tr, assignments[i], 'td');
       }
       addTextElement(tr, keeper, 'td');
-      assignments[positionToSwap] = players[nextPlayer];
+      assignments[positionToSwap] = this.players_[nextPlayer];
       positionToSwap = (positionToSwap + 1) % numFieldPositions;
       nextPlayer = (nextPlayer + 1) % numFieldPlayers;
     }
+    swapKeepers();
   }
 
   compute() {
