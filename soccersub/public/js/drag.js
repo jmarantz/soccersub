@@ -38,7 +38,7 @@ class Drag {
     /** @private {?Element} */
     this.dragOverElement_ = null;
     /** @private {string} */
-    this.saveBackgroundColor_
+    this.saveBackgroundColor_ = '';
   }
 
   /** @return {boolean} */
@@ -107,10 +107,18 @@ class Drag {
   }
 
   cleanupDrag() {
-    this.source_ = null;
-    this.saveBackgroundColor_ = '';
+    if (this.dragOverElement_ && this.saveBackgroundColor_) {
+      this.dragOverElement_.style.backgroundColor = this.saveBackgroundColor_;
+    }
+    this.dragMoveEvent = null;
+    this.dragOverElement_ = null;
     this.dragOverTarget_ = null;
     this.dragVisual.style.display = 'none';
+    this.saveBackgroundColor_ = '';
+    this.source_ = null;
+    this.startElement_ = null;
+    this.startTarget_ = null;
+      
     /*
     if (this.dragElement_) {
       goog.style.setOpacity(this.dragElement, 1.0);
