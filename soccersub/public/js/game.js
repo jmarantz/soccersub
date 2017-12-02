@@ -1,11 +1,12 @@
 goog.module('soccersub.Game');
 
 const Dialog = goog.require('goog.ui.Dialog');
-const googDom = goog.require('goog.dom');
+const Drag = goog.require('soccersub.Drag');
 const Lineup = goog.require('soccersub.Lineup');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
 const Storage = goog.require('soccersub.Storage');
+const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
 
 let deployTimestamp = window['deployTimestamp'] || 'dev';
@@ -34,23 +35,6 @@ class Game {
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
-
-    /** @type {?Element} */
-    this.dragElement = null;
-    /** @type {?Position} */
-    this.dragOverPosition = null;
-    /** @type {?Position} */
-    this.dragStartPosition = null;
-    /** @type {string} */
-    this.dragSaveBackgroundColor = '';
-    /** @type {?Player} */
-    this.dragPlayer = null;
-    /** @type {?Event} */
-    this.dragMoveEvent = null;
-    /** @type {!Element} */
-    this.dragVisual = goog.dom.getRequiredElement('drag-visual');
-    /** @type {!Element} */
-    this.dragText = goog.dom.getRequiredElement('drag-text');
 
     /** @type {!Element} */
     this.timeAdjust = goog.dom.getRequiredElement('time-adjust');
@@ -91,9 +75,11 @@ class Game {
     setupTimeAdjust('add-10-sec', 10);
     setupTimeAdjust('add-1-minute', 60);
 
-    goog.events.listen(this.gameDiv, 'touchstart', this.dragStart, false, this);
-    goog.events.listen(this.gameDiv, 'touchmove', this.dragMove, false, this);
-    goog.events.listen(this.gameDiv, 'touchend', this.dragEnd, false, this);
+    /** @private {!Drag<Player, Position>} */
+    this.drag_ = new Drag(this.gameDiv,
+                          (event) => this.findDragSource(event),
+                          (event) => this.findPositionAtEvent(event),
+                          (source, target) => this.drop_(source, target));
 
     /** @type {number} */
     this.elapsedTimeMs;
@@ -206,12 +192,12 @@ class Game {
 
   /**
    * @param {!Event} event
-   * @return {?Position}
+   * @return {?{target: !Position, element: !Element}}
    */
   findPositionAtEvent(event) {
     for (const position of this.positions) {
       if (util.inside(event.clientX, event.clientY, position.boundingBox())) {
-        return position;
+        return {target: position, element: position.element};
       }
     }
     return null;
@@ -230,80 +216,37 @@ class Game {
     return null;
   }
 
-  dragStart(e) {
-    //console.log('drag start: ' + e.clientX + ',' + e.clientY);
-    this.cleanupDrag();
-    this.dragStartPosition = this.findPositionAtEvent(e);
-    this.dragPlayer = this.dragStartPosition
-      ? this.dragStartPosition.currentPlayer : this.findPlayerAtEvent(e);
-    if (this.dragPlayer) {
-      this.dragVisual.style.display = 'block';
-      this.dragText.textContent = this.dragPlayer.name;
-      this.dragMove(e);
-
-      this.selectPlayer(this.dragPlayer);
+  /**
+   * @param {!Event} event
+   * @return {?{source:!Player, label: string}}
+   */
+  findDragSource(event) {
+    const targetElement = this.findPositionAtEvent(event);
+    const player = targetElement ? targetElement.target.currentPlayer :
+          this.findPlayerAtEvent(event);
+    if (!player) {
+      return null;
     }
+    this.selectPlayer(player);
+    return {source: player, label: player.name};
   }
 
-  dragMove(event) {
-    //console.log('drag move: ' + event.clientX + ',' + event.clientY);
-    if (!this.dragPlayer) {
-      return;
-    }
 
-    if (!this.dragMoveEvent) {
-      window.requestAnimationFrame(() => {
-        const height = this.dragVisual.clientHeight;
-        this.dragVisual.style.left = this.dragMoveEvent.clientX + 'px';
-        this.dragVisual.style.top = (this.dragMoveEvent.clientY - height) + 'px';
-        const position = this.findPositionAtEvent(this.dragMoveEvent);
-        if (this.dragOverPosition != position) {
-          if (this.dragOverPosition && 
-              this.dragOverPosition != this.dragStartPosition) {
-            this.dragOverPosition.element.style.backgroundColor =
-              this.dragSaveBackgroundColor;
-          }
-          this.dragOverPosition = position;
-          if (position && position != this.dragStartPosition) {
-            this.dragSaveBackgroundColor = position.element.style.backgroundColor;
-            position.element.style.backgroundColor = 'green';
-          }
-        }
-        this.dragMoveEvent = null;
-      });
-    }
-    event.preventDefault();
-    this.dragMoveEvent = event;
-  }
-
-  dragEnd(e) {
-    //console.log('drag end: ' + e.clientX + ',' + e.clientY);
-    if (!this.dragPlayer) {
-      return;
-    }
-
-    const position = this.findPositionAtEvent(e);
-    if (position && (this.dragPlayer.currentPosition != position)) {
+  /**
+   * @param {!Player} player
+   * @param {?Position} position
+   * @private
+   */
+  drop_(player, position) {
+    if (position && (player.currentPosition != position)) {
       if (this.clockStarted) {
-        this.addPendingAssignment(this.dragPlayer, position);
+        this.addPendingAssignment(player, position);
         this.makeSubsButton.style.backgroundColor = 'white';
         this.cancelSubsButton.style.backgroundColor = 'white';
       } else {
-        this.assignPlayerToPosition(this.dragPlayer, position);
+        this.assignPlayerToPosition(player, position);
         this.completeAssignments();
       }
-    }
-    this.cleanupDrag();
-  }
-
-  cleanupDrag() {
-    this.dragPlayer = null;
-    this.dragSaveBackgroundColor = '';
-    this.dragOverPosition = null;
-    this.dragVisual.style.display = 'none';
-    if (this.dragElement) {
-      goog.style.setOpacity(this.dragElement, 1.0);
-      this.dragElement = null;
     }
   }
 
@@ -657,7 +600,7 @@ class Game {
         for (const position of this.positions) {
           position.addTimeToShift(timeSinceLastUpdate);
         }
-        if (this.dragPlayer == null) {
+        if (!this.drag_.active()) {
           this.sortAndRenderPlayers(false);
         }
       }
@@ -669,7 +612,7 @@ class Game {
     this.redrawClock();
     this.gameClockElement.innerHTML = this.clockStarted ? 
       util.formatTime(this.elapsedTimeMs) : 'Start<br>Clock';
-    //this.save_();****
+    this.save_();
     const started = this.clockStarted || this.assignmentsMade;
     this.resetTag.style.backgroundColor = started ? 'white': 'lightgray';
   }
