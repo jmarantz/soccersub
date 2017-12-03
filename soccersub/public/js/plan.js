@@ -1,4 +1,5 @@
 goog.module('soccersub.Plan');
+const Drag = goog.require('soccersub.Drag');
 const Lineup = goog.require('soccersub.Lineup');
 const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
@@ -20,6 +21,17 @@ class Plan {
     /** @private {!Array<string>} */
     this.players_ = [];
     util.setupButton('reset-plan', () => this.reset());
+
+    /** @private {!Drag<number, number>} */
+    this.drag_ = new Drag(googDom.getRequiredElement("plan-panel"), 
+                          (event) => this.findDragSource(event),
+                          (event) => this.findDragTarget(event),
+                          (source, target) => this.drop_(source, target));
+
+    /** !private {!Element} */
+    this.thead_ = googDom.getRequiredElement('player-matrix-head');
+    /** !private {!Element} */
+    this.tbody_ = googDom.getRequiredElement('player-matrix-body');
   }
 
   // Resets the player-list from the lineup and randomizes.
@@ -87,10 +99,8 @@ class Plan {
   }
 
   render() {
-    const thead = googDom.getRequiredElement('player-matrix-head');
-    thead.innerHTML = '';
-    const tbody = googDom.getRequiredElement('player-matrix-body');
-    tbody.innerHTML = '';
+    this.thead_.innerHTML = '';
+    this.tbody_.innerHTML = '';
 
     this.freshenPlayerList();
 
@@ -100,14 +110,14 @@ class Plan {
       parent.appendChild(item);
     };
 
-    addTextElement(thead, 'Time', 'th');
+    addTextElement(this.thead_, 'Time', 'th');
     //addTextElement(thead, 'Time-', 'th');
 
     // Put the abbreviated position names into the table head, in one row.
     for (const row of this.lineup.getActivePositionNames()) {
       for (const positionName of row) {
         if (positionName) {
-          addTextElement(thead, Lineup.abbrev(positionName), 'th');
+          addTextElement(this.thead_, Lineup.abbrev(positionName), 'th');
         }
       }
     }
@@ -142,7 +152,7 @@ class Plan {
         ++half;
         sec = halfSec + 1;
         const tr = document.createElement('tr');
-        tbody.appendChild(tr);
+        this.tbody_.appendChild(tr);
         const td = document.createElement('td');
         tr.appendChild(td);
         td.className = 'plan-divider';
@@ -151,7 +161,7 @@ class Plan {
       }
 
       const tr = document.createElement('tr');
-      tbody.appendChild(tr);
+      this.tbody_.appendChild(tr);
       addTextElement(tr, util.formatTime(sec * 1000), 'td');
       for (let i = 0; i < numFieldPositions; ++i) {
         addTextElement(tr, assignments[i], 'td');
@@ -190,6 +200,114 @@ class Plan {
     
   }
 
+  /**
+   * @param {!Event} event
+   * @return {?{source:number, label: string, element: !Element}}
+   */
+  findPlayer(event) {
+    const rowColElement = this.findRowColumn(event.clientX, event.clientY);
+    if (!rowColElement) {
+      return null;
+    }
+
+    const {row, column, element} = rowColElement;
+
+    if (row == 0) {
+      // We are dragging a position, which means we swapping columns as a whole.
+      // as opposed to swapping player roles.  For now ignore.
+      return null;
+    }
+
+    const player = element.textContent;
+    const playerIndex = this.players_.indexOf(player);
+    if (playerIndex == -1) {
+      console.log('Could not find player: ' + player);
+      return null;              // Cannot find player.  Shouldn't happen.
+    }
+
+    return {source: playerIndex, label: player, element: element};
+  }
+
+  /**
+   * @param {!Event} event
+   * @return {?{source:number, label: string}}
+   */
+  findDragSource(event) {
+    const playerInfo = this.findPlayer(event);
+    if (!playerInfo) {
+      return null;
+    }
+    return {source: playerInfo.source, label: playerInfo.label};
+  }
+
+  /**
+   * @param {!Event} event
+   * @return {?{target: number, element: !Element}}
+   */
+  findDragTarget(event) {
+    const playerInfo = this.findPlayer(event);
+    if (!playerInfo) {
+      return null;
+    }
+    return {target: playerInfo.source, element: playerInfo.element};
+  }
+
+  /**
+   * @param {number} player1
+   * @param {number} player2
+   * @private
+   */
+  drop_(player1, player2) {
+    [this.players_[player1], this.players_[player2]] = 
+      [this.players_[player2], this.players_[player1]];
+    this.render();
+  }
+
+  /**
+   * Finds the row/column of the planning table.  If the head is selected,
+   * row==0 is returned, so row==1 is the first row.
+   *
+   * @param {number} x
+   * @param {number} y
+   * @return {?{row: number, column: number, element: !Element}}
+   */
+  findRowColumn(x, y) {
+    // First find the row matching the y-position.
+    let rowInfo = this.findRow(y);
+    if (!rowInfo) {
+      return null;
+    }
+    let colIndex = 0;
+    for (const td of rowInfo.rowElement.getElementsByTagName(rowInfo.dataTag)) {
+      const bounds = td.getBoundingClientRect();
+      if ((x >= bounds.left) && (x <= bounds.right)) {
+        return {row: rowInfo.rowIndex, column: colIndex, element: td};
+      }
+    }
+    return null;
+  }
+
+  /**
+   * @param {number} y
+   * @return {?{rowIndex: number, rowElement: !Element, dataTag: string}}
+   */
+  findRow(y) {
+    const rowElement = this.thead_;
+    let bounds = this.thead_.getBoundingClientRect();
+    if ((y >= bounds.top) && (y <= bounds.bottom)) {
+      return {rowIndex: 0, rowElement: this.thead_, dataTag: 'th'};
+    } else {
+      let rowIndex = 1;
+      for (const row of this.tbody_.getElementsByTagName('tr')) {
+        bounds = row.getBoundingClientRect();
+        if ((y >= bounds.top) && (y <= bounds.bottom)) {
+          return {rowIndex: rowIndex, rowElement: row, dataTag: 'td'};
+        }
+        ++rowIndex;
+      }
+    }
+    return null;
+  }
 }
 
 exports = Plan;

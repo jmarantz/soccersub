@@ -23,8 +23,8 @@ class Drag {
     goog.events.listen(div, 'touchend', this.dragEnd, false, this);
     /** @private {?Source} */
     this.source_ = null;
-    /** @type {?Event} */
-    this.dragMoveEvent = null;
+    /** @private {?Event} */
+    this.dragMoveEvent_ = null;
     /** @type {!Element} */
     this.dragVisual = goog.dom.getRequiredElement('drag-visual');
     /** @type {!Element} */
@@ -68,32 +68,35 @@ class Drag {
       return;
     }
 
-    if (!this.dragMoveEvent) {
+    if (!this.dragMoveEvent_) {
       window.requestAnimationFrame(() => {
+        if (!this.dragMoveEvent_) {
+          return;
+        }
         const height = this.dragVisual.clientHeight;
-        this.dragVisual.style.left = this.dragMoveEvent.clientX + 'px';
-        this.dragVisual.style.top = (this.dragMoveEvent.clientY - height) + 'px';
-        const targetElement = this.findTarget_(this.dragMoveEvent);
+        this.dragVisual.style.left = this.dragMoveEvent_.clientX + 'px';
+        this.dragVisual.style.top = (this.dragMoveEvent_.clientY - height) + 'px';
+        const targetElement = this.findTarget_(this.dragMoveEvent_);
         const target = targetElement ? targetElement.target : null;
         if (this.dragOverTarget_ != target) {
-          if (this.dragOverTarget_ && 
+          if ((this.dragOverTarget_ != null) && 
               this.dragOverTarget_ != this.startTarget_) {
             this.dragOverElement_.style.backgroundColor = 
               this.saveBackgroundColor_;
           }
           this.dragOverTarget_ = target;
           this.dragOverElement_ = targetElement ? targetElement.element : null;
-          if (target && target != this.startTarget_) {
+          if ((target != null) && target != this.startTarget_) {
             this.saveBackgroundColor_ = 
-              this.dragOverElement_.style.backgroundColor;
+              this.dragOverElement_.style.backgroundColor || 'white';
             this.dragOverElement_.style.backgroundColor = 'green';
           }
         }
-        this.dragMoveEvent = null;
+        this.dragMoveEvent_ = null;
       });
     }
     event.preventDefault();
-    this.dragMoveEvent = event;
+    this.dragMoveEvent_ = event;
   }
 
   dragEnd(e) {
@@ -110,7 +113,7 @@ class Drag {
     if (this.dragOverElement_ && this.saveBackgroundColor_) {
       this.dragOverElement_.style.backgroundColor = this.saveBackgroundColor_;
     }
-    this.dragMoveEvent = null;
+    this.dragMoveEvent_ = null;
     this.dragOverElement_ = null;
     this.dragOverTarget_ = null;
     this.dragVisual.style.display = 'none';
