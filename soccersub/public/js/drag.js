@@ -57,6 +57,7 @@ class Drag {
         this.startTarget_ = targetElement.target;
         this.startElement_ = targetElement.element;
       }
+      this.dragMove(e);
       this.dragVisual.style.display = 'block';
       this.dragText.textContent = srcLabel.label;
     }
@@ -64,7 +65,7 @@ class Drag {
 
   dragMove(event) {
     //console.log('drag move: ' + event.clientX + ',' + event.clientY);
-    if (!this.source_) {
+    if (this.source_ == null) {
       return;
     }
 
@@ -101,7 +102,7 @@ class Drag {
 
   dragEnd(e) {
     //console.log('drag end: ' + e.clientX + ',' + e.clientY);
-    if (this.source_) {
+    if (this.source_ != null) {
       const targetElement = this.findTarget_(e);
       const target = targetElement ? targetElement.target : null;
       this.drop_(this.source_, target);

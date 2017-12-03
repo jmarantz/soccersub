@@ -147,6 +147,8 @@ class Plan {
       keeper = this.players_[numFieldPlayers];
     };
 
+    let firstRowOfHalf = true;
+    let previousSwap = null;
     for (let sec = 0; sec < gameSec; sec += shiftSec) {
       if ((half == 0) && (sec >= halfSec)) {
         ++half;
@@ -158,18 +160,25 @@ class Plan {
         td.className = 'plan-divider';
         td.setAttribute('colspan', numFieldPlayers + 2);
         swapKeepers();
+        firstRowOfHalf = true;
       }
 
       const tr = document.createElement('tr');
       this.tbody_.appendChild(tr);
       addTextElement(tr, util.formatTime(sec * 1000), 'td');
       for (let i = 0; i < numFieldPositions; ++i) {
-        addTextElement(tr, assignments[i], 'td');
+        if (firstRowOfHalf || (i == previousSwap)) {
+          addTextElement(tr, assignments[i], 'td');
+        } else {
+          addTextElement(tr, '', 'td');
+        }
       }
       addTextElement(tr, keeper, 'td');
+      previousSwap = positionToSwap;
       assignments[positionToSwap] = this.players_[nextPlayer];
       positionToSwap = (positionToSwap + 1) % numFieldPositions;
       nextPlayer = (nextPlayer + 1) % numFieldPlayers;
+      firstRowOfHalf = false;
     }
     swapKeepers();
   }
