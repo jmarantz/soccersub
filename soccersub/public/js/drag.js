@@ -7,13 +7,13 @@ class Drag {
   /**
    * @param {!Element} div
    * @param {!function(!Event):?{source:!Source, label: string}} findSource
-   * @param {!function(!Event):?{target:!Target, element: !Element}} findTarget
+   * @param {!function(!Event, !Source):?{target:!Target, elements: !Array<!Element>}} findTarget
    * @param {!function(!Source, ?Target)} drop
    */
   constructor(div, findSource, findTarget, drop) {
     /** @private {!function(!Event):?{source:!Source, label: string}} */
     this.findSource_ = findSource;
-    /** @private {!function(!Event):?{target:!Target, element:!Element}} */
+    /** @private {!function(!Event, !Source):?{target:!Target, elements: !Array<!Element>}} */
     this.findTarget_ = findTarget;
     /** @private {!function(!Source, ?Target)} */
     this.drop_ = drop;
@@ -31,14 +31,12 @@ class Drag {
     this.dragText = goog.dom.getRequiredElement('drag-text');
     /** @private {?Target} */
     this.startTarget_ = null;
-    /** @private {?Element} */
-    this.startElement_ = null;
     /** @private {?Target} */
     this.dragOverTarget_ = null;
-    /** @private {?Element} */
-    this.dragOverElement_ = null;
-    /** @private {string} */
-    this.saveBackgroundColor_ = '';
+    /** @private {!Array<!Element>} */
+    this.dragOverElements_ = [];
+    /** @private {!Array<string>} */
+    this.saveBackgroundColors_ = [];
   }
 
   /** @return {boolean} */
@@ -52,10 +50,9 @@ class Drag {
     const srcLabel = this.findSource_(e);
     if (srcLabel) {
       this.source_ = srcLabel.source;
-      const targetElement = this.findTarget_(e);
-      if (targetElement) {
-        this.startTarget_ = targetElement.target;
-        this.startElement_ = targetElement.element;
+      const targetElements = this.findTarget_(e, srcLabel);
+      if (targetElements) {
+        this.startTarget_ = targetElements.target;
       }
       this.dragMove(e);
       this.dragVisual.style.display = 'block';
@@ -77,20 +74,23 @@ class Drag {
         const height = this.dragVisual.clientHeight;
         this.dragVisual.style.left = this.dragMoveEvent_.clientX + 'px';
         this.dragVisual.style.top = (this.dragMoveEvent_.clientY - height) + 'px';
-        const targetElement = this.findTarget_(this.dragMoveEvent_);
-        const target = targetElement ? targetElement.target : null;
+        const targetElements = this.findTarget_(
+          this.dragMoveEvent_, this.source_);
+        const target = targetElements ? targetElements.target : null;
         if (this.dragOverTarget_ != target) {
           if ((this.dragOverTarget_ != null) && 
               this.dragOverTarget_ != this.startTarget_) {
-            this.dragOverElement_.style.backgroundColor = 
-              this.saveBackgroundColor_;
+            this.restoreBackgroundColors_();
           }
           this.dragOverTarget_ = target;
-          this.dragOverElement_ = targetElement ? targetElement.element : null;
+          this.dragOverElements_ = targetElements ? 
+            targetElements.elements : [];
           if ((target != null) && target != this.startTarget_) {
-            this.saveBackgroundColor_ = 
-              this.dragOverElement_.style.backgroundColor || 'white';
-            this.dragOverElement_.style.backgroundColor = 'green';
+            this.saveBackgroundColors_ = this.dragOverElements_.map(
+              (element) => element.style.backgroundColor || 'white');
+            for (const element of this.dragOverElements_) {
+              element.style.backgroundColor = 'green';
+            }
           }
         }
         this.dragMoveEvent_ = null;
@@ -103,24 +103,29 @@ class Drag {
   dragEnd(e) {
     //console.log('drag end: ' + e.clientX + ',' + e.clientY);
     if (this.source_ != null) {
-      const targetElement = this.findTarget_(e);
+      const targetElement = this.findTarget_(e, this.source_);
       const target = targetElement ? targetElement.target : null;
       this.drop_(this.source_, target);
       this.cleanupDrag();
     }
   }
 
-  cleanupDrag() {
-    if (this.dragOverElement_ && this.saveBackgroundColor_) {
-      this.dragOverElement_.style.backgroundColor = this.saveBackgroundColor_;
+  /** @private */
+  restoreBackgroundColors_() {
+    for (let i = 0; i < this.saveBackgroundColors_.length; ++i) {
+      this.dragOverElements_[i].style.backgroundColor = 
+        this.saveBackgroundColors_[i];
     }
+    this.saveBackgroundColors_ = [];
+  }
+
+  cleanupDrag() {
+    this.restoreBackgroundColors_();
     this.dragMoveEvent_ = null;
-    this.dragOverElement_ = null;
+    this.dragOverElements_ = [];
     this.dragOverTarget_ = null;
     this.dragVisual.style.display = 'none';
-    this.saveBackgroundColor_ = '';
     this.source_ = null;
-    this.startElement_ = null;
     this.startTarget_ = null;
       
     /*

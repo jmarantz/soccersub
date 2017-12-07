@@ -78,7 +78,7 @@ class Game {
     /** @private {!Drag<Player, Position>} */
     this.drag_ = new Drag(this.gameDiv,
                           (event) => this.findDragSource(event),
-                          (event) => this.findPositionAtEvent(event),
+                          (event, source) => this.findPositionAtEvent(event),
                           (source, target) => this.drop_(source, target));
 
     /** @type {number} */
@@ -134,7 +134,7 @@ class Game {
       this.assignmentsMade = false;
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
-      this.update();
+      this.update_(false);
       this.writeLog_('reset');
     } catch (err) {
       this.writeStatus('ERROR: ' + err + '\n' + err.stack);
@@ -192,12 +192,12 @@ class Game {
 
   /**
    * @param {!Event} event
-   * @return {?{target: !Position, element: !Element}}
+   * @return {?{target: !Position, elements: !Array<!Element>}}
    */
   findPositionAtEvent(event) {
     for (const position of this.positions) {
       if (util.inside(event.clientX, event.clientY, position.boundingBox())) {
-        return {target: position, element: position.element};
+        return {target: position, elements: [position.element]};
       }
     }
     return null;
@@ -297,7 +297,7 @@ class Game {
 
     this.sortAndRenderPlayers(true);
     this.redrawPositions();
-    this.update();
+    this.update_(false);
   }
 
   /**
@@ -341,7 +341,7 @@ class Game {
       player.updateColor();
     }
     this.showAdjustedTime();
-    this.update();
+    this.update_(false);
     this.writeLog_('restore');
     return true;
   }
@@ -425,7 +425,7 @@ class Game {
     this.clockStarted = true;
     this.timeRunning = !this.timeRunning;
     this.timeOfLastUpdateMs = util.currentTimeMs();
-    this.update();
+    this.update_(true);
   };
 
   redrawClock() {
@@ -566,7 +566,7 @@ class Game {
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
     this.sortAndRenderPlayers(false);
     this.assignmentsMade = true;
-    this.update();
+    this.update_(true);
   }
 
   cancelSubs() {
@@ -586,10 +586,14 @@ class Game {
 
   updateTimer() {
     this.timeoutPending = false;
-    this.update();
+    this.update_(true);
   };
 
-  update() {
+  /**
+   * @private
+   * @param {boolean} save
+   */
+  update_(save) {
     //this.writeStatus('updating: ' + ++this.updateCount);
     if (this.timeRunning) {
       var timeMs = util.currentTimeMs();
@@ -612,7 +616,9 @@ class Game {
     this.redrawClock();
     this.gameClockElement.innerHTML = this.clockStarted ? 
       util.formatTime(this.elapsedTimeMs) : 'Start<br>Clock';
-    this.save_();
+    if (save) {
+      this.save_();
+    }
     const started = this.clockStarted || this.assignmentsMade;
     this.resetTag.style.backgroundColor = started ? 'white': 'lightgray';
   }
@@ -626,7 +632,7 @@ class Game {
     this.elapsedTimeMs += deltaMs;
     this.cumulativeAdjustedTimeSec += deltaSec;
     this.showAdjustedTime();
-    this.update();
+    this.update_(true);
   }
 
   showAdjustedTime() {

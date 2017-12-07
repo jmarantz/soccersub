@@ -4,114 +4,222 @@ const Lineup = goog.require('soccersub.Lineup');
 const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
 
+/**
+ * When we initiate a drag, we capture the player we are swapping, and
+ * the game-half (0 or 1) in which we want the swap to occur.  The swaps
+ * only have a context within the current half, because each half can be
+ * tweaked independently.
+ *
+ * @typedef {!{
+ *   playerIndex: number,
+ *   half: number,
+ * }}
+ */
+let DragSource;
+
+/**
+ * Captures an assignment that we want to make. Players are specified as
+ * indexes into this.players_.  The critical design question here is what
+ * happens to automated and manually specified assignments when:
+ *   - a player is swapped or renamed.  In this case, all assignments are
+ *     retained except for the even swap.
+ *   - players are removed or added.  In this case, the default assignments
+ *     are recomputed from scratch based on the player ordering.  We try to
+ *     keep the ordering as stable as possible.
+ *
+ * @typedef {!{
+ *   playerIndex: number,
+ *   positionIndex: number,
+ *   element: !Element,
+ *   timeSec: number,
+ * }}
+ */
+let Assignment;
+
 class Plan {
   /**
    * @param {!Lineup} lineup
    * @param {function()} save
+   * @param {function(string)} log
    */
-  constructor(lineup, save) {
+  constructor(lineup, save, log) {
+    util.setupButton('reset-plan', () => this.resetAndRender());
+
     /** @type {!Lineup} lineup */
     this.lineup = lineup;
     /** @type {number} */
-    this.minutesRemainingInHalf = 24;
-    /** @type {number} */
-    this.minutesRemainingInGame = 48;
+    this.minutesPerHalf = 24;
     /** @private {function()} */
     this.save_ = save;
+    /** @private {function(string)} */
+    this.log_ = log;
     /** @private {!Array<string>} */
-    this.players_ = [];
-    util.setupButton('reset-plan', () => this.reset());
-
-    /** @private {!Drag<number, number>} */
+    this.players_ = [];    // alphabetical list of players.
+    /** @private {!Array<!Array<number>>} */
+    this.playerOrder_ = [[], []];
+    /** @private {!Drag<DragSource, number>} */
     this.drag_ = new Drag(googDom.getRequiredElement("plan-panel"), 
                           (event) => this.findDragSource(event),
-                          (event) => this.findDragTarget(event),
+                          (event, source) => this.findDragTarget(event, source),
                           (source, target) => this.drop_(source, target));
-
-    /** !private {!Element} */
+    /** @private {!Element} */
     this.thead_ = googDom.getRequiredElement('player-matrix-head');
-    /** !private {!Element} */
+    /** @private {!Element} */
     this.tbody_ = googDom.getRequiredElement('player-matrix-body');
+    /** @private {!Array<!Assignment>} */
+    this.assignments_ = [];
   }
 
   // Resets the player-list from the lineup and randomizes.
-  reset() {
-    this.players_ = [...this.lineup.playerNames];
-    util.shuffle(this.players_);
+  resetAndRender() {
+    this.reset_();
     this.render();
+  }
+
+  /**
+   * Resets the player-list from the lineup and randomizes.
+   * @private
+   */
+  reset_() {
+    this.players_ = [...this.lineup.playerNames];
+    this.playerOrder_ = [[], []];
+    for (let half = 0; half < 2; ++half) {
+      this.playerOrder_[half] = [...Array(this.players_.length).keys()];
+      util.shuffle(this.playerOrder_[half]);
+    }
     this.save_();
   }
 
   /** @param {!Object} map */
   save(map) {
-    map['plan'] = this.players_;
+    if (!this.checkOrder()) {
+      console.log('saving invalid playerOrder');
+    }
+    map['player_order'] = this.playerOrder_;
   }
 
   /** 
    * @param {!Object} map
    * @return {boolean}
-*/
+   */
   restore(map) {
-    this.players_ = map['plan'] || [];
+    this.log_('plan playerOrder...');
+    this.playerOrder_ = map['player_order'];
+    this.log_('plan players...');
+    this.players_ = [...this.lineup.playerNames];
+    this.log_('plan checking order...');
+
+    // Cleanup any missing or malformed data.
+    if (!this.checkOrder()) {
+      this.log_('Malformed order');
+      this.reset_();
+      return true;
+    }
+    this.log_('plan rendering...');
     this.render();
     return true;
   }
 
-  // Freshens player list while trying to avoid changing the position
-  // of existing players.
-  freshenPlayerList() {
-    console.log('old: ' + this.players_);
-
-    // Do a first pass over the existing players, making a note of new players
-    // and deleted players based on the set in lineup.
-    const newPlayerSet = new Set(this.lineup.playerNames);
-    const deletedPlayerSet = new Set();
-    for (const player of this.players_) {
-      if (newPlayerSet.has(player)) {
-        newPlayerSet.delete(player);
-      } else {
-        deletedPlayerSet.add(player);
-      }
+  /**
+   * Checks to see if playerOrder_ is well formed, returning true if it is.
+   * @return {boolean}
+   */
+  checkOrder() {
+    if (!this.playerOrder_ || !Array.isArray(this.playerOrder_) || 
+        this.playerOrder_.length != 2) {
+      return false;
     }
-
-    // Now do another pass, building the freshened list, and 
-    // replacing this.players_ with it.
-    const newPlayerPool = [...newPlayerSet];
-    let poolIndex = 0;
-    const newPlayerList = [];
-    for (const player of this.players_) {
-      if (deletedPlayerSet.has(player)) {
-        if (poolIndex < newPlayerPool.length) {
-          newPlayerList.push(newPlayerPool[poolIndex++]);
+    /** @param {!Array<number>} order */
+    const checkArray = (order) => {
+      if (!Array.isArray(order) || (order.length != this.players_.length)) {
+        return false;
+      }
+      // Make sure all the numbers are covered from [0:n-1].
+      const covered = new Set();
+      for (const index of order) {
+        if ((typeof index != 'number') || (index < 0) || 
+            (index >= this.players_.length) || (Math.floor(index) != index) ||
+            covered.has(index)) {
+          return false;
         }
-      } else {
-        newPlayerList.push(player);
+        covered.add(index);
+      }
+      return true;
+    };
+    return checkArray(this.playerOrder_[0]) && checkArray(this.playerOrder_[1]);
+  }
+
+  // Freshens player list while trying to avoid changing the position
+  // of existing players, updating this.playerOrder_ to minimize
+  // assignment changes if the number of players remains the same.
+  freshenPlayers() {
+    // If the number of players changes, we just have to punt and recompute
+    // everything.
+    if (this.players_.length != this.lineup.getNumPlayers()) {
+      console.log('player lengths different: resetting');
+      this.reset_();
+      return;
+    }
+
+    // If the player-list has not changed, we are done.
+    if (this.players_.every((p, i) => this.lineup.playerNames.has(p))) {
+      console.log('lineup didn\'t change: already fresh');
+      return;
+    }
+
+    // Otherwise try to keep their order the same, even if the new players are
+    // not in the same alpahbetical order as they were before.  The new players
+    // swap in where the players they replaced were.
+    for (let half = 0; half < 2; ++half) {
+      /** @type {!Map<string, number>} */
+      const indexMap = new Map();
+      const freeIndexes = [];
+      const order = this.playerOrder_[half];
+
+      // Capture the existing index mappings, as well as the free indexes.
+      for (let i = 0; i < this.players_.length; ++i) {
+        const index = order[i];
+        if (this.lineup.playerNames.has(this.players_[i])) {
+          indexMap.set(this.players_[i], index);
+        } else {
+          freeIndexes.push(i);
+        }
+      }
+
+      // Find the new elements, that are in the new lineup, but not in our map.
+      // and assign them a free index from the free-list we just collected.
+      let nextFree = 0;
+      for (const player of this.lineup.playerNames) {
+        if (!indexMap.has(player)) {
+          indexMap.set(player, freeIndexes[nextFree++]);
+        }
+      }
+
+      // Finally, copy over the player-list and set their order.
+      this.players_ = [...this.lineup.playerNames];
+      for (let i = 0; i < this.players_.length; ++i) {
+        order[i] = indexMap.get(this.players_[i]);
       }
     }
-    for (; poolIndex < newPlayerPool.length; ++poolIndex) {
-      newPlayerList.push(newPlayerPool[poolIndex]);
-    }
-    this.players_ = newPlayerList;
-    if (this.players_.length != this.lineup.playerNames.size) {
-      debugger;
-    }
-    console.log('new: ' + this.players_);
   }
 
   render() {
     this.thead_.innerHTML = '';
     this.tbody_.innerHTML = '';
+    this.freshenPlayers();
 
-    this.freshenPlayerList();
+    this.assignments_ = [];
 
     const addTextElement = (parent, text, type) => {
       const item = document.createElement(type);
-      item.textContent = text;
+      if (text) {
+        item.textContent = text;
+      }
       parent.appendChild(item);
+      return item;
     };
 
     addTextElement(this.thead_, 'Time', 'th');
-    //addTextElement(thead, 'Time-', 'th');
 
     // Put the abbreviated position names into the table head, in one row.
     for (const row of this.lineup.getActivePositionNames()) {
@@ -122,65 +230,58 @@ class Plan {
       }
     }
 
-    // Pick a player ordering at random.  Player N-2 will be goalie for the
-    // first half.  Player N-1 will be goalie for the second half.  We can
-    // intereractively swap players later, with drag & drop, to get the
-    // right goalies.
+    // Pick a player ordering based on this.playerOrder_, which is
+    // randomized during reset(), and tweaked by drag & drop.
+    // Initially, players_[playerOrder_[half][N-1] will be goalie for
+    // a half.  intereractively swap players later, with drag & drop,
+    // to get the right goalies.
     const numFieldPlayers = this.players_.length - 1;
     const numFieldPositions = this.lineup.getNumPositions() - 1;
-    const shiftMinutes = this.minutesRemainingInHalf / numFieldPlayers;
-    let keeper = this.players_[numFieldPlayers];
+    const shiftMinutes = this.minutesPerHalf / numFieldPlayers;
     const shiftSec = shiftMinutes * 60;
-    
-    const assignments = this.players_.slice(0, numFieldPositions);
-    let positionToSwap = 0;
-    let nextPlayer = numFieldPositions % numFieldPlayers;
-    
+
     // Subtract one to avoid a 1-second shift at end due to rounding error.
-    const halfSec = 60 * this.minutesRemainingInHalf - 1;
-    const gameSec = 60 * this.minutesRemainingInGame - 1;
-    let half = 0;
+    const halfSec = 60 * this.minutesPerHalf;
+    let sec = 0;
 
-    const swapKeepers = () => {
-      this.players_[numFieldPlayers] = this.players_[numFieldPlayers - 1];
-      this.players_[numFieldPlayers - 1] = keeper;
-      keeper = this.players_[numFieldPlayers];
-    };
+    let nextPosition = -1;
+    let nextPlayer = 0;
 
-    let firstRowOfHalf = true;
-    let previousSwap = null;
-    for (let sec = 0; sec < gameSec; sec += shiftSec) {
-      if ((half == 0) && (sec >= halfSec)) {
-        ++half;
-        sec = halfSec + 1;
-        const tr = document.createElement('tr');
-        this.tbody_.appendChild(tr);
-        const td = document.createElement('td');
-        tr.appendChild(td);
-        td.className = 'plan-divider';
-        td.setAttribute('colspan', numFieldPlayers + 2);
-        swapKeepers();
-        firstRowOfHalf = true;
-      }
+    for (let half = 0; half < 2; ++half) {
+      const order = this.playerOrder_[half];
+      let firstRowOfHalf = true;
+      const tr = addTextElement(this.tbody_, '', 'tr');
+      const td = addTextElement(tr, '', 'td');
+      td.className = 'plan-divider';
+      td.setAttribute('colspan', numFieldPlayers + 2);
 
-      const tr = document.createElement('tr');
-      this.tbody_.appendChild(tr);
-      addTextElement(tr, util.formatTime(sec * 1000), 'td');
-      for (let i = 0; i < numFieldPositions; ++i) {
-        if (firstRowOfHalf || (i == previousSwap)) {
-          addTextElement(tr, assignments[i], 'td');
-        } else {
-          addTextElement(tr, '', 'td');
+      for (let end = (1 + half) * halfSec - 1; sec < end; sec += shiftSec) {
+        const tr = addTextElement(this.tbody_, '', 'tr');
+        addTextElement(tr, util.formatTime(sec * 1000), 'td');
+        const assign = (playerIndex, positionIndex) => {
+          const playerName = this.players_[order[playerIndex]];
+          this.assignments_.push({
+            playerIndex: playerIndex,
+            positionIndex: positionIndex,
+            element: addTextElement(tr, playerName, 'td'),
+            timeSec: sec,
+          });
+        };
+        for (let i = 0; i < numFieldPositions; ++i) {
+          if (firstRowOfHalf || (i == nextPosition)) {
+            assign(nextPlayer, i);
+            nextPlayer = (nextPlayer + 1) % numFieldPlayers;
+          } else {
+            addTextElement(tr, '', 'td');
+          }
         }
+        if (firstRowOfHalf) {
+          assign(numFieldPlayers, numFieldPositions);  // Keeper
+          firstRowOfHalf = false;
+        }
+        nextPosition = (nextPosition + 1) % numFieldPositions;
       }
-      addTextElement(tr, keeper, 'td');
-      previousSwap = positionToSwap;
-      assignments[positionToSwap] = this.players_[nextPlayer];
-      positionToSwap = (positionToSwap + 1) % numFieldPositions;
-      nextPlayer = (nextPlayer + 1) % numFieldPlayers;
-      firstRowOfHalf = false;
     }
-    swapKeepers();
   }
 
   compute() {
@@ -210,112 +311,80 @@ class Plan {
   }
 
   /**
-   * @param {!Event} event
-   * @return {?{source:number, label: string, element: !Element}}
-   */
-  findPlayer(event) {
-    const rowColElement = this.findRowColumn(event.clientX, event.clientY);
-    if (!rowColElement) {
-      return null;
-    }
-
-    const {row, column, element} = rowColElement;
-
-    if (row == 0) {
-      // We are dragging a position, which means we swapping columns as a whole.
-      // as opposed to swapping player roles.  For now ignore.
-      return null;
-    }
-
-    const player = element.textContent;
-    const playerIndex = this.players_.indexOf(player);
-    if (playerIndex == -1) {
-      console.log('Could not find player: ' + player);
-      return null;              // Cannot find player.  Shouldn't happen.
-    }
-
-    return {source: playerIndex, label: player, element: element};
-  }
-
-  /**
-   * @param {!Event} event
-   * @return {?{source:number, label: string}}
-   */
-  findDragSource(event) {
-    const playerInfo = this.findPlayer(event);
-    if (!playerInfo) {
-      return null;
-    }
-    return {source: playerInfo.source, label: playerInfo.label};
-  }
-
-  /**
-   * @param {!Event} event
-   * @return {?{target: number, element: !Element}}
-   */
-  findDragTarget(event) {
-    const playerInfo = this.findPlayer(event);
-    if (!playerInfo) {
-      return null;
-    }
-    return {target: playerInfo.source, element: playerInfo.element};
-  }
-
-  /**
-   * @param {number} player1
-   * @param {number} player2
-   * @private
-   */
-  drop_(player1, player2) {
-    [this.players_[player1], this.players_[player2]] = 
-      [this.players_[player2], this.players_[player1]];
-    this.render();
-  }
-
-  /**
-   * Finds the row/column of the planning table.  If the head is selected,
-   * row==0 is returned, so row==1 is the first row.
-   *
    * @param {number} x
    * @param {number} y
-   * @return {?{row: number, column: number, element: !Element}}
+   * @return {?Assignment}
    */
-  findRowColumn(x, y) {
-    // First find the row matching the y-position.
-    let rowInfo = this.findRow(y);
-    if (!rowInfo) {
-      return null;
-    }
-    let colIndex = 0;
-    for (const td of rowInfo.rowElement.getElementsByTagName(rowInfo.dataTag)) {
-      const bounds = td.getBoundingClientRect();
-      if ((x >= bounds.left) && (x <= bounds.right)) {
-        return {row: rowInfo.rowIndex, column: colIndex, element: td};
+  findAssignment(x, y) {
+    for (const assignment of this.assignments_) {
+      const bounds = assignment.element.getBoundingClientRect();
+      if ((x >= bounds.left) && (x <= bounds.right) &&
+          (y >= bounds.top) && (y <= bounds.bottom)) {
+        return assignment;
       }
     }
     return null;
   }
 
   /**
-   * @param {number} y
-   * @return {?{rowIndex: number, rowElement: !Element, dataTag: string}}
+   * @param {!Assignment} assignment
+   * @return {number}
+   * @private
    */
-  findRow(y) {
-    const rowElement = this.thead_;
-    let bounds = this.thead_.getBoundingClientRect();
-    if ((y >= bounds.top) && (y <= bounds.bottom)) {
-      return {rowIndex: 0, rowElement: this.thead_, dataTag: 'th'};
-    } else {
-      let rowIndex = 1;
-      for (const row of this.tbody_.getElementsByTagName('tr')) {
-        bounds = row.getBoundingClientRect();
-        if ((y >= bounds.top) && (y <= bounds.bottom)) {
-          return {rowIndex: rowIndex, rowElement: row, dataTag: 'td'};
-        }
-        ++rowIndex;
+  assignHalf_(assignment) {
+    return (assignment.timeSec < this.minutesPerHalf * 60) ? 0 : 1;
+  }
+
+  /**
+   * @param {!Event} event
+   * @return {?{source: !DragSource, label: string}}
+   */
+  findDragSource(event) {
+    const assignment = this.findAssignment(event.clientX, event.clientY);
+    if (!assignment) {
+      return null;
+    }
+    const half = this.assignHalf_(assignment);
+    const source = {playerIndex: assignment.playerIndex, half: half};
+    const order = this.playerOrder_[half];
+    const playerName = this.players_[order[source.playerIndex]];
+    return {source: source, label: playerName};
+  }
+
+  /**
+   * @param {!Event} event
+   * @param {!DragSource} source
+   * @return {?{target: number, elements: !Array<!Element>}}
+   */
+  findDragTarget(event, source) {
+    const assignment = this.findAssignment(event.clientX, event.clientY);
+    if (!assignment || (this.assignHalf_(assignment) != source.half)) {
+      return null;
+    }
+
+    const target = {target: assignment.playerIndex, elements: []};
+    for (const a of this.assignments_) {
+      const aHalf = this.assignHalf_(a) ;
+      if ((a.playerIndex == target.target) && (aHalf == source.half)) {
+        target.elements.push(a.element);
       }
     }
-    return null;
+    return target;
+  }
+
+  /**
+   * @param {!DragSource} source
+   * @param {?number} target
+   * @private
+   */
+  drop_(source, target) {
+    if (target != null) {
+      const order = this.playerOrder_[source.half];
+      const src = source.playerIndex;
+      [order[src], order[target]] = [order[target], order[src]];
+      this.render();
+      this.save_();
+    }
   }
 }
 

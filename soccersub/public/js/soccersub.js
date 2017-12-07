@@ -24,8 +24,9 @@ class SoccerSub {
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
     const saver = () => this.save();
+    const logger = (text) => this.log(text);
     this.game = new Game(lineup, (text) => this.writeStatus(text),
-                         (text) => this.log(text), saver);
+                         logger, saver);
     setTimeout(SoccerSub.clearVersionDisplay, 2000);
     
     /** @private {!Array<!Element>} */
@@ -50,13 +51,12 @@ class SoccerSub {
     /** @type {string} */
     this.log_ = '';
     /** @type {!Plan} */
-  this.plan_ = new Plan(lineup, saver);
+    this.plan_ = new Plan(lineup, saver, logger);
 
     this.game.constructPlayersAndPositions();
     if (!this.restore()) {
       this.game.reset();
-      this.plan_.reset();
-      this.plan_.render();
+      this.plan_.resetAndRender();
     }
   }
 
@@ -144,9 +144,17 @@ class SoccerSub {
         return false;
       }
       var map = /** @type {!Object} */ (JSON.parse(storedGame));
-      return this.game.restore(map) && this.plan_.restore(map);
+      this.log('game restore....');
+      if (!this.game.restore(map)) {
+        return false;
+      }
+      this.log('plan restore....');
+      if (!this.plan_.restore(map)) {
+        return false;
+      }
+      this.log('done');
     } catch (err) {
-      this.log('restore failed: exception caught: ' + err);
+      this.log('restore failed: exception caught:\n' + err);
     }
     return false;
   }
