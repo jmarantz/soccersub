@@ -74,6 +74,7 @@ class Plan {
   resetAndRender() {
     this.reset_();
     this.render();
+    this.save_();
   }
 
   /**
@@ -167,6 +168,7 @@ class Plan {
       return;
     }
 
+    const players = [...this.lineup.playerNames];
     // Otherwise try to keep their order the same, even if the new players are
     // not in the same alpahbetical order as they were before.  The new players
     // swap in where the players they replaced were.
@@ -196,10 +198,11 @@ class Plan {
       }
 
       // Finally, copy over the player-list and set their order.
-      this.players_ = [...this.lineup.playerNames];
-      for (let i = 0; i < this.players_.length; ++i) {
-        order[i] = indexMap.get(this.players_[i]);
-      }
+      this.playerOrder_[half] = players.map((player) => indexMap.get(player));
+    }
+    this.players_ = players;
+    if (!this.checkOrder()) {
+      this.log_('order borked');
     }
   }
 

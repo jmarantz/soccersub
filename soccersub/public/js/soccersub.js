@@ -153,6 +153,7 @@ class SoccerSub {
         return false;
       }
       this.log('done');
+      return true;
     } catch (err) {
       this.log('restore failed: exception caught:\n' + err);
     }
