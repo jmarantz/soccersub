@@ -69,6 +69,9 @@ class Position {
     if (this.nextPlayer) {
       //text += ' > ' + this.nextPlayer.name;
       text += ' ' + rightArrow + ' ' + this.nextPlayer.name;
+      this.playerNode.classList.add('pending-assignment');
+    } else {
+      this.playerNode.classList.remove('pending-assignment');
     }
     this.playerNode.innerHTML = text;
   }

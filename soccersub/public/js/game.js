@@ -2,6 +2,7 @@ goog.module('soccersub.Game');
 
 const Dialog = goog.require('goog.ui.Dialog');
 const Drag = goog.require('soccersub.Drag');
+const Assignment = goog.require('soccersub.Assignment');
 const Lineup = goog.require('soccersub.Lineup');
 const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
@@ -58,6 +59,8 @@ class Game {
     this.clockStarted = false;
     /** @type {boolean} */
     this.assignmentsMade = false;
+    /** @type {number} */
+    this.queuedAssignmentTimeSec = -1;
     /** @type {!Element} */
     this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
     this.makeSubsButton.style.backgroundColor = 'lightgray';
@@ -126,6 +129,18 @@ class Game {
     dialog.setVisible(true);
   }
 
+  /**
+   * @param {!Assignment} assignment
+   * @return {!{player: ?Player, position: ?Position}}
+   */
+  getPlayerAndPosition(assignment) {
+    const player = this.playerMap.get(
+      this.plan_.assignmentPlayer(assignment));
+    const position = this.positionMap.get(
+      this.plan_.assignmentPosition(assignment));
+    return {player, position};
+  }
+
   reset() {
     try {
       this.elapsedTimeMs = 0;
@@ -139,15 +154,13 @@ class Game {
       this.timeRunning = false;
       this.clockStarted = false;
       this.assignmentsMade = false;
+      this.queuedAssignmentTimeSec = -1;
       this.cumulativeAdjustedTimeSec = 0;
       this.showAdjustedTime();
       this.update_(false);
       this.writeLog_('reset');
       for (const assignment of this.plan_.initialAssignments()) {
-        const player = this.playerMap.get(
-          this.plan_.assignmentPlayer(assignment));
-        const position = this.positionMap.get(
-          this.plan_.assignmentPosition(assignment));
+        const {player, position} = this.getPlayerAndPosition(assignment);
         if (player && position) {
           this.assignPlayerToPosition(player, position);
         }
@@ -260,8 +273,6 @@ class Game {
     if (position && (player.currentPosition != position)) {
       if (this.clockStarted) {
         this.addPendingAssignment(player, position);
-        this.makeSubsButton.style.backgroundColor = 'white';
-        this.cancelSubsButton.style.backgroundColor = 'white';
       } else {
         this.assignPlayerToPosition(player, position);
         this.completeAssignments();
@@ -353,7 +364,7 @@ class Game {
     this.cumulativeAdjustedTimeSec = map['cumulativeAdjustedTimeSec'] || 0;
     this.timeRunning = map['timeRunning'];
     this.clockStarted = !!map['clockStarted'];
-    this.assignmentsMade = !!map['assignmentsMade'];
+    this.queuedAssignmentTimeSec = -1;
     this.timeOfLastUpdateMs = map['timeOfLastUpdateMs'];
     this.sortAndRenderPlayers(true);
     for (const player of this.activePlayers) {
@@ -537,7 +548,8 @@ class Game {
    * @param {!Position} position
    */
   addPendingAssignment(player, position) {
-    if (player.available && position.nextPlayer != player) {
+    if (player.available && position.nextPlayer != player &&
+        (player.currentPosition != position)) {
       if (position.nextPlayer) {
         position.nextPlayer.nextPosition = null;
       }
@@ -545,6 +557,8 @@ class Game {
       player.setNextPosition(position);
       this.writeStatus(player.status());
       this.sortAndRenderPlayers(false);
+      this.makeSubsButton.style.backgroundColor = 'white';
+      this.cancelSubsButton.style.backgroundColor = 'white';
     }
   }
 
@@ -584,6 +598,7 @@ class Game {
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
     this.sortAndRenderPlayers(false);
+    this.queuedAssignmentTimeSec = -1;
     this.assignmentsMade = true;
     this.update_(true);
   }
@@ -635,10 +650,21 @@ class Game {
       const timeSec = this.elapsedTimeMs / 1000;
       const nextAssignment = this.plan_.nextAssignment(timeSec);
       if (nextAssignment) {
-        const deltaSec = nextAssignment.timeSec - timeSec;
-        this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
-                         this.plan_.assignmentPlayer(nextAssignment) + ' at ' + 
-                         this.plan_.assignmentPosition(nextAssignment));
+        const {player, position} = this.getPlayerAndPosition(nextAssignment);
+        if (player && position) {
+          const deltaSec = nextAssignment.timeSec - timeSec;
+          this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
+                           this.plan_.assignmentPlayer(nextAssignment) + ' at ' + 
+                           this.plan_.assignmentPosition(nextAssignment));
+          if ((deltaSec < 30) && 
+              (this.queuedAssignmentTimeSec < nextAssignment.timeSec)) {
+            navigator.vibrate([500]);
+            this.addPendingAssignment(player, position);
+            this.queuedAssignmentTimeSec = nextAssignment.timeSec;
+          } else if ((5 < deltaSec) && (deltaSec <= 7)) {
+            navigator.vibrate([500]);
+          }
+        }
       }
     }
     this.redrawClock();

@@ -154,3 +154,13 @@ span.tab button.active {
     background-color: darkblue;
     height: 3px;
 }
+
+@keyframes blink-animation {
+  to {
+    visibility: hidden;
+  }
+}
+
+.pending-assignment {
+    animation: blink-animation 1s steps(5, start) infinite;
+}

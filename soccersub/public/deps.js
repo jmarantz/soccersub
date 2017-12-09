@@ -9,9 +9,10 @@
   addDep('util.js', 'soccersub.util');
   addDep('lineup.js', 'soccersub.Lineup');
   addDep('drag.js', 'soccersub.Drag');
+  addDep('assignment.js', 'soccersub.Assignment');
   addDep('plan.js', 'soccersub.Plan');
-  addDep('player.js', 'soccersub.Player');
   addDep('position.js', 'soccersub.Position');
+  addDep('player.js', 'soccersub.Player');
   addDep('map_section.js', 'soccersub.MapSection');
   addDep('array_section.js', 'soccersub.ArraySection');
   addDep('storage.js', 'soccersub.Storage');
