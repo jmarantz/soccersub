@@ -25,8 +25,10 @@ class SoccerSub {
 
     const saver = () => this.save();
     const logger = (text) => this.log(text);
+    /** @type {!Plan} */
+    this.plan_ = new Plan(lineup, saver, logger);
     this.game = new Game(lineup, (text) => this.writeStatus(text),
-                         logger, saver);
+                         logger, saver, this.plan_);
     setTimeout(SoccerSub.clearVersionDisplay, 2000);
     
     /** @private {!Array<!Element>} */
@@ -50,13 +52,11 @@ class SoccerSub {
     this.lineup = lineup;
     /** @type {string} */
     this.log_ = '';
-    /** @type {!Plan} */
-    this.plan_ = new Plan(lineup, saver, logger);
 
     this.game.constructPlayersAndPositions();
     if (!this.restore()) {
-      this.game.reset();
       this.plan_.resetAndRender();
+      this.game.reset();
     }
   }
 

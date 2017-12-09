@@ -104,3 +104,26 @@ exports.shuffle = (array) => {
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
+
+/**
+ * Inefficient implementation of upper-bound functionality a la STL.  Returns
+ * Index of largest index where lessThan(array[index]) is true.
+ * if !lessThan(array[0]), then -1 is returned.
+ *
+ * Assumes array is sorted via lessThan.
+ * 
+ * TODO(jmarantz): replace current linear impl with binary search.
+ *
+ * @template T
+ * @param {!Array<T>} array
+ * @param {function(T): boolean} lessThan
+ * @return {number}
+ */
+exports.upperBound = (array, lessThan) => {
+  for (let i = 0; i < array.length; ++i) {
+    if (lessThan(array[i])) {
+      return i;
+    }
+  }
+  return -1;
+};

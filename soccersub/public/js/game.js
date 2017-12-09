@@ -3,6 +3,7 @@ goog.module('soccersub.Game');
 const Dialog = goog.require('goog.ui.Dialog');
 const Drag = goog.require('soccersub.Drag');
 const Lineup = goog.require('soccersub.Lineup');
+const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
 const Storage = goog.require('soccersub.Storage');
@@ -18,14 +19,17 @@ class Game {
    * @param {function(string)} writeStatus
    * @param {function(string)} writeLog
    * @param {function()} save
+   * @param {!Plan} plan
    */
-  constructor(lineup, writeStatus, writeLog, save) {
+  constructor(lineup, writeStatus, writeLog, save, plan) {
     /** @type {function(string)} */
     this.writeStatus = writeStatus;
     /** @private {function(string)} */
     this.writeLog_ = writeLog;
     /** @private {function()} */
     this.save_ = save;
+    /** @private {!Plan} */
+    this.plan_ = plan;
     /** @type {boolean} */
     this.showTimesAtPosition = false;
 
@@ -89,6 +93,8 @@ class Game {
     this.rendered;
     /** @type {!Array<!Position>} */
     this.positions;
+    /** @type {!Map<string, !Position>} */
+    this.positionMap;
     /** @type {?Player} */
     this.selectedPlayer;
     /** @type {!Array<!Player>} */
@@ -126,6 +132,7 @@ class Game {
       this.timeOfLastUpdateMs = 0;
       this.rendered = false;
       this.positions = [];
+      this.positionMap = new Map();
       this.selectedPlayer = null;
       this.constructPlayersAndPositions();
       this.sortAndRenderPlayers(false);
@@ -136,6 +143,16 @@ class Game {
       this.showAdjustedTime();
       this.update_(false);
       this.writeLog_('reset');
+      for (const assignment of this.plan_.initialAssignments()) {
+        const player = this.playerMap.get(
+          this.plan_.assignmentPlayer(assignment));
+        const position = this.positionMap.get(
+          this.plan_.assignmentPosition(assignment));
+        if (player && position) {
+          this.assignPlayerToPosition(player, position);
+        }
+      }
+      this.completeAssignments();
     } catch (err) {
       this.writeStatus('ERROR: ' + err + '\n' + err.stack);
     }
@@ -155,6 +172,7 @@ class Game {
   constructPlayersAndPositions() {
     var headRow = goog.dom.getRequiredElement('table-head-row');
     this.positions = [];
+    this.positionMap = new Map;
     const field = goog.dom.getRequiredElement('field');
     field.innerHTML = '';
     for (const row of this.lineup.getActivePositionNames()) {
@@ -165,6 +183,7 @@ class Game {
           const abbrev = Lineup.abbrev(positionName);
           const position = new Position(positionName, abbrev, headRow, this);
           this.positions.push(position);
+          this.positionMap.set(positionName, position);
           util.handleTouch(
             position.element, () => this.selectPosition(position));
         }
@@ -611,6 +630,15 @@ class Game {
       if (!this.timeoutPending) {
         this.timeoutPending = true;
         window.setTimeout(() => this.updateTimer(), 1000);
+      }
+
+      const timeSec = this.elapsedTimeMs / 1000;
+      const nextAssignment = this.plan_.nextAssignment(timeSec);
+      if (nextAssignment) {
+        const deltaSec = nextAssignment.timeSec - timeSec;
+        this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
+                         this.plan_.assignmentPlayer(nextAssignment) + ' at ' + 
+                         this.plan_.assignmentPosition(nextAssignment));
       }
     }
     this.redrawClock();

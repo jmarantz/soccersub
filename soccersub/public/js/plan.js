@@ -636,6 +636,58 @@ class Plan {
     }
     return null;
   }
+
+  /**
+   * Returns the next assignment to occur after a given current time in seconds.
+   * Currently does a linear walk over the assignment list.  Returns null if there
+   * are no more subs in the current half.
+   *
+   * @param {number} currentTimeSec
+   * @return {?Assignment}
+   */
+  nextAssignment(currentTimeSec) {
+    const index = util.upperBound(
+      this.assignments_, (assignment) => currentTimeSec < assignment.timeSec);
+    if (index == -1) {
+      return null;
+    }
+    return this.assignments_[index];
+  }
+  
+  /**
+   * @return {!Array<!Assignment>}
+   */
+  initialAssignments() {
+    const initial = [];
+    for (const a of this.assignments_) {
+      if (a.row == this.startRows_[0]) {
+        initial.push(a);
+      }
+    }
+    return initial;
+  }
+
+  /**
+   * @param {!Assignment} assignment
+   * @return {string}
+   */
+  assignmentPlayer(assignment) {
+    const half = this.assignHalf_(assignment);
+    const playerOrder = this.playerOrder_[half];
+    return this.players_[playerOrder[assignment.playerIndex]];
+  }
+
+  /**
+   * @param {!Assignment} assignment
+   * @return {string}
+   */
+  assignmentPosition(assignment) {
+    const half = this.assignHalf_(assignment);
+    const positionOrder = this.positionOrder_[half];
+    return this.positionNames_[positionOrder[assignment.positionIndex]];
+  }
 }
+
+Plan.Assignment = Assignment;
 
 exports = Plan;
