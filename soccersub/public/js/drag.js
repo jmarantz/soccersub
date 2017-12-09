@@ -50,7 +50,7 @@ class Drag {
     const srcLabel = this.findSource_(e);
     if (srcLabel) {
       this.source_ = srcLabel.source;
-      const targetElements = this.findTarget_(e, srcLabel);
+      const targetElements = this.findTarget_(e, srcLabel.source);
       if (targetElements) {
         this.startTarget_ = targetElements.target;
       }

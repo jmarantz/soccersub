@@ -45,6 +45,8 @@ table {
 
 .log-text {
     font-family: sans-serif;
+    font-size: small;
+    line-height: normal;
 }
 
 .log-area {
