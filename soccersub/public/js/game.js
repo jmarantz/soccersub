@@ -193,7 +193,8 @@ class Game {
         if (positionName) {
           this.makePositionElement(tableRow, positionName);
           const abbrev = Lineup.abbrev(positionName);
-          const position = new Position(positionName, abbrev, headRow, this);
+          const position = new Position(
+            positionName, abbrev, headRow,  this.showTimesAtPosition);
           this.positions.push(position);
           this.positionMap.set(positionName, position);
           util.handleTouch(

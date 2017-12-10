@@ -1,7 +1,6 @@
 goog.module('soccersub.Position');
 const util = goog.require('soccersub.util');
 const googDom = goog.require('goog.dom');
-let Game = goog.forwardDeclare('soccersub.Game');
 let Player = goog.forwardDeclare('soccersub.Player');
 
 const rightArrow = '&rarr;';
@@ -11,9 +10,9 @@ class Position {
    * @param {string} name
    * @param {string} abbrev
    * @param {!Element} headRow
-   * @param {!Game} game
+   * @param {boolean} showTimesAtPosition
    */
-  constructor(name, abbrev, headRow, game) {
+  constructor(name, abbrev, headRow, showTimesAtPosition) {
     /** @type {string} */
     this.name = name;
     /** @type {?Player} */
@@ -48,7 +47,7 @@ class Position {
     
     // Now the table header entry, which we are just going to automatically
     // populate, and don't need to reference it after that.
-    if (game.showTimesAtPosition) {
+    if (showTimesAtPosition) {
       var th = document.createElement('th');
       th.textContent = name;
       headRow.appendChild(th);
