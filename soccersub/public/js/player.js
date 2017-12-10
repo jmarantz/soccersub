@@ -2,7 +2,6 @@ goog.module('soccersub.Player');
 
 const Lineup = goog.require('soccersub.Lineup');
 const util = goog.require('soccersub.util');
-let Game = goog.forwardDeclare('soccersub.Game');
 let Position = goog.forwardDeclare('soccersub.Position');
 
 const DB_PREFIX = 'player:';
@@ -11,12 +10,14 @@ class Player {
   /**
    * @param {string} name
    * @param {!Lineup} lineup
-   * @param {!Game} game
+   * @param {function(string)} writeStatus
    */
-  constructor(name, lineup, game) {
+  constructor(name, lineup, writeStatus) {
     this.name = name;
+    /** @type {!Lineup} */
     this.lineup = lineup;
-    this.game = game;
+    /** @private {function(string)} */
+    this.writeStatus_ = writeStatus;
     /** @type {boolean} */
     this.available;
     /** @type {boolean} */
@@ -41,6 +42,10 @@ class Player {
     this.gameTimeElement = document.createElement('td');
     /** @type {number} */
     this.percentageInGameNotKeeper;
+    /** @type {boolean} */
+    this.showTimesAtPosition = false;
+    /** @type {boolean} */
+    this.hasLongestShift = false;
     this.reset();
   };
 
@@ -142,8 +147,11 @@ class Player {
     return playerMap['currentPosition']
   }
 
-  /** @param {!Lineup} lineup */
-  static dbSection(lineup) {
+  /** 
+   * @param {!Lineup} lineup 
+   * @param {function(string): ?Position} findPosition
+   */
+  static dbSection(lineup, findPosition) {
     let fields = [
       ['timeInGameMs', (p) => p.timeInGameMs, (p, v) => p.timeInGameMs = v],
       ['timeInShiftMs', (p) => p.timeInShiftMs, (p, v) => p.timeInShiftMs = v],
@@ -153,7 +161,7 @@ class Player {
          p.currentPosition = null;
          p.nextPosition = null;
          if (positionName) {
-           p.currentPosition = p.game.findPosition(positionName);
+           p.currentPosition = findPosition(positionName);
          }
        }],
     ];
@@ -249,7 +257,7 @@ class Player {
     this.gameTimeElement = document.createElement('td');
     this.renderGameTime();
     row.appendChild(this.gameTimeElement);
-    if (this.game.showTimesAtPosition) {
+    if (this.showTimesAtPosition) {
       for (const positionName of this.lineup.getActivePositionNames()) {
         const td = document.createElement('td');
         row.appendChild(td);
@@ -292,6 +300,7 @@ class Player {
   setPosition(position, clearTimeInShift) {
     if (clearTimeInShift && this.currentPosition) {
       this.timeInShiftMs = 0;
+      this.hasLongestShift = false;
     }
     if (this.nextPosition) {
       if (this.nextPosition.nextPlayer == this) {
@@ -320,7 +329,7 @@ class Player {
     if (!this.available) {
       color = 'lightblue';
     } else if (this.currentPosition != null) {
-      if (this.currentPosition == this.game.positionWithLongestShift) {
+      if (this.hasLongestShift) {
         color = 'orange';
       } else if (this.currentPosition.name == 'keeper') {
         color = 'bisque';
@@ -344,7 +353,7 @@ class Player {
    */
   renderAtPosition(verbose) {
     if (this.selected) {
-      this.game.writeStatus(this.status());
+      this.writeStatus_(this.status());
     }
     let str = this.name + ' ' + util.formatTime(this.timeInShiftMs);
     if (verbose) {

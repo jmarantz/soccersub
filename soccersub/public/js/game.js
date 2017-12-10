@@ -134,8 +134,7 @@ class Game {
    * @return {!{player: ?Player, position: ?Position}}
    */
   getPlayerAndPosition(assignment) {
-    const player = this.playerMap.get(
-      this.plan_.assignmentPlayer(assignment));
+    const player = this.playerMap.get(this.plan_.assignmentPlayer(assignment));
     const position = this.positionMap.get(
       this.plan_.assignmentPosition(assignment));
     return {player, position};
@@ -209,13 +208,13 @@ class Game {
     this.activePlayers = [];
     this.playerMap = new Map();
     for (const name of this.lineup.playerNames) {
-      var player = new Player(name, this.lineup, this);
+      var player = new Player(name, this.lineup, this.writeStatus);
       this.activePlayers.push(player);
       player.available = true;
       this.playerMap.set(name, player);
     }
     for (const name of this.lineup.unavailablePlayerNames) {
-      var player = new Player(name, this.lineup, this);
+      var player = new Player(name, this.lineup, this.writeStatus);
       player.available = false;
       this.playerMap.set(name, player);
     }
@@ -309,7 +308,7 @@ class Game {
         if (player) {
           player.available = true;
         } else {
-          player = new Player(name, this.lineup, this);
+          player = new Player(name, this.lineup, this.writeStatus);
         }
       }
       this.activePlayers.push(player);
@@ -402,7 +401,8 @@ class Game {
     map['assignmentsMade'] = this.assignmentsMade;
     map['timeOfLastUpdateMs'] = this.timeOfLastUpdateMs;
     this.lineup.save(map);
-    const playerSection = Player.dbSection(this.lineup);
+    const playerSection = Player.dbSection(
+      this.lineup, (posName) => this.findPosition(posName));
     for (const player of this.playerMap.values()) {
       player.save(map);
     }
@@ -519,7 +519,14 @@ class Game {
         }
       }
     }
+    if (this.positionWithLongestShift && 
+        this.positionWithLongestShift.currentPlayer) {
+      this.positionWithLongestShift.currentPlayer.hasLongestShift = false;
+    }
     this.positionWithLongestShift = pos;
+    if (pos && pos.currentPlayer) {
+      pos.currentPlayer.hasLongestShift = true;
+    }
     this.redrawPositions();
   }
 

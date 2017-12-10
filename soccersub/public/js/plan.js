@@ -324,31 +324,42 @@ class Plan {
     }
   }
 
-  compute() {
-    // Strategy:
-    //  1. goalies divide time evenly.
-    //  2. a percentage of time played during the game exclusive of
-    //     goalie is computed.  So if the first-half keeper plays gets
-    //     half the minutes in the second half, his percentage is 50%,
-    //     even though you could argue he was in 75% of the game
-    //     overall.
-    //  3. Each player plays half his minutes at forward and half his
-    //     minutes at defense.
-    //  4. Certain players may be paired with each other, and an
-    //     attempt can be made to accomodate that if it's in the model.
-    //  5. Cetain players may prefer playing on right or left, and this
-    //     can be factored in as well.
-    //  6. the plan can be recomputed at any time during the game, and
-    //     does the best job possible of evening out the time given what's
-    //     happened so far, even if that was not according to plan, or even
-    //     if the set of available players changed.
-    //  7. In general a perfect solution is not possible, and arbitrary
-    //     points are assigned to the goals above, and we try to find the
-    //     max point-score overall for the team.
-
-    // Ignore goalies for now.  Focus on field players.
-    
-  }
+  // Assumptions: parents will not notify us whether kids are coming.  Kids
+  // will arrive late or leave early. Kids will need to be subed our early
+  // for injuries or other reasons.  For this reason, the plan must be
+  // extremely dynamic, changing mid-game based on conditions.
+  //
+  // At the same time, a fair amount of careful manipulation occurs to
+  // get players organized as desired, and whatever positions are hand-picked
+  // must stay in place, though timing of subs can & will change based on the
+  // randomly changing available roster.
+  //
+  // Strategy:
+  //  1. goalies divide time evenly.
+  //  2. a percentage of time played during the game exclusive of
+  //     goalie is computed.  So if the first-half keeper plays gets
+  //     half the minutes in the second half, his percentage is 50%,
+  //     even though you could argue he was in 75% of the game
+  //     overall.
+  //  3. Each player plays half his minutes at forward and half his
+  //     minutes at defense.
+  //  4. Certain players may be paired with each other, and an
+  //     attempt can be made to accomodate that if it's in the model.
+  //  5. Cetain players may prefer playing on right or left, and this
+  //     can be factored in as well.
+  //  6. the plan can be recomputed at any time during the game, and
+  //     does the best job possible of evening out the time given what's
+  //     happened so far, even if that was not according to plan, or even
+  //     if the set of available players changed.
+  //  7. In general a perfect solution is not possible, and arbitrary
+  //     points are assigned to the goals above, and we try to find the
+  //     max point-score overall for the team.
+  //
+  // Compute should be re-called whenever a change happens.  E.g. whenever there
+  // is:
+  //    - a roster change
+  //    - a position change a coach might want to switch formations mid-game
+  //      or a substitution made
 
   /**
    * @param {number} x
