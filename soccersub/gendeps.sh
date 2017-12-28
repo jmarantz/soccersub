@@ -26,7 +26,10 @@ for file in $(grep -v closure-library/); do
     base=$(basename $file)
     echo "  addDep('$base', '$module');"
 done
-
+echo ""
+echo "  for (const [file, module] of window.testDeps || []) {"
+echo "    addDep(file, module);"
+echo "  }"
 echo ""
 echo "  return modules;"
 echo "})().forEach(goog.require);"

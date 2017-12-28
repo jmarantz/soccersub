@@ -20,5 +20,9 @@
   addDep('soccersub.js', 'soccersub.SoccerSub');
   addDep('main.js', 'soccersubMain');
 
+  for (const [file, module] of window.testDeps || []) {
+    addDep(file, module);
+  }
+
   return modules;
 })().forEach(goog.require);

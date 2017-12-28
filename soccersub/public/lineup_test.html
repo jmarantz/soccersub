@@ -2,13 +2,10 @@
 <head>
 <title>SoccerSub Unit Tests - soccersub.Lineup</title>
 <script src="closure-library/closure/goog/base.js"></script>
-<script src="deps.js"></script>
-<!--<script src="../loader.js"></script>-->
 <script>
-const opts = {'module': 'goog', 'lang': 'es6'};
-goog.addDependency('../../../js/lineup_test.js', ['soccersub.LineupTest'], [], opts);
-goog.require('soccersub.LineupTest'); 
+  window.testDeps = [['lineup_test.js', 'soccersub.LineupTest']];
 </script>
+<script src="deps.js"></script>
 </head>
 <body>
 <button type="button" class="inline-button" id="5v5">5v5</button>
