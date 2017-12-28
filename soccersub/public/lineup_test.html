@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<head>
+<title>SoccerSub Unit Tests - soccersub.Lineup</title>
+<script src="closure-library/closure/goog/base.js"></script>
+<script src="deps.js"></script>
+<!--<script src="../loader.js"></script>-->
+<script>
+  const opts = {'module': 'goog', 'lang': 'es6'};
+  const modules = [];
+  const addDep = (file, module) => {
+    modules.push(module);
+    goog.addDependency('../../../js/' + file, [module], [], opts);
+  };
+  addDep('lineup_test.js', 'soccersub.LineupTest');
+//const opts = {'module': 'goog', 'lang': 'es6'};
+goog.addDependency('../../../js/lineup_test.js', ['soccersub.LineupTest'], [], opts);
+goog.require('soccersub.LineupTest'); 
+</script>
+</head>
+<body>
+<button type="button" class="inline-button" id="5v5">5v5</button>
+<button type="button" class="inline-button" id="9v9">9v9</button>
+<button type="button" class="inline-button" id="11v11">11v11</button>
+<button type="button" class="inline-button" id="add-players">Add Players...</button>
+<div id="positions"></div>
+<div id="positions-status"></div>
+<table>
+  <tbody id="players-tbody">
+  </tbody>
+</table>
+</body>
+</html>
