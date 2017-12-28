@@ -5,14 +5,7 @@
 <script src="deps.js"></script>
 <!--<script src="../loader.js"></script>-->
 <script>
-  const opts = {'module': 'goog', 'lang': 'es6'};
-  const modules = [];
-  const addDep = (file, module) => {
-    modules.push(module);
-    goog.addDependency('../../../js/' + file, [module], [], opts);
-  };
-  addDep('lineup_test.js', 'soccersub.LineupTest');
-//const opts = {'module': 'goog', 'lang': 'es6'};
+const opts = {'module': 'goog', 'lang': 'es6'};
 goog.addDependency('../../../js/lineup_test.js', ['soccersub.LineupTest'], [], opts);
 goog.require('soccersub.LineupTest'); 
 </script>
