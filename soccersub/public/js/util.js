@@ -23,15 +23,16 @@ exports.storageAvailable = (type) => {
  */
 exports.setupButton = (id, callback) => {
   const button = goog.dom.getRequiredElement(id);
-  exports.handleTouch(button, callback);
+  exports.handleTouch(button, callback, id);
   return button;
 };
 
 /**
  * @param {!Element} element
  * @param {function()} func
+ * @param {string} label
  */
-exports.handleTouch = (element, func) => {
+exports.handleTouch = (element, func, label) => {
   /**
    * @param {!Event} event
    */

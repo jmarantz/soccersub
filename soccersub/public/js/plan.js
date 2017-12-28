@@ -231,6 +231,17 @@ class Plan {
     this.tbody_.innerHTML = '';
     this.freshenPlayers();
 
+    // Pick a player ordering based on this.playerOrder_, which is
+    // randomized during reset(), and tweaked by drag & drop.
+    // Initially, players_[playerOrder_[half][N-1] will be goalie for
+    // a half.  intereractively swap players later, with drag & drop,
+    // to get the right goalies.
+    const numFieldPlayers = this.players_.length - 1;
+    const numFieldPositions = this.lineup.getNumPositions() - 1;
+    if ((numFieldPositions <= 0) || (numFieldPlayers <= 0)) {
+      return;
+    }
+
     this.assignments_ = [];
     let row = -1;
 
@@ -259,13 +270,6 @@ class Plan {
       }
     }
 
-    // Pick a player ordering based on this.playerOrder_, which is
-    // randomized during reset(), and tweaked by drag & drop.
-    // Initially, players_[playerOrder_[half][N-1] will be goalie for
-    // a half.  intereractively swap players later, with drag & drop,
-    // to get the right goalies.
-    const numFieldPlayers = this.players_.length - 1;
-    const numFieldPositions = this.lineup.getNumPositions() - 1;
     const shiftMinutes = this.minutesPerHalf / numFieldPlayers;
     const shiftSec = shiftMinutes * 60;
 

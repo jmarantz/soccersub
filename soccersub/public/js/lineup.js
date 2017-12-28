@@ -79,7 +79,7 @@ class Lineup {
     /** @type {!Set<string>} */
     this.unavailablePlayerNames = new Set();
     /** @type {number} */
-    this.numberOfPlayers = defaultNumberOfPlayers;
+    this.numberOfPlayers;
     util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
     util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
     util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
@@ -87,7 +87,7 @@ class Lineup {
     this.positionsDiv = goog.dom.getRequiredElement('positions');
     this.positionsStatusDiv = goog.dom.getRequiredElement('positions-status');
     this.playersTbody = goog.dom.getRequiredElement('players-tbody');
-    this.renderPositions_();
+    this.setNumberOfPlayers_(defaultNumberOfPlayers);
     this.renderPlayers_();
     /** @type {boolean} */
     this.modified = false;
@@ -207,7 +207,7 @@ class Lineup {
             }
             this.annotateStatus();
             this.modified = true;
-          });
+          }, 'position:' + positionName);
         }
       }
     }
@@ -261,8 +261,9 @@ class Lineup {
 
       const rotate = () =>
             this.rotatePlayerState_(playerName, img, playerElement);
-      util.handleTouch(img, rotate);
-      util.handleTouch(playerElement, rotate);
+      const label = 'player:' + playerName;
+      util.handleTouch(img, rotate, label);
+      util.handleTouch(playerElement, rotate, label);
     }
   }
 
@@ -309,24 +310,33 @@ class Lineup {
       'Entry names of players, one per line',
       (response) => {
         if (response) {
-          let added = false;
-          for (let name of response.split('\n')) {
-            name = name.trim();
-            if (name && !this.playerNames.has(name) && 
-                !this.unavailablePlayerNames.has(name)) {
-              added = true;
-              this.playerNames.add(name);
-            }
-          }
-          if (added) {
-            this.renderPlayers_();
-            this.modified = true;
-          }
+          this.addPlayers(response);
         }
         prompt.dispose();
       });
     prompt.setRows(10);
     prompt.setVisible(true);
+  }
+
+  /** 
+   * Adds players to the roster, one per line.
+   *
+   * @param {string} players
+   **/
+  addPlayers(players) {
+    let added = false;
+    for (let name of players.split('\n')) {
+      name = name.trim();
+      if (name && !this.playerNames.has(name) && 
+          !this.unavailablePlayerNames.has(name)) {
+        added = true;
+        this.playerNames.add(name);
+      }
+    }
+    if (added) {
+      this.renderPlayers_();
+      this.modified = true;
+    }
   }
 
   /**

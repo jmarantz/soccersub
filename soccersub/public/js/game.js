@@ -35,8 +35,8 @@ class Game {
     this.showTimesAtPosition = false;
 
     // Set up HTML element connections & handlers.
-    this.gameClockElement = goog.dom.getRequiredElement('game-clock');
-    util.handleTouch(this.gameClockElement, () => this.toggleClock());
+    this.gameClockElement = util.setupButton(
+      'game-clock', () => this.toggleClock());
 
     /** @type {Position} */
     this.positionWithLongestShift = null;
@@ -70,8 +70,7 @@ class Game {
     this.cancelSubsButton.style.backgroundColor = 'lightgray';
 
     const setupTimeAdjust = (id, deltaSec) => {
-      util.handleTouch(goog.dom.getRequiredElement(id),
-                       () => this.adjustTime(deltaSec));
+      util.setupButton(id, () => this.adjustTime(deltaSec));
     };
     setupTimeAdjust('sub-1-minute', -60);
     setupTimeAdjust('sub-10-sec', -10);
@@ -198,7 +197,8 @@ class Game {
           this.positions.push(position);
           this.positionMap.set(positionName, position);
           util.handleTouch(
-            position.element, () => this.selectPosition(position));
+            position.element, () => this.selectPosition(position), 
+            positionName);
         }
       }
     }
