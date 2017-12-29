@@ -1,4 +1,4 @@
-goog.module('soccersub.Plan2');
+goog.module('soccersub.PlanCalculator');
 
 const Assignment = goog.require('soccersub.Assignment2');
 
@@ -18,7 +18,7 @@ let AvailabilitySpan;
  */
 let Availability;
 
-class Plan {
+class PlanCalculator {
   /**
    * @param {!Lineup} lineup
    * @param {function()} save
