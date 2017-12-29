@@ -1,10 +1,13 @@
 goog.module('soccersub.PlanCalculator');
 
 const Assignment = goog.require('soccersub.Assignment2');
+const Lineup = goog.require('soccersub.Lineup');
+
+const AVAILABLE = -1;
 
 /**
  * Holds a span of time when a player starts & stops being available.
- * Players that are currently available have -1 for their stopTime.
+ * Players that are currently available have AVAILABLE for their stopTime.
  *
  * @typedef {!{
  *   startTime: number,
@@ -25,6 +28,9 @@ class PlanCalculator {
    * @param {function(string)} log
    */
   constructor(lineup, save, log) {
+    /** @private {!Lineup} */
+    this.lineup_ = lineup;
+
     /**
      * Captures time-ordered assignments, both pending and future.
      * The boundary index between these is this.assignmentIndex_.
@@ -103,7 +109,7 @@ class PlanCalculator {
      *
      * @private {number}
      */
-    this.shiftTimeSec = 0;
+    this.shiftTimeSec_ = 0;
 
     /** @private {number} */
     this.nextPlayerChangeSec_ = 0;
@@ -122,7 +128,7 @@ class PlanCalculator {
     let playerDelta = 0;
 
     // Find new players.
-    for (const player of this.lineup.playerNames) {
+    for (const player of this.lineup_.playerNames) {
       let availability = this.playerAvailablityMap_.get(player);
       if (!availability) {
         availability = [];
@@ -142,13 +148,13 @@ class PlanCalculator {
     }
 
     // Find players that are no longer available.
-    for (const [player, availability] of this.playerAvailablityMap_) {
-      if (!this.lineup.playerNames.has(player) &&
+    this.playerAvailablityMap_.forEach((availability, player) => {
+      if (!this.lineup_.playerNames.has(player) &&
           (availability[availability.length - 1].stopTime == AVAILABLE)) {
         --playerDelta;
         availability[availability.length - 1].stopTime = this.gameTimeSec_;
       }
-    }
+    });
     return playerDelta;
   }
 
@@ -160,7 +166,7 @@ class PlanCalculator {
     }
 
     const timeLeftSec = endOfHalfSec - this.nextPlayerChangeSec_;
-    const numFieldPlayers = this.lineup.playerNames.size - 1;
+    const numFieldPlayers = this.lineup_.playerNames.size - 1;
     this.shiftTimeSec_ = timeLeftSec / numFieldPlayers;
   }
 
@@ -178,14 +184,15 @@ class PlanCalculator {
       // up the assignment index.  No big changes are needed.
       if (this.assignmentIndex_ < this.assignments_.length) {
         const nextAssignment = this.assignments_[this.assignmentIndex_];
-        if ((nextAssignment.playerName_ == assignment.playerName_) &&
-            (nextAssignment.positionName_ == assignment.positionName_)) {
-          nextAssignment_.timeSec = assignment.timeSec;
+        if ((nextAssignment.playerName == assignment.playerName) &&
+            (nextAssignment.positionName == assignment.positionName)) {
+          nextAssignment.timeSec = assignment.timeSec;
           ++this.assignmentIndex_;
           continue;
         }
       }
       hasNewAssignment = true;
+      this.assignments_.push(assignment);
     }
 
     // However, if either the player or position is not what we recommended,
@@ -193,14 +200,13 @@ class PlanCalculator {
     // substitution.
     if (hasNewAssignment) {
       this.assignments_.length = this.assignmentIndex_;
-      this.assignments_.push(assignment);
       this.computePlan();
     }
   }
 
   setupPositions() {
     this.positionNames_ = [];
-    for (const row of this.lineup.getActivePositionNames()) {
+    for (const row of this.lineup_.getActivePositionNames()) {
       for (const positionName of row) {
         if (positionName) {
           //addTextElement(this.thead_, Lineup.abbrev(positionName), 'th');
@@ -234,13 +240,14 @@ class PlanCalculator {
     const positionAssignmentMap = new Map();
     for (const assignment of this.assignments_) {
       const prevAssignment = positionAssignmentMap.get(assignment.positionName);
-      const deltaTimeSec = assignment.timeSec;
+      let deltaTimeSec = assignment.timeSec;
       if (prevAssignment) {
         deltaTimeSec -= prevAssignment.timeSec;
       }
-      const currentTime = playerTimeMap.get(prevAssignment.playerName) || 0;
-      playerTimeMap.set(prevAssignment.playerName, currentTime + deltaTime);
-      positionAssignmentMap.set(assignment.position, assignment);
+      const currentTimeSec = playerTimeMap.get(prevAssignment.playerName) || 0;
+      playerTimeMap.set(prevAssignment.playerName, 
+                        currentTimeSec + deltaTimeSec);
+      positionAssignmentMap.set(assignment.positionName, assignment);
     }
 
     // Now we make assignments for the remainder of the game, aiming for
@@ -257,17 +264,18 @@ class PlanCalculator {
    * Copmutes the next assignment based on wwhat players have played so far, and
    * how long they've been out.
    *
-   * @param {!Map<name, number>} playerTimeMap
+   * @param {!Map<string, number>} playerTimeMap
    * @return {?Assignment}
    */
   computeNextAssignment(playerTimeMap) {
     // Which position do we assign?  The one with the player that's got
     // the most time.
     for (let i = 0; i < this.positionNames_.length; ++i) {
-      if (
     }
+    return null;
   }
 
+/*
   compute() {
     // Tracks the amount of time a player has played in each half.  These all
     // map player names to time-in-game in seconds.
@@ -279,11 +287,11 @@ class PlanCalculator {
 
     let half =  (this.gameTimeSec_ < this.minutesPerHalf) ? 0 : 1;
     let firstHalf, secondHalf;
-    if (this.gameTime_ == 0) {
+    if (this.gameTimeSec_ == 0) {
       this.makeInitialAssignmentsIfNeeded();
-    } else {
+    }* else {
       {firstHalf, secondHalf} = this.computePlayerTime();
-    }
+    }*
 
     const assignmentMatrix = this.fillAssignmentMatrix();
     let timeLeftInHalfSec = this.minutesPerHalf - this.gameTimeSec_;
@@ -291,7 +299,7 @@ class PlanCalculator {
       timeLeftInHalfSec += this.minutesPerHalf;
     }    
   }
-
+*/
 
   /**
    * Matrix of assignments.  Outer array is indexed by shifts, inner array
@@ -320,18 +328,18 @@ class PlanCalculator {
     return assignmentMatrix;
   }
 
-  /**
+  /*
    * Computes maps of assigned playerTime in seconds for a half, combining any
    * time already played with projected time based on the current plan.
    *
-   * @param {number} half
-   * @return {!Map<string, number>}
+   * param {number} half
+   * return {!Map<string, number>}
    */
+/*
   computePlayerTime(half) {
     const firstHalfTime = new Map();
     const secondHalfTime = new Map();
     const playerTimeInHalfSec = [new Map(), new Map()];
-    let half = 0;
     const currentPlayerAtPosition = new Map();
     let timeSec = 0;
     let timeMap = firstHalfTime;
@@ -354,11 +362,13 @@ class PlanCalculator {
     }
     return {firstHalfTime, seocndHalfTime};
   }
+*/
 
-  /**
-   * @param {number} timeSec
-   * @return {!Array</Player>}
+  /*
+   * param {number} timeSec
+   * return {!Array<?Player>}
    */
+/*
   addRow(timeSec) {
     const assignments = Array(this.positionNames_.length).fill(null);
     this.assignmentMatrix_.push({timeSec, assignments});
@@ -376,6 +386,7 @@ class PlanCalculator {
       }
     }
   }
+*/
 
   /**
    * @param {!Assignment} assignment
@@ -386,3 +397,5 @@ class PlanCalculator {
     return (assignment.timeSec < this.minutesPerHalf * 60) ? 0 : 1;
   }
 }
+
+exports = PlanCalculator;

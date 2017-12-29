@@ -2,6 +2,7 @@ goog.module('soccersub.Plan');
 const Assignment = goog.require('soccersub.Assignment');
 const Drag = goog.require('soccersub.Drag');
 const Lineup = goog.require('soccersub.Lineup');
+const PlanCalculator = goog.require('soccersub.PlanCalculator');
 const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
 
@@ -46,6 +47,8 @@ class Plan {
 
     /** @type {!Lineup} lineup */
     this.lineup = lineup;
+    /** @type {!PlanCalculator} */
+    this.calculator_ = new PlanCalculator(lineup, save, log);
     /** @type {number} */
     this.minutesPerHalf = 24;
     /** @private {function()} */
