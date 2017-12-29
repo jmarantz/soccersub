@@ -21,10 +21,25 @@ echo "    goog.addDependency('$PREFIX/js/' + file, [module], [], opts);"
 echo "  };"
 echo ""
 
-for file in $(grep -v closure-library/); do
-    module=$(grep goog.module "$file" | cut -f2 -d\')
-    base=$(basename $file)
-    echo "  addDep('$base', '$module');"
+# grep -v closure-library/
+
+for file in $(grep -v /base.js); do
+    if [[ "$file" == */closure-library/* ]]; then
+      # Just add the require statement, without setting up the path.
+      module=$(grep ^goog.provide "$file" | head -1 | cut -f2 -d\')
+      if [ -z "$module" ]; then
+        module=$(grep ^goog.module "$file" | head -1 | cut -f2 -d\')
+      fi
+      if [ -z "$module" ]; then
+        echo "// Cannot find module for file: " $file
+      else
+        echo "  modules.push('$module');"
+      fi
+    else
+      module=$(grep goog.module "$file" | cut -f2 -d\')
+      base=$(basename $file)
+      echo "  addDep('$base', '$module');"
+    fi
 done
 echo ""
 echo "  for (const [file, module] of window.testDeps || []) {"

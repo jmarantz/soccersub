@@ -1,3 +1,4 @@
+
 # Tools needed:
 #   closure compiler: https://dl.google.com/closure-compiler/compiler-latest.zip
 #   java runtime: sudo apt-get install jvm-7-avian-jre
@@ -13,8 +14,7 @@ COMPILER_JAR = $(HOME)/bin/closure-compiler-$(CLOSURE_VERSION).jar
 CLOSURE_LIB = $(HOME)/dev/closure-library
 BUILD = $(CLOSURE_LIB)/closure/bin/build/closurebuilder.py \
 	  --root=$(CLOSURE_LIB)/ \
-	  --root=public/js \
-	  --namespace="soccersubMain"
+	  --root=public/js
 
 deploy : public/deploy_timestamp.js
 xcompile : public/soccersub.min.js
@@ -26,7 +26,7 @@ JSFILES = public/js/soccersub.js public/js/game.js public/js/position.js \
 	public/js/util.js public/js/storage.js public/js/array_section.js \
 	public/js/map_section.js public/js/plan.js public/js/drag.js \
 	public/js/plan_calculator.js public/js/assignment.js \
-	public/js/assignment2.js
+	public/js/assignment2.js public/js/lineup_test.js public/js/test.js
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
@@ -37,10 +37,13 @@ jsopts : $(JSFILES) Makefile
 export PREFIX = ../../..
 
 public/deps.js : Makefile ./gendeps.sh $(JSFILES)
-	$(BUILD) | ./gendeps.sh >$@
+	$(BUILD) --namespace="soccersubMain" | ./gendeps.sh >$@
 
-deps : public/deps.js
-compile : public/soccersub.min.js public/opt.html
+public/testdeps.js : Makefile ./gendeps.sh $(JSFILES)
+	$(BUILD) --namespace="soccersubTest" | ./gendeps.sh >$@
+
+deps : public/deps.js public/testdeps.js
+compile : public/soccersub.min.js public/opt.html public/test.html
 .PHONY : deps compile
 
 public/opt.html : public/soccersub.html Makefile
@@ -48,8 +51,13 @@ public/opt.html : public/soccersub.html Makefile
 	    -e 's@deps.js@soccersub.min.js@' \
 		< $< > $@
 
+public/test.html : public/soccersub.html Makefile
+	sed -e 's@deps.js@testdeps.js@' \
+	    -e 's@soccersubMain@soccersubTest@' \
+	        < $< > $@
+
 public/soccersub.min.js : $(JSFILES) Makefile
-	$(BUILD) \
+	$(BUILD) --namespace="soccersubMain" \
 	  --compiler_jar=$(COMPILER_JAR) \
 	  --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
 	  --output_mode=compiled \
