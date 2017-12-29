@@ -28,7 +28,7 @@ JSFILES = public/js/soccersub.js public/js/game.js public/js/position.js \
 	public/js/plan_calculator.js public/js/assignment.js \
 	public/js/assignment2.js
 
-TEST_JSFILES = public/js/lineup_test.js
+TEST_JSFILES = public/js/lineup_test.js public/js/plan_calculator_test.js 
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
