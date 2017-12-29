@@ -100,6 +100,7 @@
   addDep('lineup.js', 'soccersub.Lineup');
   addDep('assignment2.js', 'soccersub.Assignment2');
   addDep('plan_calculator.js', 'soccersub.PlanCalculator');
+  addDep('plan_calculator_test.js', 'soccersub.PlanCalculatorTest');
   modules.push('goog.testing.ObjectPropertyString');
   modules.push('goog.testing.PropertyReplacer');
   modules.push('goog.testing.events');
@@ -127,7 +128,6 @@
   modules.push('goog.labs.testing.Environment');
   modules.push('goog.testing.testSuite');
   addDep('test_util.js', 'soccersub.TestUtil');
-  addDep('plan_calculator_test.js', 'soccersub.PlanCalculatorTest');
   addDep('lineup_test.js', 'soccersub.Lineup_test');
   addDep('test.js', 'soccersubTest');
 

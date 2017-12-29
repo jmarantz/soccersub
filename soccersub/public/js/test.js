@@ -7,8 +7,8 @@ const PlanCalculatorTest = goog.require('soccersub.PlanCalculatorTest');
 const TestUtil = goog.require('soccersub.TestUtil');
 
 const soccersubTest = () => {
-  TestUtil.addTestSuite(PlanCalculatorTest);
   TestUtil.addTestSuite(Lineup_test);
+  TestUtil.addTestSuite(PlanCalculatorTest);
   TestUtil.runTestSuite();
 }
 
