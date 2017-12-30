@@ -27,12 +27,25 @@ exports.setupButton = (id, callback) => {
   return button;
 };
 
+/** @type {!Array<function(!Element, function(), string)>} */
+let handleTouchHooks = [];
+
 /**
+ * Establishes a touch-handler that provides button behavior on both click
+ * and touch events, so an app can work on mobile and desktop.  Allows for
+ * test methods to track all the handlers established so the buttons can
+ * be easily clicked from unit tests via label.
+ *
  * @param {!Element} element
  * @param {function()} func
  * @param {string} label
  */
 exports.handleTouch = (element, func, label) => {
+  for (let i = 0; i < handleTouchHooks.length; ++i) {
+    const hook = handleTouchHooks[i];
+    hook(element, func, label);
+  }
+
   /**
    * @param {!Event} event
    */
@@ -45,6 +58,18 @@ exports.handleTouch = (element, func, label) => {
                            ///** @type {boolean} */ ({'passive': true}));
   element.addEventListener('click', handler);
                            ///** @type {boolean} */ ({'passive': true}));
+};
+
+/**
+ * Provides a mechanism to track all touch-handlers established for
+ * an application. This is intended for testing, so unit-test methods
+ * can trigger the touch handlers by calling the function directoy, without
+ * messing with events, or being able to find the element.
+ *
+ * @param {function(!Element, function(), string)} func
+ */
+exports.addHandleTouchHook = (func) => {
+  handleTouchHooks.push(func);
 };
 
 /** @return {number} */

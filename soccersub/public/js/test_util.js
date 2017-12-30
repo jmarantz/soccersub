@@ -8,27 +8,26 @@ const setUpMap = new Map();
 const tearDownMap = new Map();
 
 let buttonFunctionMap;
-const utilHandleTouch = util.handleTouch;
-util.handleTouch = (element, func, label) => {
+util.addHandleTouchHook((element, func, label) => {
   buttonFunctionMap.set(label, func);
-};
+});
 
 exports.touch = (label) => {
   const func = buttonFunctionMap.get(label);
-  assertNotNull('No touch handler for ' + label, func);
+  assertTrue('No touch handler for ' + label, !!func);
   func();
 };
 
 const mergedTests = {
-  getTestName() {
+  'getTestName': () => {
     return 'SoccersubTest';
   },
   
-  setUp() {
+  'setUp': () => {
     buttonFunctionMap = new Map();
   },
 
-  tearDown() {
+  'tearDown': () => {
     buttonFunctionMap = null;
   },
 };

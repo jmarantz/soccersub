@@ -3,14 +3,13 @@ goog.module('soccersub.Lineup_test');
 
 const Lineup = goog.require('soccersub.Lineup');
 const TestUtil = goog.require('soccersub.TestUtil');
-//const testSuite = goog.require('goog.testing.testSuite');
 
 exports = {
-  getTestName() {
+  'getTestName': () => {
     return 'LineupTest';
   },
 
-  testAddPlayers() {
+  'testAddPlayers': () => {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
     assertTrue(lineup.playerNames.has('jim'));
     assertFalse(lineup.playerNames.has('carol'));
@@ -19,7 +18,7 @@ exports = {
     assertTrue(lineup.playerNames.has('alice'));
   },
 
-  testRotatePlayerState() {
+  'testRotatePlayerState': () => {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
 
     // Rotate fred through his three states, bringing him back into the roster.
