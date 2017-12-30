@@ -11,9 +11,10 @@ for file in $*; do
   modules="$modules $module"
 done
 for module in $modules; do
-    echo "const $module = goog.require('soccersub.$module');"
+    if [ "$module" != "soccersubTest" ]; then
+        echo "const $module = goog.require('soccersub.$module');"
+    fi
 done
-echo "const TestUtil = goog.require('soccersub.TestUtil');"
 
 echo ""
 echo "const soccersubTest = () => {"
@@ -23,7 +24,9 @@ echo "const soccersubTest = () => {"
 #   - easy to notice which test-module failed to load, if any.
 #   - compiler will not dead-code-eliminate the test.
 for module in $modules; do
-    echo "  TestUtil.addTestSuite($module);"
+    if [[ "$module" == *Test ]]; then
+        echo "  TestUtil.addTestSuite($module);"
+    fi
 done
 echo "  TestUtil.runTestSuite();"
 echo "}"

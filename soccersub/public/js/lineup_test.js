@@ -1,4 +1,4 @@
-goog.module('soccersub.Lineup_test');
+goog.module('soccersub.LineupTest');
 /*goog.setTestOnly('soccersub.Lineup_test');*/
 
 const Lineup = goog.require('soccersub.Lineup');

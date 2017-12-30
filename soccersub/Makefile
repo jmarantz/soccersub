@@ -21,14 +21,8 @@ xcompile : public/soccersub.min.js
 
 .PHONY: deploy compile jsopts
 
-JSFILES = public/js/soccersub.js public/js/game.js public/js/position.js \
-	public/js/player.js public/js/main.js public/js/lineup.js \
-	public/js/util.js public/js/storage.js public/js/array_section.js \
-	public/js/map_section.js public/js/plan.js public/js/drag.js \
-	public/js/plan_calculator.js public/js/assignment.js \
-	public/js/assignment2.js
-
-TEST_JSFILES = public/js/lineup_test.js public/js/plan_calculator_test.js public/js/test_util.js
+include Makefile.deps
+include Makefile.testdeps
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
@@ -38,16 +32,14 @@ jsopts : $(JSFILES) Makefile
 # library.
 export PREFIX = ../../..
 
-public/deps.js : Makefile ./gendeps.sh $(JSFILES)
-	$(BUILD) --namespace="soccersubMain" | ./gendeps.sh >$@
+TEST_SOURCES = $(filter-out public/js/test.js,$(TEST_JSFILES))
+public/js/test.js : Makefile $(TEST_SOURCES)
+	./gentest.sh $(filter-out public/js/test.js,$(TEST_SOURCES)) >$@
 
-public/testdeps.js : Makefile ./gendeps.sh $(JSFILES) $(TEST_JSFILES) public/js/test.js
-	$(BUILD) --namespace="soccersubTest" | ./gendeps.sh >$@
+deps :
+	./gendeps.sh soccersubMain public/deps.js Makefile.deps JSFILES
+	./gendeps.sh soccersubTest public/testdeps.js Makefile.testdeps TEST_JSFILES
 
-public/js/test.js : Makefile $(TEST_JSFILES)
-	./gentest.sh $(TEST_JSFILES) >$@
-
-deps : public/deps.js public/testdeps.js
 compile : public/soccersub.min.js public/soccersub.testmin.js public/opt.html public/test.html public/test_opt.html
 .PHONY : deps compile
 
@@ -78,7 +70,7 @@ COMPILE = $(BUILD) \
 public/soccersub.min.js : $(JSFILES) Makefile
 	$(COMPILE) --namespace="soccersubMain" 2>&1 | grep -v ButtonSet
 
-public/soccersub.testmin.js : $(TEST_JSFILES) $(JSFILES) Makefile
+public/soccersub.testmin.js : $(TEST_JSFILES) Makefile
 	$(COMPILE) --namespace="soccersubTest" 2>&1 | \
 	    egrep -v '(ButtonSet|goog.structs.Map)'
 

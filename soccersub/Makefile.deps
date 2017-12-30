@@ -1,0 +1,16 @@
+JSFILES = \
+    public/js/util.js \
+    public/js/lineup.js \
+    public/js/assignment2.js \
+    public/js/plan_calculator.js \
+    public/js/drag.js \
+    public/js/assignment.js \
+    public/js/plan.js \
+    public/js/position.js \
+    public/js/player.js \
+    public/js/map_section.js \
+    public/js/array_section.js \
+    public/js/storage.js \
+    public/js/game.js \
+    public/js/soccersub.js \
+    public/js/main.js \

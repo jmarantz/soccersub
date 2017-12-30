@@ -2,12 +2,16 @@
 goog.module('soccersubTest');
 goog.setTestOnly('soccersubTest');
 
-const Lineup_test = goog.require('soccersub.Lineup_test');
-const PlanCalculatorTest = goog.require('soccersub.PlanCalculatorTest');
+const util = goog.require('soccersub.util');
+const Lineup = goog.require('soccersub.Lineup');
+const Assignment2 = goog.require('soccersub.Assignment2');
+const PlanCalculator = goog.require('soccersub.PlanCalculator');
 const TestUtil = goog.require('soccersub.TestUtil');
+const LineupTest = goog.require('soccersub.LineupTest');
+const PlanCalculatorTest = goog.require('soccersub.PlanCalculatorTest');
 
 const soccersubTest = () => {
-  TestUtil.addTestSuite(Lineup_test);
+  TestUtil.addTestSuite(LineupTest);
   TestUtil.addTestSuite(PlanCalculatorTest);
   TestUtil.runTestSuite();
 }

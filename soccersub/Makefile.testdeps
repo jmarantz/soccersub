@@ -1,0 +1,9 @@
+TEST_JSFILES = \
+    public/js/util.js \
+    public/js/lineup.js \
+    public/js/assignment2.js \
+    public/js/plan_calculator.js \
+    public/js/test_util.js \
+    public/js/plan_calculator_test.js \
+    public/js/lineup_test.js \
+    public/js/test.js \
