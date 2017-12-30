@@ -5,6 +5,7 @@
 **/*.bak
 .idea
 **/*.min.js
+**/*.testmin.js
 deploy.timestamp
 **/closure-library
 **/opt.html
