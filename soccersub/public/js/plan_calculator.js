@@ -88,9 +88,6 @@ class PlanCalculator {
     this.playerTimeMap_ = new Map();
     
     /** @private {!Map<string, string>} */
-    this.playerPositionMap_ = new Map();
-    
-    /** @private {!Map<string, string>} */
     this.positionPlayerMap_ = new Map();
     
     /** 
@@ -269,6 +266,7 @@ class PlanCalculator {
    * @return {boolean}
    */
   comparePlayers(player1, player2) {
+    // TODO(jmarantz): cache these timings somehow.
     const timing1 = this.computeGameTiming_(player1);
     const timing2 = this.computeGameTiming_(player2);
     let cmp = timing1.percentInGame - timing2.percentInGame;
@@ -310,6 +308,33 @@ class PlanCalculator {
     return nextPlayer;
   }
 
+  /**
+   * @param {string} player
+   * @return {?string}
+   */
+  playerPosition(player) {
+    const events = this.playerEventsMap_.get(player);
+    if (!events) {
+      return null;
+    }
+    const assignment = events[events.length - 1].assignment;
+    if (!assignment) {
+      return null;
+    }
+    return assignment.positionName;
+  }
+
+  makeInitialAssignments() {
+    for (const position of this.positionNames_) {
+      const player = this.pickNextPlayer();
+      if (player) {
+        const assignment = {playerName: player, positionName: position, 
+                            timeSec: this.gameTimeSec_};
+        this.executeAssignments([assignment]);
+      }
+    }
+  }
+
   /** @param {!Array<!Assignment>} assignments */
   executeAssignments(assignments) {
     let hasNewAssignment = false;
@@ -331,15 +356,24 @@ class PlanCalculator {
       const previousPlayerAtPosition = 
             this.positionPlayerMap_.get(assignment.positionName);
       if (previousPlayerAtPosition) {
-        this.playerPositionMap_.delete(previousPlayerAtPosition);
+        this.playerEventsMap_.get(previousPlayerAtPosition).push({
+          type: EventType.BENCH,
+          timeSec: this.gameTimeSec_,
+          assignment: null,
+        });
       }
       const previousPositionOfPlayer = 
-            this.playerPositionMap_.get(assignment.playerName);
+            this.playerPosition(assignment.playerName);
       if (previousPositionOfPlayer) {
         this.positionPlayerMap_.delete(previousPositionOfPlayer);
       }
-      this.playerPositionMap_.set(assignment.playerName, assignment.positionName);
       this.positionPlayerMap_.set(assignment.positionName, assignment.playerName);
+      this.playerEventsMap_.get(assignment.playerName).push({
+        type: (assignment.positionName == 'Keeper') ? 
+          EventType.KEEPER : EventType.FIELD,
+        timeSec: this.gameTimeSec_,
+        assignment: assignment,
+      });
     }
 
     // However, if either the player or position is not what we recommended,
