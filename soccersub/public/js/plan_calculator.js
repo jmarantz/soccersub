@@ -6,20 +6,23 @@ const Lineup = goog.require('soccersub.Lineup');
 const AVAILABLE = -1;
 
 /**
- * Holds a span of time when a player starts & stops being available.
- * Players that are currently available have AVAILABLE for their stopTime.
- *
- * @typedef {!{
- *   startTime: number,
- *   stopTime: number,
- * }}
+ * @enum {string}
  */
-let AvailabilitySpan;
+const EventType = {
+  UNAVAILABLE: 'unavailable',
+  BENCH: 'bench',
+  FIELD: 'field',
+  KEEPER: 'keeper',
+};
 
 /**
- * @typedef {!Array<!AvailabilitySpan>}
+ * @typedef {!{
+ *   type: !EventType,
+ *   timeSec: number,
+ *   assignment: ?Assignment,
+ * }}
  */
-let Availability;
+let PlayerEvent;
 
 class PlanCalculator {
   /**
@@ -65,9 +68,9 @@ class PlanCalculator {
      *
      * So this map tracks spans of times when players are eligible.
      *
-     * @private {!Map<string, !Availability>}
+     * @private {!Map<string, !Array<!PlayerEvent>>}
      */
-    this.playerAvailablityMap_ = new Map();
+    this.playerEventsMap_ = new Map();
 
     /** @private {number} */
     this.gameTimeSec_ = 0;
@@ -83,6 +86,12 @@ class PlanCalculator {
 
     /** @private {!Map<string, number>} */
     this.playerTimeMap_ = new Map();
+    
+    /** @private {!Map<string, string>} */
+    this.playerPositionMap_ = new Map();
+    
+    /** @private {!Map<string, string>} */
+    this.positionPlayerMap_ = new Map();
     
     /** 
      * The priority-map assigns priority indices to players. These are
@@ -129,10 +138,10 @@ class PlanCalculator {
 
     // Find new players.
     for (const player of this.lineup_.playerNames) {
-      let availability = this.playerAvailablityMap_.get(player);
-      if (!availability) {
-        availability = [];
-        this.playerAvailablityMap_.set(player, availability);
+      let events = this.playerEventsMap_.get(player);
+      if (!events) {
+        events = [];
+        this.playerEventsMap_.set(player, events);
 
         // Players that come late get the lowest priority by default, so all
         // things being equal, when choosing the next player the ones that
@@ -140,19 +149,21 @@ class PlanCalculator {
         // in the UI via drag & drop.
         this.playerPriorityMap_.set(player, this.playerPriorityMap_.size + 1);
       }
-      if ((availability.length == 0) ||
-          (availability[availability.length - 1].stopTime != AVAILABLE)) {
-        availability.push({startTime: this.gameTimeSec_, stopTime: AVAILABLE});
+      const len = events.length;
+      if ((len == 0) || (events[len - 1].type == EventType.UNAVAILABLE)) {
+        events.push({type: EventType.BENCH, timeSec: this.gameTimeSec_,
+                     assignment: null});
         ++playerDelta;
       }
     }
 
     // Find players that are no longer available.
-    this.playerAvailablityMap_.forEach((availability, player) => {
+    this.playerEventsMap_.forEach((events, player) => {
       if (!this.lineup_.playerNames.has(player) &&
-          (availability[availability.length - 1].stopTime == AVAILABLE)) {
+          (events[events.length - 1].type != EventType.UNAVAILABLE)) {
         --playerDelta;
-        availability[availability.length - 1].stopTime = this.gameTimeSec_;
+        events.push({type: EventType.UNAVAILABLE, 
+                     timeSec: this.gameTimeSec_, assignment: null});
       }
     });
     return playerDelta;
@@ -171,8 +182,132 @@ class PlanCalculator {
   }
 
   /**
+   * @param {string} player
+   * @return {!{percentInGame: number, benchTimeSec: number}}
+   * @private
+   */
+  computeGameTiming_(player) {
+    const events = this.playerEventsMap_.get(player);
+    let percentInGame = 50;
+    let benchTimeSec = 0;
+    
+    if (!events) {
+      return {percentInGame, benchTimeSec};
+    }
+    let availableSec = 0;
+    let fieldSec = 0;
+    let startBenchTime = 0;
+    let startAvailableTime = 0;
+    let previousFieldTime = 0;
+    let previousType = EventType.UNAVAILABLE;
+    let lastTimeSec = 0;
+
+    const sequence = (t1, t2) => {
+      return t1 + ' -> ' + t2;
+    }
+
+    const accumulateTime = (timeSec, type) => {
+      switch (sequence(previousType, type)) {
+      case sequence(EventType.FIELD, EventType.UNAVAILABLE):
+      case sequence(EventType.FIELD, EventType.KEEPER):
+        fieldSec += timeSec - previousFieldTime;
+        availableSec += timeSec - startAvailableTime;
+        break;
+      case sequence(EventType.FIELD, EventType.BENCH):
+        fieldSec += timeSec - previousFieldTime;
+        startBenchTime = timeSec;
+        break;
+      case sequence(EventType.BENCH, EventType.FIELD):
+        previousFieldTime = timeSec;
+        benchTimeSec += timeSec - startBenchTime;
+        break;
+      case sequence(EventType.BENCH, EventType.KEEPER):
+      case sequence(EventType.BENCH, EventType.UNAVAILABLE):
+        availableSec += timeSec - startAvailableTime;
+        benchTimeSec += timeSec - startBenchTime;
+        break;
+      case sequence(EventType.UNAVAILABLE, EventType.FIELD):
+      case sequence(EventType.KEEPER, EventType.FIELD):
+        startAvailableTime = timeSec;
+        previousFieldTime = timeSec;
+        break;
+      case sequence(EventType.UNAVAILABLE, EventType.BENCH):
+      case sequence(EventType.KEEPER, EventType.BENCH):
+        startAvailableTime = timeSec;
+        startBenchTime = timeSec;
+        break;
+      }
+    };
+
+    for (const event of events) {
+      if (previousType == event.type) {
+        continue;
+      }
+      lastTimeSec = event.timeSec;
+      accumulateTime(lastTimeSec, event.type);
+      previousType = event.type;
+    }
+    if (this.gameTimeSec_ != lastTimeSec) {
+      accumulateTime(this.gameTimeSec_, EventType.UNAVAILABLE);
+    }
+
+    if (availableSec == 0) {
+      percentInGame = 50;
+    } else {
+      percentInGame = 100 * fieldSec / availableSec;
+    }
+    return {percentInGame, benchTimeSec};
+  }
+
+  /**
+   * Eligible players are compared based on how long they've been in the
+   * game, how long they've been waiting, and finally by an arbitrary priority
+   * which can be adjusted.
+   *
+   * @param {string} player1
+   * @param {string} player2
+   * @return {boolean}
+   */
+  comparePlayers(player1, player2) {
+    const timing1 = this.computeGameTiming_(player1);
+    const timing2 = this.computeGameTiming_(player2);
+    let cmp = timing1.percentInGame - timing2.percentInGame;
+    if (cmp != 0) {
+      return cmp < 0;
+    }
+    cmp = timing2.benchTimeSec - timing1.benchTimeSec;
+    if (cmp != 0) {
+      return cmp < 0;
+    }
+    cmp = this.playerPriorityMap_.get(player1) - 
+      this.playerPriorityMap_.get(player2);
+    if (cmp != 0) {
+      return cmp < 0;         // this should cover all players.
+    }
+    return player1 < player2; // This should not be reachable.
+  }
+
+  /**
+   * @param {string} player
+   * @return {boolean}
+   */
+  playerIsAvailable(player) {
+    let events = this.playerEventsMap_.get(player);
+    return events && (events[events.length - 1].type == EventType.BENCH);
+  }
+
+  /**
+   * @return {?string}
    */
   pickNextPlayer() {
+    let nextPlayer = null;
+    for (const player of this.lineup_.playerNames) {
+      if (this.playerIsAvailable(player) &&
+          ((nextPlayer == null) || this.comparePlayers(player, nextPlayer))) {
+        nextPlayer = player;
+      }
+    }
+    return nextPlayer;
   }
 
   /** @param {!Array<!Assignment>} assignments */
@@ -193,6 +328,18 @@ class PlanCalculator {
       }
       hasNewAssignment = true;
       this.assignments_.push(assignment);
+      const previousPlayerAtPosition = 
+            this.positionPlayerMap_.get(assignment.positionName);
+      if (previousPlayerAtPosition) {
+        this.playerPositionMap_.delete(previousPlayerAtPosition);
+      }
+      const previousPositionOfPlayer = 
+            this.playerPositionMap_.get(assignment.playerName);
+      if (previousPositionOfPlayer) {
+        this.positionPlayerMap_.delete(previousPositionOfPlayer);
+      }
+      this.playerPositionMap_.set(assignment.playerName, assignment.positionName);
+      this.positionPlayerMap_.set(assignment.positionName, assignment.playerName);
     }
 
     // However, if either the player or position is not what we recommended,
