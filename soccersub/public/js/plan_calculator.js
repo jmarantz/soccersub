@@ -25,6 +25,16 @@ const EventType = {
  */
 let PlayerEvent;
 
+/**
+ * @param {string} playerName
+ * @param {string} positionName
+ * @param {number} timeSec
+ * @return {!Assignment}
+ */
+const makeAssignment = (playerName, positionName, timeSec) => {
+  return {playerName, positionName, timeSec};
+}
+
 class PlanCalculator {
   /**
    * @param {!Lineup} lineup
@@ -319,6 +329,22 @@ class PlanCalculator {
     return priority;
   }
 
+  /** @return {?string} */
+  pickNextPosition() {
+    // Determine which position has been in the longest, by iterating backward
+    // through assignments, eliminating positions from the candidate list
+    const positions = new Set(this.positionNames_);
+    
+    for (let i = this.assignments_.length - 1; i >= 0; --i) {
+      const assignment = this.assignments_[i];
+      positions.delete(assignent.positionName);
+      if (positions.size == 1) {
+        return Array.from(positions)[0];
+      }
+    }
+    return null;
+  }
+
   /**
    * @param {number} numPlayers
    * @return {!Array<string>}
@@ -329,7 +355,7 @@ class PlanCalculator {
     if (numPlayers < players.length) {
       util.sortTopN(players, numPlayers, (player) => this.playerPriority(player));
     }
-    players.length = numPlayers;
+    players.length = Math.min(players.length, numPlayers);
     return players;
   }
 
@@ -355,11 +381,36 @@ class PlanCalculator {
     for (let i = 0; i < nextPlayers.length; ++i) {
       const player = nextPlayers[i];
       const position = this.positionNames_[i];
-      assignments.push({playerName: player, positionName: position, 
-                        timeSec: this.gameTimeSec_});
-
+      assignments.push(makeAssignment(player, position, this.gameTimeSec_));
     }
+    this.nextPlayerChangeSec_ = this.shiftTimeSec_;
     this.executeAssignments(assignments);
+  }
+
+  /**
+   * @param {!Assignment} assignment
+   */
+  addAssignment(assignment) {
+    this.assignments_.push(assignment);
+    const previousPlayer = this.positionPlayerMap_.get(assignment.positionName);
+    if (previousPlayer) {
+      this.playerEventsMap_.get(previousPlayer).push({
+        type: EventType.BENCH,
+        timeSec: this.gameTimeSec_,
+        assignment: null,
+      });
+    }
+    const previousPosition = this.playerPosition(assignment.playerName);
+    if (previousPosition) {
+      this.positionPlayerMap_.delete(previousPosition);
+    }
+    this.positionPlayerMap_.set(assignment.positionName, assignment.playerName);
+    this.playerEventsMap_.get(assignment.playerName).push({
+      type: (assignment.positionName == Lineup.KEEPER) ? 
+        EventType.KEEPER : EventType.FIELD,
+      timeSec: this.gameTimeSec_,
+      assignment: assignment,
+    });
   }
 
   /** @param {!Array<!Assignment>} assignments */
@@ -379,28 +430,8 @@ class PlanCalculator {
         }
       }
       hasNewAssignment = true;
-      this.assignments_.push(assignment);
-      const previousPlayerAtPosition = 
-            this.positionPlayerMap_.get(assignment.positionName);
-      if (previousPlayerAtPosition) {
-        this.playerEventsMap_.get(previousPlayerAtPosition).push({
-          type: EventType.BENCH,
-          timeSec: this.gameTimeSec_,
-          assignment: null,
-        });
-      }
-      const previousPositionOfPlayer = 
-            this.playerPosition(assignment.playerName);
-      if (previousPositionOfPlayer) {
-        this.positionPlayerMap_.delete(previousPositionOfPlayer);
-      }
-      this.positionPlayerMap_.set(assignment.positionName, assignment.playerName);
-      this.playerEventsMap_.get(assignment.playerName).push({
-        type: (assignment.positionName == 'Keeper') ? 
-          EventType.KEEPER : EventType.FIELD,
-        timeSec: this.gameTimeSec_,
-        assignment: assignment,
-      });
+      this.addAssignment(assignment);
+      ++this.assignmentIndex_;
     }
 
     // However, if either the player or position is not what we recommended,
@@ -427,113 +458,48 @@ class PlanCalculator {
   }
 
   computePlan() {
-    // We compute a plan by calcuating play-time based on the Player
-    // objects, and then making "semi-fresh" decisions as to who goes
-    // in when. "fresh" because new information may alter priority in
-    // future assignments, e.g. to compensate for a delayed substition
-    // or a change in plan vs execution as determined by the coach.
-    // But "semi-" because there are some arbitrary decisions that may
-    // have been overridden at the start of the game, say to contrive
-    // to get a player into a particular position or get two players
-    // that play well together in at the same time.  Examples of
-    // arbitrary decisions we may want to remember are:
-    //   1. Which starting player gets substituted first.
-    //   2. Which non-starting player enters the game first.
-    // Once the players have all rotated in, there are may be fewer
-    // arbitrary decisions, because each player on the field entered
-    // at a different time, unless multipe players are substituted at
-    // once, which happens more in outdoor soccer than Futsal.
-
-    const playerTimeMap = new Map();
-    const positionAssignmentMap = new Map();
-    for (const assignment of this.assignments_) {
-      const prevAssignment = positionAssignmentMap.get(assignment.positionName);
-      let deltaTimeSec = assignment.timeSec;
-      if (prevAssignment) {
-        deltaTimeSec -= prevAssignment.timeSec;
+    // Override any existing plan for the future, because we are going to
+    // recompute it. Any assignments already made are assumed to be correct.
+    // We also have to iterate through the players and remove any future
+    // events.
+    this.assignments_.length = this.assignmentIndex_;
+    this.playerEventsMap_.forEach((events, player) => {
+      const index = util.upperBound(
+        events, (event) => this.timeSec <= this.gameTimeSec_);
+      if (index != -1) {
+        events.length = index;
       }
-      const currentTimeSec = playerTimeMap.get(prevAssignment.playerName) || 0;
-      playerTimeMap.set(prevAssignment.playerName, 
-                        currentTimeSec + deltaTimeSec);
-      positionAssignmentMap.set(assignment.positionName, assignment);
-    }
+    });
+    // Note: if we were to add a cache for player timing stats, it would need
+    // to be invalidated here.
 
-    // Now we make assignments for the remainder of the game, aiming for
-    // play-time equality.  It we are starting a new half, we just divide
-    // time in half by the number of field players available (assuming keeper
-    // does not sub).  Whene there is a player added (arrived late) or
-    // removed (injury), we need to recompute the shift-time for the half
-    // based on the current scenario.  That happens rarely so we'll have
-    // an alternate path for when the player-count changes, and retain the
-    // shift information.
-  }
-
-  /**
-   * Copmutes the next assignment based on wwhat players have played so far, and
-   * how long they've been out.
-   *
-   * @param {!Map<string, number>} playerTimeMap
-   * @return {?Assignment}
-   */
-  computeNextAssignment(playerTimeMap) {
-    // Which position do we assign?  The one with the player that's got
-    // the most time.
-    for (let i = 0; i < this.positionNames_.length; ++i) {
-    }
-    return null;
-  }
-
-/*
-  compute() {
-    // Tracks the amount of time a player has played in each half.  These all
-    // map player names to time-in-game in seconds.
-    const playerTimeInHalfSec = [new Map(), new Map()];
-    const playerTimeInGameSec = new Map();
-
-    // TODO(jmarantz): changes in formation mid-game should be possible, and
-    // will be chalenging because there will be active and inactive positions.
-
-    let half =  (this.gameTimeSec_ < this.minutesPerHalf) ? 0 : 1;
-    let firstHalf, secondHalf;
-    if (this.gameTimeSec_ == 0) {
-      this.makeInitialAssignmentsIfNeeded();
-    }* else {
-      {firstHalf, secondHalf} = this.computePlayerTime();
-    }*
-
-    const assignmentMatrix = this.fillAssignmentMatrix();
-    let timeLeftInHalfSec = this.minutesPerHalf - this.gameTimeSec_;
-    if (half == 1) {
-      timeLeftInHalfSec += this.minutesPerHalf;
-    }    
-  }
-*/
-
-  /**
-   * Matrix of assignments.  Outer array is indexed by shifts, inner array
-   * is indexed by positionIndex.
-   *
-   * @return {!Array<!Array<?Assignment>>}
-   */
-  fillAssignmentMatrix() {
-    const assignmentMatrix = [];
-    let previousAssignmentTimeSec = -1;
-    let row = null;
-    for (const assignment of this.assignments_) {
-      if (assignment.timeSec != previousAssignmentTimeSec) {
-        row = row ? row.slice() : Array(this.positionNames_.length).fill(null);
-        assignmentMatrix.push(row);
-        previousAssignmentTimeSec = assignment.timeSec;
+    let half = 0;
+    const halfSec = this.minutesPerHalf * 60;
+    const gameSec = 2 * halfSec;
+    for (let timeSec = this.nextPlayerChangeSec_; timeSec < gameSec; 
+         timeSec += this.shiftTimeSec) {
+      const players = this.pickNextPlayers(1);
+      if (players.length != 1) {
+        console.log('not enough players');
+        return;
       }
-      const posIndex = this.positionNameIndexMap_.get(assignment.positionName);
-      if (posIndex == null) {
-        console.log('Invalid position: ' + assignment.positionName);
-        debugger;
+
+      let position;
+      if ((half == 0) && (timeSec >= halfSec)) {
+        timeSec = halfSec;
+        half = 1;
+        // pick a new keeper.
+        if (this.secondHalfKeeper_) {
+          players = [this.secondHalfKeeper_];
+        } else {
+          this.secondHalfKeeper_ = players[0];
+        }
+        position = Lineup.KEEPER;
       } else {
-        row[posIndex] = assignment;
-       }
+        position = this.pickNextPosition();
+      }
+      this.addAssignment(makeAssignment(players[0], position, timeSec));
     }
-    return assignmentMatrix;
   }
 
   /*

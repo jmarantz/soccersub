@@ -19,6 +19,8 @@ const util = goog.require('soccersub.util');
  */
 let Positions;
 
+const KEEPER = 'Keeper';
+
 /**
  * Maps the number of allowed players (e.g. 5, 9, 11) into a list of positions
  * for that game.  The UI can display the abbreviated forms of positions, which
@@ -27,15 +29,15 @@ let Positions;
  * @type {!Object<number, !Positions>}
  */
 const configurations = {
-  5: [['Keeper'],
+  5: [[KEEPER],
       ['Left Back', 'Center Back', 'Right Back'],
       ['Left Mid', 'Right Mid'],
       ['Left Forward', 'Striker', 'Right Forward']],
-  9: [['Keeper'],
+  9: [[KEEPER],
       ['Left Back', 'Center Back', 'Right Back'],
       ['Left Mid', 'Center Mid', 'Right Mid'],
       ['Left Forward', 'Striker', 'Right Forward']],
-  11: [['Keeper'],
+  11: [[KEEPER],
        ['Sweeper'],
        ['Left Back', 'Left Center Back', 'Right Center Back', 'Right Back'],
        ['Stopper'],
@@ -51,7 +53,7 @@ const abbrevs = {
   'Center Back': 'CB',
   'Center Defensive Mid': 'CDM',
   'Center Mid': 'CM',
-  'Keeper': 'GK',
+  KEEPER: 'GK',
   'Left Back': 'LB',
   'Left Center Back': 'LCB',
   'Left Forward': 'LF',
@@ -347,5 +349,7 @@ class Lineup {
     return abbrevs[positionName] || positionName;
   }
 }
+
+Lineup.KEEPER = KEEPER;
 
 exports = Lineup;
