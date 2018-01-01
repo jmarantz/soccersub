@@ -164,14 +164,21 @@ class PlanCalculator {
                      timeSec: this.gameTimeSec_, assignment: null});
       }
     });
+    this.computeShiftTime_();
     return playerDelta;
   }
 
-  computeShiftTime() {
+  /** @return {number} */
+  shiftTimeSec() {
+    return this.shiftTimeSec_;
+  }
+
+  /** @private */
+  computeShiftTime_() {
     const halfSec = this.minutesPerHalf * 60;
-    let endOfHalfSec = this.gameTimeSec_;
-    if (endOfHalfSec >= halfSec) {
-      endOfHalfSec -= halfSec;
+    let endOfHalfSec = halfSec;
+    if (this.gameTimeSec_ == halfSec) {
+      endOfHalfSec += halfSec;
     }
 
     const timeLeftSec = endOfHalfSec - this.nextPlayerChangeSec_;
