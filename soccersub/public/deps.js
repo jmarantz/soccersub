@@ -96,6 +96,9 @@
   modules.push('goog.ui.Dialog');
   modules.push('goog.dom.InputType');
   modules.push('goog.ui.Prompt');
+  modules.push('goog.structs.Node');
+  modules.push('goog.structs.Heap');
+  modules.push('goog.structs.PriorityQueue');
   addDep('util.js', 'soccersub.util');
   addDep('lineup.js', 'soccersub.Lineup');
   addDep('assignment2.js', 'soccersub.Assignment2');

@@ -6,4 +6,5 @@ TEST_JSFILES = \
     public/js/test_util.js \
     public/js/plan_calculator_test.js \
     public/js/lineup_test.js \
+    public/js/util_test.js \
     public/js/test.js \

@@ -35,6 +35,9 @@ exports = {
     TestUtil.touch('position:Right Forward');
     calculator.setupPositions();
     calculator.makeInitialAssignments();
+    // This order corresponds to the configurations structure in lineup.js,
+    // for a 5v5 game, as well as the order of the default player-set passed
+    // in above to the lineup ctor.
     assertEquals('Left Forward', calculator.playerPosition('jim'));
     assertEquals('Right Forward', calculator.playerPosition('joe'));
     assertEquals('Left Back', calculator.playerPosition('fred'));
