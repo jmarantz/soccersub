@@ -1,31 +1,38 @@
 goog.module('soccersub.ArraySection');
 
-// An ArrayStorageValue can be declared by an application, specifying
-// how values can be saved from, or restored to, active state.
+/**
+ * An ArrayStorageValue can be declared by an application, specifying
+ * how values can be saved from, or restored to, active state.
+ *
+ * @template Key, Value
+ */
 class ArrayStorageValue {
   /**
    * @param {string} name
-   * @param {function(*):*} getter
-   * @param {function(*, *):undefined} setter
+   * @param {function(Key):Value} getter
+   * @param {function(Key, Value):undefined} setter
    */
   constructor(name, getter, setter) {
     /** @type {string} */
     this.name = name;
-    /** @type {function(*):*} getter */
+    /** @type {function(Key):Value} getter */
     this.getter = getter;
-    /** @type {function(*, *):undefined} setter */
+    /** @type {function(Key, Value):undefined} setter */
     this.setter = setter;
   }
 }
 
+/**
+ * @template Key, Value
+ */
 class ArraySection {
   /** @param {string} name */
   constructor(name) {
     /** @type {string} */
     this.name = name;
-    /** @type {Map<string, !ArrayStorageValue>} */
+    /** @type {Map<string, !ArrayStorageValue<Key, Value>>} */
     this.columns = new Map();
-    /** @type {!Map<string, *> } */
+    /** @type {!Map<string, Value>} */
     this.instances = new Map();
   }
 

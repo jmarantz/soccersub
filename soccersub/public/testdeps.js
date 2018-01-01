@@ -7,11 +7,20 @@
     goog.addDependency('../../../js/' + file, [module], [], opts);
   };
 
+  addDep('map_section.js', 'soccersub.MapSection');
+  addDep('array_section.js', 'soccersub.ArraySection');
+  addDep('storage.js', 'soccersub.Storage');
+  addDep('storage_test.js', 'soccersub.StorageTest');
+  modules.push('goog.structs.Node');
+  modules.push('goog.object');
   modules.push('goog.dom.NodeType');
   modules.push('goog.debug.Error');
   modules.push('goog.asserts');
-  modules.push('goog.object');
   modules.push('goog.array');
+  modules.push('goog.structs.Heap');
+  modules.push('goog.structs.PriorityQueue');
+  addDep('util.js', 'soccersub.util');
+  addDep('util_test.js', 'soccersub.UtilTest');
   modules.push('goog.math');
   modules.push('goog.math.Coordinate');
   modules.push('goog.math.Box');
@@ -96,10 +105,6 @@
   modules.push('goog.ui.Dialog');
   modules.push('goog.dom.InputType');
   modules.push('goog.ui.Prompt');
-  modules.push('goog.structs.Node');
-  modules.push('goog.structs.Heap');
-  modules.push('goog.structs.PriorityQueue');
-  addDep('util.js', 'soccersub.util');
   addDep('lineup.js', 'soccersub.Lineup');
   addDep('assignment2.js', 'soccersub.Assignment2');
   addDep('plan_calculator.js', 'soccersub.PlanCalculator');
@@ -132,7 +137,10 @@
   addDep('test_util.js', 'soccersub.TestUtil');
   addDep('plan_calculator_test.js', 'soccersub.PlanCalculatorTest');
   addDep('lineup_test.js', 'soccersub.LineupTest');
-  addDep('util_test.js', 'soccersub.UtilTest');
+  addDep('drag.js', 'soccersub.Drag');
+  addDep('assignment.js', 'soccersub.Assignment');
+  addDep('plan.js', 'soccersub.Plan');
+  addDep('plan_test.js', 'soccersub.PlanTest');
   addDep('test.js', 'soccersubTest');
 
   for (const [file, module] of window.testDeps || []) {

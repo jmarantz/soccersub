@@ -21,8 +21,7 @@ xcompile : public/soccersub.min.js
 
 .PHONY: deploy compile jsopts
 
-include Makefile.deps
-include Makefile.testdeps
+include Makefile.*deps
 
 jsopts : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-v20161024.jar --help
@@ -32,12 +31,15 @@ jsopts : $(JSFILES) Makefile
 # library.
 export PREFIX = ../../..
 
-TEST_SOURCES = $(filter-out public/js/test.js,$(TEST_JSFILES))
-public/js/test.js : Makefile $(TEST_SOURCES)
-	./gentest.sh $(filter-out public/js/test.js,$(TEST_SOURCES)) >$@
+deps : public/deps.js public/testdeps.js public/js/test.js
 
-deps :
-	./gendeps.sh soccersubMain public/deps.js Makefile.deps JSFILES
+public/deps.js : $(JSFILES) ./gendeps.sh $(JSFILES) Makefile
+	./gendeps.sh soccersubMain $@ Makefile.deps JSFILES
+
+public/js/test.js : public/js/*_test.js ./gentest.sh Makefile
+	./gentest.sh > public/js/test.js
+
+public/testdeps.js : public/js/test.js $(TEST_JSFILES) ./gendeps.sh Makefile
 	./gendeps.sh soccersubTest public/testdeps.js Makefile.testdeps TEST_JSFILES
 
 compile : public/soccersub.min.js public/soccersub.testmin.js public/opt.html public/test.html public/test_opt.html
@@ -67,10 +69,10 @@ COMPILE = $(BUILD) \
 	  --compiler_flags="--warning_level=VERBOSE" \
 	  --output_file=$@ 
 
-public/soccersub.min.js : $(JSFILES) Makefile
+public/soccersub.min.js : $(JSFILES) Makefile deps
 	$(COMPILE) --namespace="soccersubMain" 2>&1 | grep -v ButtonSet
 
-public/soccersub.testmin.js : $(TEST_JSFILES) Makefile
+public/soccersub.testmin.js : $(TEST_JSFILES) Makefile deps
 	$(COMPILE) --namespace="soccersubTest" 2>&1 | \
 	    egrep -v '(ButtonSet|goog.structs.Map)'
 

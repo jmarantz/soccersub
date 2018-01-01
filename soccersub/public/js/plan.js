@@ -80,16 +80,15 @@ class Plan {
 
   // Resets the player-list from the lineup and randomizes.
   resetAndRender() {
-    this.reset_();
+    this.reset();
     this.render();
     this.save_();
   }
 
   /**
    * Resets the player-list from the lineup and randomizes.
-   * @private
    */
-  reset_() {
+  reset() {
     this.players_ = [...this.lineup.playerNames];
     this.playerOrder_ = [[], []];
     this.positionOrder_ = [[], []];
@@ -130,7 +129,7 @@ class Plan {
     // Cleanup any missing or malformed data.
     if (!this.checkOrder()) {
       this.log_('Malformed order');
-      this.reset_();
+      this.reset();
       return true;
     }
     this.log_('plan rendering...');
@@ -180,7 +179,7 @@ class Plan {
     // everything.
     if (this.players_.length != this.lineup.getNumPlayers()) {
       console.log('player lengths different: resetting');
-      this.reset_();
+      this.reset();
       return;
     }
 

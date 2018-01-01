@@ -45,8 +45,9 @@ class Storage {
   }
 
   /**
+   * @template Key, Value
    * @param {string} name
-   * @return {!ArraySection}
+   * @return {!ArraySection<Key, Value>}
    */
   addArraySection(name) {
     const arraySection = new ArraySection(name);
