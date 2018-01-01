@@ -2,6 +2,7 @@ goog.module('soccersub.PlanCalculator');
 
 const Assignment = goog.require('soccersub.Assignment2');
 const Lineup = goog.require('soccersub.Lineup');
+const util = goog.require('soccersub.util');
 
 const AVAILABLE = -1;
 
@@ -295,17 +296,34 @@ class PlanCalculator {
   }
 
   /**
-   * @return {?string}
+   * Computes a numeric priority for a player.  This is is more natural to
+   * express in relative terms (ie is player1 higher priority than player2)
+   * but the PriorityQueue implementation does not allow for that.
+   *
+   * @param {string} player
+   * @return {number}
    */
-  pickNextPlayer() {
-    let nextPlayer = null;
-    for (const player of this.lineup_.playerNames) {
-      if (this.playerIsAvailable(player) &&
-          ((nextPlayer == null) || this.comparePlayers(player, nextPlayer))) {
-        nextPlayer = player;
-      }
+  playerPriority(player) {
+    const timing = this.computeGameTiming_(player);
+    let priority = timing.percentInGame * 1e6;
+    priority += timing.benchTimeSec * 100;
+    priority += this.playerPriorityMap_.size - 
+      this.playerPriorityMap_.get(player);
+    return priority;
+  }
+
+  /**
+   * @param {number} numPlayers
+   * @return {!Array<string>}
+   */
+  pickNextPlayers(numPlayers) {
+    const players = Array.from(this.lineup_.playerNames).filter(
+      (player) => this.playerIsAvailable(player));
+    if (numPlayers < players.length) {
+      util.sortTopN(players, numPlayers, (player) => this.playerPriority(player));
     }
-    return nextPlayer;
+    players.length = numPlayers;
+    return players;
   }
 
   /**
@@ -325,14 +343,16 @@ class PlanCalculator {
   }
 
   makeInitialAssignments() {
-    for (const position of this.positionNames_) {
-      const player = this.pickNextPlayer();
-      if (player) {
-        const assignment = {playerName: player, positionName: position, 
-                            timeSec: this.gameTimeSec_};
-        this.executeAssignments([assignment]);
-      }
+    const nextPlayers = this.pickNextPlayers(this.positionNames_.length);
+    const assignments = [];
+    for (let i = 0; i < nextPlayers.length; ++i) {
+      const player = nextPlayers[i];
+      const position = this.positionNames_[i];
+      assignments.push({playerName: player, positionName: position, 
+                        timeSec: this.gameTimeSec_});
+
     }
+    this.executeAssignments(assignments);
   }
 
   /** @param {!Array<!Assignment>} assignments */

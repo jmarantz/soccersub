@@ -21,7 +21,7 @@ exports = {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
     const calculator = new PlanCalculator(lineup, () => {}, console.log);
     assertEquals(5, calculator.updatePlayers());
-    assertEquals('jim', calculator.pickNextPlayer());  // FIFO to start, not abc.
+    assertArrayEquals(['jim', 'joe'], calculator.pickNextPlayers(2));
   },
 
   'testInitialAssignments': () => {
