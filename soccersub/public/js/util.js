@@ -1,5 +1,8 @@
 goog.module('soccersub.util');
 
+const PriorityQueue = goog.require('goog.structs.PriorityQueue');
+const asserts = goog.require('goog.asserts');
+
 /** @param {string} type */
 exports.storageAvailable = (type) => {
   try {
@@ -152,4 +155,87 @@ exports.upperBound = (array, lessThan) => {
     }
   }
   return -1;
+};
+
+/**
+ * Finds the highest-priority n items in arr and moves them to the
+ * front of the array in sorted order (highest first).  The remainder
+ * of the array remains unsorted.
+ *
+ * The worse-case runtime for this should be O(arr.length * log N).
+ * However, typically it will be O(arr.length + N * log N).  We use
+ * "+" instead of "*" because typically our arrays are mostly sorted
+ * coming into this function, with only incremental changes expected,
+ * and we have an early-exit for array elements that have no chance of
+ * being inserted into the high-priority list.
+ *
+ * The worse-case performance comes if the array is sorted in reverse
+ * order.
+ *
+ * @param {!Array<T>} arr
+ * @param {number} n
+ * @param {!function(T):number} getPriority
+ * @template T
+ */
+exports.sortTopN = (arr, n, getPriority) => {
+  if (n == 0) {
+    return;
+  }
+  // type {!PriorityQueue<!{value: T, index: number}>}
+  const pqueue = new PriorityQueue();
+
+  // Keep track of the minimum priority in the queue, and don't bother
+  // to insert anything less than that.  This is a common case because
+  // our priorities don't change much from run to run, so if we have 1M
+  // entries and rarely get below a few hundred of them we should be able
+  // tackle most of them in linear time.
+  let minPriority = NaN;
+  for (let i = 0; i < arr.length; ++i) {
+    const value = arr[i];
+    const priority = getPriority(value);
+    if ((pqueue.getCount() < n) || (priority > minPriority)) {
+      pqueue.enqueue(priority, {value: value, index: i});
+      if (pqueue.getCount() > n) {
+        pqueue.dequeue();
+      }
+      minPriority = getPriority(pqueue.peek().value);
+    }
+  }
+
+  // Pull the priority-queue of top N slots into a set for easier lookup.
+  // type {!Array<T>}
+  const topNArray = pqueue.getValues().map(({value, index}) => value);
+  // type {!Set<T>}
+  const topN = new Set(topNArray);
+
+  // Hold onto all values we are evicting from the top N slots in the array,
+  // so we can swap them into the slots vacated by top N entries.  Note that
+  // there can be fewer than N of these because some of the top N entries may
+  // already have been in the top N slots.
+  const evictedValues = [];
+  let evictedValuesIndex = 0;
+  for (let i = 0; i < n; ++i) {
+    const value = arr[i];
+    if (!topN.has(value)) {
+      evictedValues.push(value);
+    }
+  }
+
+  // Pull the sorted N entries out of the priority queue and put them
+  // back into the first N entries of the array, moving the evicted items
+  // into higher-numbered slots previously inhabited by the top N entries.
+  // We are pulling the lowest priority elements out of the pqueue first so
+  // we fill the array from n-1 to 0.
+  for (let i = n - 1; i >= 0; --i) {
+    const {value, index} = pqueue.dequeue();
+    if (index >= n) {
+      arr[index] = evictedValues[evictedValuesIndex];
+      ++evictedValuesIndex;
+    }
+    arr[i] = value;
+  }
+
+  // All of the evictedValues must be put back into the array, otherwise
+  // we will lose them when the topN values take over their top slots.
+  asserts.assert(evictedValuesIndex == evictedValues.length);
 };
