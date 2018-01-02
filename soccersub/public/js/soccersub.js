@@ -6,7 +6,7 @@ const Lineup = goog.require('soccersub.Lineup');
 const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
-const Storage = goog.require('soccersub.Storage');
+//const Storage = goog.require('soccersub.Storage');
 const util = goog.require('soccersub.util');
 
 let deployTimestamp = window['deployTimestamp'] || 'dev';

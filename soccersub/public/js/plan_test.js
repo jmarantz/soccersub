@@ -15,7 +15,7 @@ exports = {
 
   'testFreshenPlayers': () => {
     const lineup = new Lineup(5, ['a', 'b', 'c', 'd']);
-    const plan = new Plan(lineup, () => {}, console.log);
+    const plan = new Plan(lineup, () => {}, TestUtil.consoleLog);
     plan.reset();
   },
 };

@@ -9,7 +9,8 @@
 export PATH := /usr/local/bin:$(PATH)
 
 #CLOSURE_VERSION = v20161024
-CLOSURE_VERSION = v20171112
+#CLOSURE_VERSION = v20171112
+CLOSURE_VERSION = v20171203
 COMPILER_JAR = $(HOME)/bin/closure-compiler-$(CLOSURE_VERSION).jar
 CLOSURE_LIB = $(HOME)/dev/closure-library
 BUILD = $(CLOSURE_LIB)/closure/bin/build/closurebuilder.py \
@@ -62,19 +63,22 @@ public/test_opt.html : public/opt.html Makefile
 	    -e 's@soccersubMain@soccersubTest@' \
 	        < $< > $@
 
+JSHIDE = --hide_warnings_for=/Users/jmarantz/dev/closure-library/
+JSOPTS = --compilation_level=ADVANCED_OPTIMIZATIONS $(JSHIDE) --new_type_inf
+#JSOPTS = --compilation_level=ADVANCED_OPTIMIZATIONS $(JSHIDE)
+
 COMPILE = $(BUILD) \
 	  --compiler_jar=$(COMPILER_JAR) \
-	  --compiler_flags="--compilation_level=ADVANCED_OPTIMIZATIONS" \
+	  --compiler_flags="$(JSOPTS)" \
 	  --output_mode=compiled \
 	  --compiler_flags="--warning_level=VERBOSE" \
 	  --output_file=$@ 
 
 public/soccersub.min.js : $(JSFILES) Makefile deps
-	$(COMPILE) --namespace="soccersubMain" 2>&1 | grep -v ButtonSet
+	$(COMPILE) --namespace="soccersubMain"
 
 public/soccersub.testmin.js : $(TEST_JSFILES) Makefile deps
-	$(COMPILE) --namespace="soccersubTest" 2>&1 | \
-	    egrep -v '(ButtonSet|goog.structs.Map)'
+	$(COMPILE) --namespace="soccersubTest"
 
 public/xxsoccersub.min.js : $(JSFILES) Makefile
 	java -jar $(HOME)/bin/closure-compiler-$(CLOSURE_VERSION).jar \

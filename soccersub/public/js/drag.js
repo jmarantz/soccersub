@@ -6,16 +6,16 @@ goog.module('soccersub.Drag');
 class Drag {
   /**
    * @param {!Element} div
-   * @param {!function(!Event):?{source:!Source, label: string}} findSource
-   * @param {!function(!Event, !Source):?{target:!Target, elements: !Array<!Element>}} findTarget
-   * @param {!function(!Source, ?Target)} drop
+   * @param {function(!Event):?{source:Source, label: string}} findSource
+   * @param {function(!Event, Source):?{target:Target, elements: !Array<!Element>}} findTarget
+   * @param {function(Source, ?Target):undefined} drop
    */
   constructor(div, findSource, findTarget, drop) {
-    /** @private {!function(!Event):?{source:!Source, label: string}} */
+    /** @private {!function(!Event):?{source:Source, label: string}} */
     this.findSource_ = findSource;
-    /** @private {!function(!Event, !Source):?{target:!Target, elements: !Array<!Element>}} */
+    /** @private {!function(!Event, Source):?{target:Target, elements: !Array<!Element>}} */
     this.findTarget_ = findTarget;
-    /** @private {!function(!Source, ?Target)} */
+    /** @private {!function(Source, ?Target)} */
     this.drop_ = drop;
 
     goog.events.listen(div, 'touchstart', this.dragStart, false, this);
@@ -65,6 +65,7 @@ class Drag {
     if (this.source_ == null) {
       return;
     }
+    const source = /** @type {Source} */ (this.source_);
 
     if (!this.dragMoveEvent_) {
       window.requestAnimationFrame(() => {
@@ -75,7 +76,7 @@ class Drag {
         this.dragVisual.style.left = this.dragMoveEvent_.clientX + 'px';
         this.dragVisual.style.top = (this.dragMoveEvent_.clientY - height) + 'px';
         const targetElements = this.findTarget_(
-          this.dragMoveEvent_, this.source_);
+          this.dragMoveEvent_, source);
         const target = targetElements ? targetElements.target : null;
         if (this.dragOverTarget_ != target) {
           if ((this.dragOverTarget_ != null) && 

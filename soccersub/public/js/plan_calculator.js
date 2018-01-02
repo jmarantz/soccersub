@@ -130,6 +130,9 @@ class PlanCalculator {
 
     /** @private {number} */
     this.nextPlayerChangeSec_ = 0;
+
+    /** @private {?string} */
+    this.secondHalfKeeper_ = null;
   }
 
   /**
@@ -309,7 +312,8 @@ class PlanCalculator {
    */
   playerIsAvailable(player) {
     let events = this.playerEventsMap_.get(player);
-    return events && (events[events.length - 1].type == EventType.BENCH);
+    return (events != null) && (events.length > 0) && 
+      (events[events.length - 1].type == EventType.BENCH);
   }
 
   /**
@@ -337,7 +341,7 @@ class PlanCalculator {
     
     for (let i = this.assignments_.length - 1; i >= 0; --i) {
       const assignment = this.assignments_[i];
-      positions.delete(assignent.positionName);
+      positions.delete(assignment.positionName);
       if (positions.size == 1) {
         return Array.from(positions)[0];
       }
@@ -365,7 +369,7 @@ class PlanCalculator {
    */
   playerPosition(player) {
     const events = this.playerEventsMap_.get(player);
-    if (!events) {
+    if (!events || (events.length == 0)) {
       return null;
     }
     const assignment = events[events.length - 1].assignment;
@@ -415,6 +419,13 @@ class PlanCalculator {
 
   /** @param {!Array<!Assignment>} assignments */
   executeAssignments(assignments) {
+    this.clearFutureAssignments();
+    for (const assignment of assignments) {
+      this.addAssignment(assignment);
+      ++this.assignmentIndex_;
+    }
+
+/*
     let hasNewAssignment = false;
     for (const assignment of assignments) {
       // If the assignment being executed is the one planned, we just have
@@ -441,6 +452,7 @@ class PlanCalculator {
       this.assignments_.length = this.assignmentIndex_;
       this.computePlan();
     }
+*/
   }
 
   setupPositions() {
@@ -457,7 +469,7 @@ class PlanCalculator {
     }
   }
 
-  computePlan() {
+  clearFutureAssignments() {
     // Override any existing plan for the future, because we are going to
     // recompute it. Any assignments already made are assumed to be correct.
     // We also have to iterate through the players and remove any future
@@ -465,26 +477,35 @@ class PlanCalculator {
     this.assignments_.length = this.assignmentIndex_;
     this.playerEventsMap_.forEach((events, player) => {
       const index = util.upperBound(
-        events, (event) => this.timeSec <= this.gameTimeSec_);
+        events, (event) => event.timeSec <= this.gameTimeSec_);
       if (index != -1) {
         events.length = index;
       }
     });
     // Note: if we were to add a cache for player timing stats, it would need
     // to be invalidated here.
+  }
+
+  computePlan() {
+    this.clearFutureAssignments();
 
     let half = 0;
     const halfSec = this.minutesPerHalf * 60;
     const gameSec = 2 * halfSec;
     for (let timeSec = this.nextPlayerChangeSec_; timeSec < gameSec; 
-         timeSec += this.shiftTimeSec) {
-      const players = this.pickNextPlayers(1);
+         timeSec += this.shiftTimeSec_) {
+      let players = this.pickNextPlayers(1);
       if (players.length != 1) {
         console.log('not enough players');
         return;
       }
 
-      let position;
+      let position = this.pickNextPosition();
+      if (!position) {
+        console.log('no positions defined');
+        return;
+      }
+
       if ((half == 0) && (timeSec >= halfSec)) {
         timeSec = halfSec;
         half = 1;
@@ -495,8 +516,6 @@ class PlanCalculator {
           this.secondHalfKeeper_ = players[0];
         }
         position = Lineup.KEEPER;
-      } else {
-        position = this.pickNextPosition();
       }
       this.addAssignment(makeAssignment(players[0], position, timeSec));
     }

@@ -7,7 +7,7 @@ const Lineup = goog.require('soccersub.Lineup');
 const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
 const Position = goog.require('soccersub.Position');
-const Storage = goog.require('soccersub.Storage');
+//const Storage = goog.require('soccersub.Storage');
 const googDom = goog.require('goog.dom');
 const util = goog.require('soccersub.util');
 
@@ -431,7 +431,8 @@ class Game {
       this.activePlayers = players;
       var tableBody = goog.dom.getRequiredElement('table-body');
       tableBody.innerHTML = '';
-      let row;
+      /** @type {?Element} */
+      let row = null;
       let index = 0;
       const numColumns = 2;
       for (const player of this.activePlayers) {
@@ -443,11 +444,13 @@ class Game {
           tableBody.appendChild(row);
         } else {
           const td = document.createElement('td');
-          row.appendChild(td);
+          (/** @type {!Element} */ (row)).appendChild(td);
           td.style.width = '10px';
         }
         ++index;
-        player.render(tableBody, row);
+        if (row) {
+          player.render(tableBody, /** @type {!Element} */ (row));  // NTI
+        }
       }
     }
   }
@@ -510,6 +513,7 @@ class Game {
 
   /** @private */
   computePositionWithLongestShift_() {
+    /** @type {?Position} */
     var pos = null;
     for (var i = 0; i < this.positions.length; ++i) {
       var position = this.positions[i];

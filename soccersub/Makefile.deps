@@ -8,9 +8,6 @@ JSFILES = \
     public/js/plan.js \
     public/js/position.js \
     public/js/player.js \
-    public/js/map_section.js \
-    public/js/array_section.js \
-    public/js/storage.js \
     public/js/game.js \
     public/js/soccersub.js \
     public/js/main.js \

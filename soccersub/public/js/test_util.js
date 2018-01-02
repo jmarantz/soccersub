@@ -62,3 +62,8 @@ exports.addTestSuite = (suite) => {
 exports.runTestSuite = () => {
   testSuite(mergedTests);
 };
+
+/** @param {string} str */
+exports.consoleLog = (str) => {
+  console.log(str);
+};

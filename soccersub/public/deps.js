@@ -108,9 +108,6 @@
   addDep('plan.js', 'soccersub.Plan');
   addDep('position.js', 'soccersub.Position');
   addDep('player.js', 'soccersub.Player');
-  addDep('map_section.js', 'soccersub.MapSection');
-  addDep('array_section.js', 'soccersub.ArraySection');
-  addDep('storage.js', 'soccersub.Storage');
   addDep('game.js', 'soccersub.Game');
   addDep('soccersub.js', 'soccersub.SoccerSub');
   addDep('main.js', 'soccersubMain');

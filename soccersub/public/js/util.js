@@ -125,7 +125,7 @@ exports.makeSingleRowTable = (parent) => {
 
 /**
  * @template T
- * @param {!Array<!T>} array
+ * @param {!Array<T>} array
  */
 exports.shuffle = (array) => {
   for (let i = array.length - 1; i > 0; i--) {
@@ -172,16 +172,16 @@ exports.upperBound = (array, lessThan) => {
  * The worse-case performance comes if the array is sorted in reverse
  * order.
  *
+ * @template T
  * @param {!Array<T>} arr
  * @param {number} n
  * @param {!function(T):number} getPriority
- * @template T
  */
 exports.sortTopN = (arr, n, getPriority) => {
   if (n == 0) {
     return;
   }
-  // type {!PriorityQueue<!{value: T, index: number}>}
+  /** @type {!PriorityQueue<!{value: T, index: number}>} */
   const pqueue = new PriorityQueue();
 
   // Keep track of the minimum priority in the queue, and don't bother
@@ -191,6 +191,7 @@ exports.sortTopN = (arr, n, getPriority) => {
   // tackle most of them in linear time.
   let minPriority = NaN;
   for (let i = 0; i < arr.length; ++i) {
+    /** @type {T} */
     const value = arr[i];
     const priority = getPriority(value);
     if ((pqueue.getCount() < n) || (priority > minPriority)) {
@@ -227,12 +228,14 @@ exports.sortTopN = (arr, n, getPriority) => {
   // We are pulling the lowest priority elements out of the pqueue first so
   // we fill the array from n-1 to 0.
   for (let i = n - 1; i >= 0; --i) {
-    const {value, index} = pqueue.dequeue();
+    /** @type {!{value: T, index: number}} */
+    const valueIndex = pqueue.dequeue();  // NTI
+    const index = valueIndex.index;
     if (index >= n) {
       arr[index] = evictedValues[evictedValuesIndex];
       ++evictedValuesIndex;
     }
-    arr[i] = value;
+    arr[i] = valueIndex.value;
   }
 
   // All of the evictedValues must be put back into the array, otherwise

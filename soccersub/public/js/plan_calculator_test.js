@@ -20,14 +20,16 @@ exports = {
 
   'testConstruction': () => {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, console.log);
+    const calculator = new PlanCalculator(lineup, () => {}, 
+                                          TestUtil.consoleLog);
     assertEquals(5, calculator.updatePlayers());
     assertEquals(0, calculator.updatePlayers());
   },
 
   'testPickInitial': () => {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, console.log);
+    const calculator = new PlanCalculator(lineup, () => {}, 
+                                          TestUtil.consoleLog);
     assertEquals(5, calculator.updatePlayers());
     assertArrayEquals(['jim', 'joe'], calculator.pickNextPlayers(2));
   },
@@ -35,7 +37,7 @@ exports = {
   'testComputeShiftTime': () => {
     const lineup = new Lineup(5, ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i']);
     futsalTwoTwoFormation();
-    const calculator = new PlanCalculator(lineup, () => {}, console.log);
+    const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
     calculator.setupPositions();
     assertEquals(9, calculator.updatePlayers());
 
@@ -56,7 +58,7 @@ exports = {
 
   'testInitialAssignments': () => {
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, console.log);
+    const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
     assertEquals(5, calculator.updatePlayers());
     futsalTwoTwoFormation();
     calculator.setupPositions();
@@ -75,7 +77,7 @@ exports = {
   'testGameTiming': () => {
     /*
     const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, console.log);
+    const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
     */
   },
 };

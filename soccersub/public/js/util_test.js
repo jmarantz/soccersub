@@ -6,9 +6,10 @@ const util = goog.require('soccersub.util');
  * Checks to see whether arr has its top n elements in priority
  * order, and that there are no duplicates in the array.
  *
- * @param {!Array<*>} arr
+ * @template T
+ * @param {!Array<T>} arr
  * @param {number} n
- * @param {!function(*):number} getPriority
+ * @param {!function(T):number} getPriority
  */
 const sanityCheck = (arr, n, getPriority) => {
   const checker = new Set();
@@ -65,6 +66,7 @@ exports = {
   },
 
   'testSequential': () =>  {
+    /** @type {!Array<!IntWrapper>} */
     const arr = [];
     for (let i = 0; i < 100; ++i) {
       arr.push(new IntWrapper(i));
@@ -74,6 +76,7 @@ exports = {
   },
 
   'testRandom': () => {
+    /** @type {!Array<!IntWrapper>} */
     const arr = [];
     for (let i = 0; i < 1000; ++i) {
       arr.push(new IntWrapper(Math.random()));

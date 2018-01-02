@@ -7,9 +7,6 @@
     goog.addDependency('../../../js/' + file, [module], [], opts);
   };
 
-  addDep('map_section.js', 'soccersub.MapSection');
-  addDep('array_section.js', 'soccersub.ArraySection');
-  addDep('storage.js', 'soccersub.Storage');
   addDep('storage_test.js', 'soccersub.StorageTest');
   modules.push('goog.structs.Node');
   modules.push('goog.object');

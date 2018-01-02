@@ -56,7 +56,6 @@ class Player {
     this.available = this.lineup.playerNames.has(this.name);
     this.timeAtPositionMs = {};
     this.elementAtPosition = {};
-    /** @type {?Position} */
     this.currentPosition = null;
     this.nextPosition = null;
     this.selected = false;

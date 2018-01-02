@@ -1,7 +1,4 @@
 TEST_JSFILES = \
-    public/js/map_section.js \
-    public/js/array_section.js \
-    public/js/storage.js \
     public/js/storage_test.js \
     public/js/util.js \
     public/js/util_test.js \
