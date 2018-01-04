@@ -4,10 +4,9 @@ JSFILES = \
     public/js/assignment2.js \
     public/js/plan_calculator.js \
     public/js/drag.js \
-    public/js/assignment.js \
     public/js/plan.js \
-    public/js/position.js \
     public/js/player.js \
+    public/js/position.js \
     public/js/game.js \
     public/js/soccersub.js \
     public/js/main.js \

@@ -104,10 +104,9 @@
   addDep('assignment2.js', 'soccersub.Assignment2');
   addDep('plan_calculator.js', 'soccersub.PlanCalculator');
   addDep('drag.js', 'soccersub.Drag');
-  addDep('assignment.js', 'soccersub.Assignment');
   addDep('plan.js', 'soccersub.Plan');
-  addDep('position.js', 'soccersub.Position');
   addDep('player.js', 'soccersub.Player');
+  addDep('position.js', 'soccersub.Position');
   addDep('game.js', 'soccersub.Game');
   addDep('soccersub.js', 'soccersub.SoccerSub');
   addDep('main.js', 'soccersubMain');

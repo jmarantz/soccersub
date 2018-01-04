@@ -135,7 +135,6 @@
   addDep('plan_calculator_test.js', 'soccersub.PlanCalculatorTest');
   addDep('lineup_test.js', 'soccersub.LineupTest');
   addDep('drag.js', 'soccersub.Drag');
-  addDep('assignment.js', 'soccersub.Assignment');
   addDep('plan.js', 'soccersub.Plan');
   addDep('plan_test.js', 'soccersub.PlanTest');
   addDep('test.js', 'soccersubTest');

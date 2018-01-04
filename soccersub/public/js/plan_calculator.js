@@ -587,11 +587,22 @@ class PlanCalculator {
 */
 
   /**
+   * @param {string} positionName
+   * @return {number}
+   */
+  positionIndex(positionName) {
+    const index = this.positionNameIndexMap_.get(positionName);
+    if (index == null) {
+      return -1;
+    }
+    return index;
+  }
+
+  /**
    * @param {!Assignment} assignment
    * @return {number}
-   * @private
    */
-  assignHalf_(assignment) {
+  assignHalf(assignment) {
     return (assignment.timeSec < this.minutesPerHalf * 60) ? 0 : 1;
   }
 }

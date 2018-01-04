@@ -9,7 +9,6 @@ TEST_JSFILES = \
     public/js/plan_calculator_test.js \
     public/js/lineup_test.js \
     public/js/drag.js \
-    public/js/assignment.js \
     public/js/plan.js \
     public/js/plan_test.js \
     public/js/test.js \

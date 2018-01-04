@@ -2,7 +2,7 @@ goog.module('soccersub.Game');
 
 const Dialog = goog.require('goog.ui.Dialog');
 const Drag = goog.require('soccersub.Drag');
-const Assignment = goog.require('soccersub.Assignment');
+const Assignment = goog.require('soccersub.Assignment2');
 const Lineup = goog.require('soccersub.Lineup');
 const Plan = goog.require('soccersub.Plan');
 const Player = goog.require('soccersub.Player');
@@ -133,9 +133,8 @@ class Game {
    * @return {!{player: ?Player, position: ?Position}}
    */
   getPlayerAndPosition(assignment) {
-    const player = this.playerMap.get(this.plan_.assignmentPlayer(assignment));
-    const position = this.positionMap.get(
-      this.plan_.assignmentPosition(assignment));
+    const player = this.playerMap.get(assignment.playerName);
+    const position = this.positionMap.get(assignment.positionName);
     return {player, position};
   }
 
@@ -666,8 +665,8 @@ class Game {
         if (player && position) {
           const deltaSec = nextAssignment.timeSec - timeSec;
           this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
-                           this.plan_.assignmentPlayer(nextAssignment) + ' at ' + 
-                           this.plan_.assignmentPosition(nextAssignment));
+                           nextAssignment.playerName + ' at ' + 
+                           nextAssignment.positionName);
           if ((deltaSec < 30) && 
               (this.queuedAssignmentTimeSec < nextAssignment.timeSec)) {
             navigator.vibrate([500]);
