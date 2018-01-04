@@ -13,6 +13,27 @@ const futsalTwoTwoFormation = () => {
   TestUtil.touch('position:Right Forward');
 };
 
+/** @return {!PlanCalculator} */
+const makeInitialAssignments = () => {
+  const lineup = new Lineup(5, [
+    'jim', 'joe', 'fred', 'harvey', 'frank', 'bob']);
+  const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
+  assertEquals(6, calculator.updatePlayers());
+  futsalTwoTwoFormation();
+  calculator.setupPositions();
+  calculator.makeInitialAssignments();
+  return calculator;
+};
+
+/**
+ * @param {Assignment} assignment
+ * @return {string}
+ */
+const assignmentToString = (assignment) => {
+  return util.formatTime(assignment.timeSec * 1000) + ' ' +
+    assignment.positionName + '=' + assignment.playerName;
+};
+
 exports = {
   'getTestName': () => {
     return 'PlanCalculatorTest';
@@ -57,12 +78,7 @@ exports = {
 
 
   'testInitialAssignments': () => {
-    const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
-    assertEquals(5, calculator.updatePlayers());
-    futsalTwoTwoFormation();
-    calculator.setupPositions();
-    calculator.makeInitialAssignments();
+    const calculator = makeInitialAssignments();
     // This order corresponds to the configurations structure in lineup.js,
     // for a 5v5 game, as well as the order of the default player-set passed
     // in above to the lineup ctor.
@@ -72,12 +88,20 @@ exports = {
     assertEquals('Right Back', calculator.playerPosition('harvey'));
     assertEquals('Keeper', calculator.playerPosition('frank'));
     assertEquals(null, calculator.playerPosition('unknown'));
+    assertArrayEquals(['bob'], calculator.pickNextPlayers(1));
+    assertArrayEquals([], calculator.pickNextPlayers(0));
   },
 
-  'testGameTiming': () => {
-    /*
-    const lineup = new Lineup(5, ['jim', 'joe', 'fred', 'harvey', 'frank']);
-    const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
-    */
+  'testComputePlan': () => {
+    const calculator = makeInitialAssignments();
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim',
+      '0:00 Right Forward=joe',
+      '0:00 Left Back=fred',
+      '0:00 Right Back=harvey',
+      '0:00 Keeper=frank',
+    ], assigns);
   },
 };

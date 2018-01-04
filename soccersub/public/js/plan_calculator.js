@@ -181,6 +181,11 @@ class PlanCalculator {
     return playerDelta;
   }
 
+  /** @return {!Array<!Assignment>} */
+  assignments() {
+    return this.assignments_;
+  }
+
   /** @return {number} */
   shiftTimeSec() {
     return this.shiftTimeSec_;
