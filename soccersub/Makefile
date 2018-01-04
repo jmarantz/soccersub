@@ -63,7 +63,7 @@ public/test_opt.html : public/opt.html Makefile
 	    -e 's@soccersubMain@soccersubTest@' \
 	        < $< > $@
 
-JSHIDE = --hide_warnings_for=/Users/jmarantz/dev/closure-library/
+JSHIDE = --hide_warnings_for=$(HOME)/dev/closure-library/
 JSOPTS = --compilation_level=ADVANCED_OPTIMIZATIONS $(JSHIDE) --new_type_inf
 #JSOPTS = --compilation_level=ADVANCED_OPTIMIZATIONS $(JSHIDE)
 

@@ -1,5 +1,6 @@
 goog.module('soccersub.PlanCalculatorTest');
 
+const Assignment = goog.require('soccersub.Assignment2');
 const Lineup = goog.require('soccersub.Lineup');
 const PlanCalculator = goog.require('soccersub.PlanCalculator');
 const TestUtil = goog.require('soccersub.TestUtil');
@@ -102,6 +103,15 @@ exports = {
       '0:00 Left Back=fred',
       '0:00 Right Back=harvey',
       '0:00 Keeper=frank',
+      '4:48 Left Forward=bob',
+      '9:36 Right Forward=jim',
+      '14:24 Left Back=joe',
+      '19:12 Right Back=fred',
+      '24:00 Keeper=harvey',
+      '28:48 Left Forward=frank',
+      '33:36 Right Forward=bob',
+      '38:24 Left Back=jim',
+      '43:12 Right Back=joe',
     ], assigns);
   },
 };

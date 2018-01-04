@@ -138,6 +138,7 @@ exports.shuffle = (array) => {
  * Inefficient implementation of upper-bound functionality a la STL.  Returns
  * Index of largest index where lessThan(array[index]) is true.
  * if !lessThan(array[0]), then -1 is returned.
+ * If lessThan(array[array.length - 1]) then array.length is returned.
  *
  * Assumes array is sorted via lessThan.
  * 
@@ -150,11 +151,11 @@ exports.shuffle = (array) => {
  */
 exports.upperBound = (array, lessThan) => {
   for (let i = 0; i < array.length; ++i) {
-    if (lessThan(array[i])) {
-      return i;
+    if (!lessThan(array[i])) {
+      return i - 1;
     }
   }
-  return -1;
+  return array.length;
 };
 
 /**
