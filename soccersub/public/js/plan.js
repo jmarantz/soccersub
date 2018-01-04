@@ -301,6 +301,7 @@ class Plan {
     let subs = Array(numPositions).fill(null);
 
     const renderRow = () => {
+      /** @type {?Element} */
       let tr = null;
       let col = 0;
       for (const assignment of subs) {
