@@ -25,16 +25,6 @@ const EventType = {
  */
 let PlayerEvent;
 
-/**
- * @param {string} playerName
- * @param {string} positionName
- * @param {number} timeSec
- * @return {!Assignment}
- */
-const makeAssignment = (playerName, positionName, timeSec) => {
-  return {playerName, positionName, timeSec};
-}
-
 class PlanCalculator {
   /**
    * @param {!Lineup} lineup
@@ -131,8 +121,8 @@ class PlanCalculator {
     /** @private {number} */
     this.nextPlayerChangeSec_ = 0;
 
-    /** @private {?string} */
-    this.secondHalfKeeper_ = null;
+    // private {?string}
+    //this.secondHalfKeeper_ = null;
   }
 
   /**
@@ -186,6 +176,16 @@ class PlanCalculator {
   /** @return {!Array<!Assignment>} */
   assignments() {
     return this.assignments_;
+  }
+
+  /**
+   * @param {string} playerName
+   * @param {string} positionName
+   * @return {!Assignment}
+   */
+  makeAssignment(playerName, positionName) {
+    return {playerName: playerName, positionName: positionName, 
+            timeSec: this.gameTimeSec_};
   }
 
   /** @return {number} */
@@ -332,8 +332,12 @@ class PlanCalculator {
    * @return {number}
    */
   playerPriority(player) {
+    if (player == 'Leo') {
+      debugger;
+    }
+
     const timing = this.computeGameTiming_(player);
-    let priority = timing.percentInGame * 1e6;
+    let priority = (100 - timing.percentInGame) * 1e6;
     priority += timing.benchTimeSec * 100;
     priority += this.playerPriorityMap_.size - 
       this.playerPriorityMap_.get(player);
@@ -341,10 +345,11 @@ class PlanCalculator {
   }
 
   /** @return {?string} */
-  pickNextPosition() {
+  pickNextFieldPosition() {
     // Determine which position has been in the longest, by iterating backward
     // through assignments, eliminating positions from the candidate list
     const positions = new Set(this.positionNames_);
+    positions.delete(Lineup.KEEPER);
     
     for (let i = this.assignments_.length - 1; i >= 0; --i) {
       const assignment = this.assignments_[i];
@@ -396,7 +401,7 @@ class PlanCalculator {
     for (let i = 0; i < nextPlayers.length; ++i) {
       const player = nextPlayers[i];
       const position = this.positionNames_[i];
-      assignments.push(makeAssignment(player, position, this.gameTimeSec_));
+      assignments.push(this.makeAssignment(player, position));
     }
     this.executeAssignments(assignments);
   }
@@ -516,33 +521,42 @@ class PlanCalculator {
     let half = 0;
     const halfSec = this.minutesPerHalf * 60;
     const gameSec = 2 * halfSec;
-    for (let timeSec = this.nextPlayerChangeSec_; timeSec < gameSec; 
-         timeSec += this.shiftTimeSec_) {
-      let players = this.pickNextPlayers(1);
-      if (players.length != 1) {
-        console.log('not enough players');
-        return;
-      }
-
-      let position = this.pickNextPosition();
+    const saveGameTime = this.gameTimeSec_;
+    for (this.gameTimeSec_ = this.nextPlayerChangeSec_; 
+         this.gameTimeSec_ < gameSec; 
+         this.gameTimeSec_ += this.shiftTimeSec_) {
+      const position = this.pickNextFieldPosition();
       if (!position) {
         console.log('no positions defined');
         return;
       }
+      const positions = [position];
 
-      if ((half == 0) && (timeSec >= halfSec)) {
-        timeSec = halfSec;
+      // Pick a new keeper at halftime.
+      if ((half == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
+        this.gameTimeSec_ = halfSec;
         half = 1;
-        // pick a new keeper.
-        if (this.secondHalfKeeper_) {
-          players = [this.secondHalfKeeper_];
-        } else {
-          this.secondHalfKeeper_ = players[0];
-        }
-        position = Lineup.KEEPER;
+        positions.push(Lineup.KEEPER);
       }
-      this.addAssignment(makeAssignment(players[0], position, timeSec));
+
+      let players = this.pickNextPlayers(positions.length);
+      if (players.length != positions.length) {
+        console.log('not enough players');
+        return;
+      }
+
+      for (let i = 0; i < players.length; ++i) {
+        // pick a new keeper.
+        //if (this.secondHalfKeeper_) {
+          //players = [this.secondHalfKeeper_];
+        //} else {
+          //this.secondHalfKeeper_ = players[0];
+        //}
+        //position = Lineup.KEEPER;
+        this.addAssignment(this.makeAssignment(players[i], positions[i]));
+      }
     }
+    this.gameTimeSec_ = saveGameTime;
   }
 
   /*

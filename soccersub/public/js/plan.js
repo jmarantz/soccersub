@@ -333,12 +333,13 @@ class Plan {
     this.startRows_ = [];
     const /** !Array<!Assignment> */ assignments = 
           this.calculator_.assignments();
+    const halfSec = this.calculator_.minutesPerHalf * 60;
     for (let i = 0; i < assignments.length; ++i) {
       const /** !Assignment */ assignment = assignments[i];
-      if ((half == 0) && 
-          (assignment.timeSec >= this.calculator_.minutesPerHalf * 60)) {
+      if ((half == 0) && (Math.ceil(assignment.timeSec) >= halfSec)) {
         ++half;
         firstRowOfHalf = true;
+        renderRow();
       }
       if (firstRowOfHalf) {
         const tr = addTextElement(this.tbody_, '', 'tr');
