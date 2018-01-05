@@ -581,16 +581,24 @@ class Game {
     // erase a pending assignments that would be not make sense by
     // itself.
     const subs = [];
+    const assignments = [];
     for (const position of this.positions) {
       const player = position.nextPlayer;
       if (player && player.available) {
         subs.push([position, player]);
+        assignments.push({
+          playerName: player.name,
+          positionName: position.name,
+          timeSec: this.elapsedTimeMs / 1000,
+        });
       }
     }
     // Now walk through the collected substitution list and execute them.
     for (const [position, player] of subs) {
       this.assignPlayerToPosition(player, position);
     }
+    this.plan_.executeAssignments(assignments);
+
     this.completeAssignments();
   }
 

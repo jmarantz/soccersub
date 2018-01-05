@@ -158,11 +158,13 @@ class PlanCalculator {
         // things being equal, when choosing the next player the ones that
         // came on time will go in first.  This can be overridden by the coach
         // in the UI via drag & drop.
-        this.playerPriorityMap_.set(player, this.playerPriorityMap_.size + 1);
+        if (!this.playerPriorityMap_.has(player)) {
+          this.playerPriorityMap_.set(player, this.playerPriorityMap_.size + 1);
+        }
       }
       const len = events.length;
       if ((len == 0) || (events[len - 1].type == EventType.UNAVAILABLE)) {
-        events.push({type: EventType.BENCH, timeSec: this.gameTimeSec_,
+        events.push({type: EventType.BENCH, timeSec: this.gameTimeSec_ + 0,
                      assignment: null});
         ++playerDelta;
       }
@@ -174,7 +176,7 @@ class PlanCalculator {
           (events[events.length - 1].type != EventType.UNAVAILABLE)) {
         --playerDelta;
         events.push({type: EventType.UNAVAILABLE, 
-                     timeSec: this.gameTimeSec_, assignment: null});
+                     timeSec: this.gameTimeSec_ + 0, assignment: null});
       }
     });
     this.computeShiftTime_();
@@ -385,6 +387,10 @@ class PlanCalculator {
   }
 
   makeInitialAssignments() {
+    this.assignments_ = [];
+    this.assignmentIndex_ = 0;
+    this.playerEventsMap_ = new Map();
+    this.updatePlayers();
     const nextPlayers = this.pickNextPlayers(this.positionNames_.length);
     const assignments = [];
     for (let i = 0; i < nextPlayers.length; ++i) {
@@ -392,7 +398,6 @@ class PlanCalculator {
       const position = this.positionNames_[i];
       assignments.push(makeAssignment(player, position, this.gameTimeSec_));
     }
-    this.nextPlayerChangeSec_ = this.shiftTimeSec_;
     this.executeAssignments(assignments);
   }
 
@@ -405,7 +410,7 @@ class PlanCalculator {
     if (previousPlayer) {
       this.playerEventsMap_.get(previousPlayer).push({
         type: EventType.BENCH,
-        timeSec: this.gameTimeSec_,
+        timeSec: assignment.timeSec,
         assignment: null,
       });
     }
@@ -417,7 +422,7 @@ class PlanCalculator {
     this.playerEventsMap_.get(assignment.playerName).push({
       type: (assignment.positionName == Lineup.KEEPER) ? 
         EventType.KEEPER : EventType.FIELD,
-      timeSec: this.gameTimeSec_,
+      timeSec: assignment.timeSec,
       assignment: assignment,
     });
   }
@@ -428,7 +433,21 @@ class PlanCalculator {
     for (const assignment of assignments) {
       this.addAssignment(assignment);
       ++this.assignmentIndex_;
+      this.gameTimeSec_ = Math.max(this.gameTimeSec_, assignment.timeSec);
     }
+
+
+    // If we executed the change late, or no more than 45 seconds early,
+    // then just advance our planned next substition time by one shift.
+    if ((this.gameTimeSec_ > this.nextPlayerChangeSec_) ||
+        ((this.gameTimeSec_ - this.nextPlayerChangeSec_) < 45)) {
+      this.nextPlayerChangeSec_ += this.shiftTimeSec_;
+    } else {
+      // Otherwise, just move it forward from the current time.
+      this.nextPlayerChangeSec_ = this.gameTimeSec_ + this.shiftTimeSec_;
+    }
+    
+    // TODO(jmarantz): special case being close to the end of the half or game.
 
 /*
     let hasNewAssignment = false;

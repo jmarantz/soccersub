@@ -18,7 +18,7 @@ const util = goog.require('soccersub.util');
  *
  * @typedef {!{
  *   element: !Element,
- *   row: number,
+ *   rowIndex: number,
  *   assignment: !Assignment,
  * }}
  */
@@ -134,6 +134,8 @@ class Plan {
       return true;
     }
     this.log_('plan rendering...');
+    this.calculator_.updatePlayers();
+    this.calculator_.setupPositions();
     this.render();
     return true;
   }
@@ -258,7 +260,7 @@ class Plan {
 
     this.assignments_ = [];
 */
-    let row = -1;
+    let rowIndex = -1;
 
     /**
      * @param {!Element} parent
@@ -268,7 +270,7 @@ class Plan {
      */
     const addTextElement = (parent, text, type) => {
       if (type == 'tr') {
-        ++row;
+        ++rowIndex;
       }
       const item = document.createElement(type);
       if (text) {
@@ -315,7 +317,11 @@ class Plan {
             }
           }
           const element = addTextElement(tr, assignment.playerName, 'td');
-          this.renderedAssignments_.push({element, row, assignment});
+          this.renderedAssignments_.push({
+            element: element, 
+            rowIndex: rowIndex - 1, 
+            assignment: assignment,
+          });
         } else if (tr) {
           addTextElement(tr, '', 'td');
         }
@@ -324,12 +330,13 @@ class Plan {
       subs = Array(numPositions).fill(null);
     };
 
+    this.startRows_ = [];
     const /** !Array<!Assignment> */ assignments = 
           this.calculator_.assignments();
     for (let i = 0; i < assignments.length; ++i) {
       const /** !Assignment */ assignment = assignments[i];
       if ((half == 0) && 
-          (assignment.timeSec >= this.calculator_.minutesPerHalf)) {
+          (assignment.timeSec >= this.calculator_.minutesPerHalf * 60)) {
         ++half;
         firstRowOfHalf = true;
       }
@@ -341,6 +348,7 @@ class Plan {
         td.className = 'plan-divider';
         td.setAttribute('colspan', numTableColumns);
         firstRowOfHalf = false;
+        this.startRows_.push(rowIndex);
       }
 
       if ((prevAssignment == null) ||
@@ -468,7 +476,7 @@ class Plan {
       playerName: assignment.playerName, 
       positionName: assignment.positionName, 
       half: half,
-      row: renderedAssignment.row,
+      row: renderedAssignment.rowIndex,
     };
     return {source: source, label: assignment.playerName};
   }
@@ -510,7 +518,8 @@ class Plan {
 
       // Now find the assignment that matches the row for this y-position.
       renderedAssignment = this.renderedAssignments_.find(
-        (a) => (a.row == row) && (a.assignment.positionName != Lineup.KEEPER));
+        (a) => (a.rowIndex == row) && 
+          (a.assignment.positionName != Lineup.KEEPER));
       if (!renderedAssignment) {
         return null;
       }
@@ -676,24 +685,39 @@ class Plan {
     const assignments = this.calculator_.assignments();
     const index = util.upperBound(
       assignments, 
-      (assignment) => currentTimeSec < assignment.timeSec);
-    if (index == -1) {
+      (assignment) => assignment.timeSec < currentTimeSec);
+    if ((index == -1) || (index + 1 >= assignments.length)) {
       return null;
     }
-    return assignments[index];
+    return assignments[index + 1];
   }
   
   /**
    * @return {!Array<!Assignment>}
    */
   initialAssignments() {
+    this.calculator_.makeInitialAssignments();
+    this.calculator_.computePlan();
+    this.render();
+    // save?
+
+    /** @type {!Array<!Assignment>} */
     const initial = [];
     for (const a of this.renderedAssignments_) {
-      if (a.row == this.startRows_[0]) {
-        initial.push(a);
+      if (a.rowIndex == this.startRows_[0]) {
+        initial.push(a.assignment);
       }
     }
     return initial;
+  }
+
+  /**
+   * @param {!Array<!Assignment>} assignments
+   */
+  executeAssignments(assignments) {
+    this.calculator_.executeAssignments(assignments);
+    this.calculator_.computePlan();
+    this.render();
   }
 }
 
