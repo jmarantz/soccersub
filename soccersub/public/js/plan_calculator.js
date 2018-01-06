@@ -4,8 +4,6 @@ const Assignment = goog.require('soccersub.Assignment2');
 const Lineup = goog.require('soccersub.Lineup');
 const util = goog.require('soccersub.util');
 
-const AVAILABLE = -1;
-
 /**
  * @enum {string}
  */
@@ -74,7 +72,7 @@ class PlanCalculator {
     this.playerEventsMap_ = new Map();
 
     /** @private {number} */
-    this.gameTimeSec_ = -1;
+    this.gameTimeSec_ = 0;
 
     /** @type {number} */
     this.minutesPerHalf = 24;
@@ -85,10 +83,10 @@ class PlanCalculator {
     /** @private {!Map<string, number>} */
     this.positionNameIndexMap_ = new Map();
 
-    /** @private {!Map<string, number>} */
-    this.playerTimeMap_ = new Map();
+    // private {!Map<string, number>}
+    // this.playerTimeMap_ = new Map();
     
-    /** @private {!Map<string, string>} */
+    /** private {!Map<string, string>} */
     this.positionPlayerMap_ = new Map();
     
     /** 
@@ -123,6 +121,61 @@ class PlanCalculator {
 
     // private {?string}
     //this.secondHalfKeeper_ = null;
+  }
+
+  /** @return {boolean} */
+  sanityCheck() {
+    let ret = true;
+    let check = (a, msg) => {
+      if (!a) {
+        console.log(msg());
+        ret = false;
+      }
+    };
+    let checkEq = (a, b, msg) =>
+        check(a == b, () => msg + ': ' + a + ' != ' + b);
+    let checkLe = (a, b, msg) =>
+        check(a <= b, () => msg + ': ' + a + ' != ' + b);
+    checkLe(this.assignmentIndex_, this.assignments_.length, 
+            'assignments vs index');
+    checkLe(this.playerEventsMap_.size, this.playerPriorityMap_.size, 
+            'player events vs priority');
+    checkEq(this.positionNames_.length, this.positionNameIndexMap_.size, 
+            'positionNames');
+    return ret;
+  }
+
+  /** @param {!Object} map */
+  save(map) {
+    map['plan_assignments'] = this.assignments_;
+    map['plan_index'] = this.assignmentIndex_;
+    map['plan_player_events'] = util.saveMap(this.playerEventsMap_);
+    map['plan_position_names'] = util.saveMap(this.positionNameIndexMap_);
+    map['plan_gametime'] = this.gameTimeSec_;
+    map['plan_positions'] = this.positionNames_;
+    map['plan_position_players'] = util.saveMap(this.positionPlayerMap_);
+    map['plan_priorities'] = util.saveMap(this.playerPriorityMap_);
+    map['plan_shift_time_sec'] = this.shiftTimeSec_;
+    map['plan_next_player_change_sec'] = this.nextPlayerChangeSec_;
+  }
+
+  /**
+   * @param {!Object} map
+   * @return {boolean}
+   */
+  restore(map) {
+    this.assignments_ = map['plan_assignments'];
+    this.assignmentIndex_ = map['plan_index'];
+    this.gameTimeSec_ = map['plan_gametime'];
+    this.positionNames_ = map['plan_positions'];
+    this.shiftTimeSec_ = map['plan_shift_time_sec'];
+    this.nextPlayerChangeSec_ = map['plan_next_player_change_sec'];
+    return (
+      util.restoreMap(map['plan_player_events'], this.playerEventsMap_) &&
+      util.restoreMap(map['plan_position_players'], this.positionPlayerMap_) &&
+      util.restoreMap(map['plan_priorities'], this.playerPriorityMap_) &&
+      util.restoreMap(map['plan_position_names'], this.positionNameIndexMap_)
+    );
   }
 
   /**
@@ -185,7 +238,7 @@ class PlanCalculator {
    */
   makeAssignment(playerName, positionName) {
     return {playerName: playerName, positionName: positionName, 
-            timeSec: this.gameTimeSec_};
+            timeSec: this.gameTimeSec_, executed: false};
   }
 
   /** @return {number} */
@@ -206,6 +259,11 @@ class PlanCalculator {
 */
     const numFieldPlayers = this.lineup_.playerNames.size - 1;
     this.shiftTimeSec_ = halfSec /*timeLeftSec*/ / numFieldPlayers;
+    const gameTimeSec = this.gameTimeSec_;
+    if ((this.nextPlayerChangeSec_ <= gameTimeSec) || 
+        (this.nextPlayerChangeSec_ > (gameTimeSec + this.shiftTimeSec_))) {
+      this.nextPlayerChangeSec_  = gameTimeSec + this.shiftTimeSec_;
+    }
   }
 
   /**
@@ -392,7 +450,8 @@ class PlanCalculator {
   makeInitialAssignments() {
     this.assignments_ = [];
     this.assignmentIndex_ = 0;
-    this.playerEventsMap_ = new Map();
+    this.playerEventsMap_.clear();
+    this.gameTimeSec_ = 0;
     this.updatePlayers();
     const nextPlayers = this.pickNextPlayers(this.positionNames_.length);
     const assignments = [];
@@ -401,8 +460,9 @@ class PlanCalculator {
       const position = this.positionNames_[i];
       assignments.push(this.makeAssignment(player, position));
     }
-    this.executeAssignments(assignments, -1);
+    this.executeAssignments(assignments, 0);
     this.gameTimeSec_ = 0;
+    this.nextPlayerChangeSec_ = this.shiftTimeSec_;
   }
 
   /**
@@ -439,20 +499,18 @@ class PlanCalculator {
     this.gameTimeSec_ = timeSec;
     this.clearFutureAssignments();
     for (const assignment of assignments) {
+      assignment.executed = true;
       this.addAssignment(assignment);
       ++this.assignmentIndex_;
     }
 
-
-    // If we executed the change late, or no more than 45 seconds early,
-    // then just advance our planned next substition time by one shift.
-    if ((timeSec > this.nextPlayerChangeSec_) || 
-        ((timeSec - this.nextPlayerChangeSec_) < 45)) {
+    // If executed change more than 30 seconds early, probably due to an injury,
+    // don't change the next player timing at all.
+    if ((this.nextPlayerChangeSec_ - timeSec) <= 30) {
       this.nextPlayerChangeSec_ += this.shiftTimeSec_;
-    } else {
-      // Otherwise, just move it forward from the current time.
-      this.nextPlayerChangeSec_ = timeSec + this.shiftTimeSec_;
     }
+    // For late assignments we could move it forward, but punt for now.
+    // this.nextPlayerChangeSec_ = timeSec + this.shiftTimeSec_;
     
     // TODO(jmarantz): special case being close to the end of the half or game.
 
@@ -509,10 +567,12 @@ class PlanCalculator {
       const removeAssignment = this.assignments_[this.assignmentIndex_];
       this.assignments_.length = this.assignmentIndex_;
       this.playerEventsMap_.forEach((events, player) => {
-        const index = util.upperBound(
-          events, (event) => event.timeSec <= removeAssignment.timeSec);
-        if (index != -1) {
-          events.length = index;
+        for (let i = 0; i < events.length; ++i) {
+          const event = events[i];
+          if (event.assignment && !event.assignment.executed) {
+            events.length = i;
+            break;
+          }
         }
       });
     }
@@ -527,6 +587,7 @@ class PlanCalculator {
     const halfSec = this.minutesPerHalf * 60;
     const gameSec = 2 * halfSec;
     const saveGameTime = this.gameTimeSec_;
+    const savePositionPlayerMap = new Map(this.positionPlayerMap_);
     for (this.gameTimeSec_ = this.nextPlayerChangeSec_; 
          this.gameTimeSec_ < gameSec; 
          this.gameTimeSec_ += this.shiftTimeSec_) {
@@ -563,7 +624,11 @@ class PlanCalculator {
         this.addAssignment(this.makeAssignment(players[i], positions[i]));
       }
     }
+
+    // We have mutated some structures while computing the plan, but now restore
+    // them to the current executed state.
     this.gameTimeSec_ = saveGameTime;
+    this.positionPlayerMap_ = savePositionPlayerMap;
   }
 
   /**

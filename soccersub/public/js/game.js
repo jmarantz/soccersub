@@ -591,6 +591,7 @@ class Game {
           playerName: player.name,
           positionName: position.name,
           timeSec: this.elapsedTimeMs / 1000,
+          executed: false,
         });
       }
     }

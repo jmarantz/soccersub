@@ -84,4 +84,15 @@ exports = {
     util.sortTopN(arr, 100, (iw) => iw.i);
     sanityCheck(arr, 100, (iw) => iw.i);
   },
+
+  'testSaveRestoreMap': () => {
+    let /** !Map<string, number> */ map = new Map();
+    map.set('one', 1);
+    map.set('two', 2);
+    let array = util.saveMap(map);
+    map = new Map();
+    util.restoreMap(array, map);
+    assertEquals(1, map.get('one'));
+    assertEquals(2, map.get('two'));
+  },
 };

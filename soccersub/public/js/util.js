@@ -243,3 +243,35 @@ exports.sortTopN = (arr, n, getPriority) => {
   // we will lose them when the topN values take over their top slots.
   asserts.assert(evictedValuesIndex == evictedValues.length);
 };
+
+/**
+ * @template Key, Value
+ * @param {!Map<Key, Value>} map
+ * @return {!{keys: !Array<Key>, values: !Array<Value>}}
+ */
+exports.saveMap = (map) => {
+  const /** !Array<Key> */ keys = [];
+  const /** !Array<Value> */ values = [];
+  map.forEach((/** Value */ value, /** Key */ key) => {
+    keys.push(key);
+    values.push(value);
+  });
+  return {keys, values};
+};
+
+/**
+ * @template Key, Value
+ * @param {!{keys: Array<Key>, values: !Array<Value>}} array
+ * @param {!Map<Key, Value>} mapOut
+ * @return {boolean}
+ */
+exports.restoreMap = (array, mapOut) => {
+  mapOut.clear();
+  if (array.keys.length != array.values.length) {
+    return false
+  }
+  for (let i = 0; i < array.keys.length; ++i) {
+    mapOut.set(array.keys[i], array.values[i]);
+  }
+  return true;
+};

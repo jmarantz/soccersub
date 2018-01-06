@@ -124,6 +124,7 @@ class Plan {
     if (!this.checkOrder()) {
       console.log('saving invalid playerOrder');
     }
+    this.calculator_.save(map);
     //map['player_order'] = this.playerOrder_;
     //map['position_order'] = this.positionOrder_;
   }
@@ -139,6 +140,12 @@ class Plan {
     this.log_('plan players...');
     //this.players_ = [...this.lineup.playerNames];
     this.log_('plan checking order...');
+
+    if (!this.calculator_.restore(map)) {
+      this.log_('Malformed calculator');
+      this.reset();
+      return true;
+    }
 
     // Cleanup any missing or malformed data.
     if (!this.checkOrder()) {
@@ -309,17 +316,11 @@ class Plan {
     // Subtract one to avoid a 1-second shift at end due to rounding error.
     let sec = 0;
 
-    let /** ?Assignment */ prevAssignment = null;
+    let prevAssignmentTime = -1;
     let firstRowOfHalf = true;
     let half = 0;
     /** @type {!Array<?Assignment>} */
     let subs = Array(numPositions).fill(null);
-
-    /**
-     * @param {!Assignment} assignment
-     * @return {number}
-     */
-    const timeSec = (assignment) => Math.max(0, Math.ceil(assignment.timeSec));
 
     const renderRow = () => {
       /** @type {?Element} */
@@ -329,7 +330,7 @@ class Plan {
         if (assignment) {
           if (!tr) {
             tr = addTextElement(this.tbody_, '', 'tr');
-            const timeMs = 1000 * timeSec(assignment);
+            const timeMs = 1000 * assignment.timeSec;
             addTextElement(tr, util.formatTime(timeMs), 'td');
             for (let i = 0; i < col; ++i) {
               addTextElement(tr, '', 'td');
@@ -355,7 +356,7 @@ class Plan {
     const halfSec = this.calculator_.minutesPerHalf * 60;
     for (let i = 0; i < assignments.length; ++i) {
       const /** !Assignment */ assignment = assignments[i];
-      const assignmentTime = timeSec(assignment);
+      const assignmentTime = Math.ceil(assignment.timeSec);
       if ((half == 0) && (assignmentTime >= halfSec)) {
         ++half;
         firstRowOfHalf = true;
@@ -372,13 +373,12 @@ class Plan {
         this.startRows_.push(rowIndex);
       }
 
-      if ((prevAssignment == null) || 
-          (timeSec(prevAssignment) != assignmentTime)) {
+      if (prevAssignmentTime != assignmentTime) {
         renderRow();
+        prevAssignmentTime = assignmentTime;
       }
       const posIndex = this.calculator_.positionIndex(assignment.positionName);
       subs[posIndex] = assignment;
-      prevAssignment = assignment;
     }
     renderRow();
   }
