@@ -164,3 +164,11 @@ span.tab button.active {
 .pending-assignment {
     animation: blink-animation 1s steps(5, start) infinite;
 }
+
+#plan-game-past-scrim {
+    background-color: lightblue;
+    opacity: 0.5;
+    display: none;
+    z-index: 100;
+    position: absolute;
+}

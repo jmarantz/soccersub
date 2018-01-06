@@ -585,6 +585,11 @@ class PlanCalculator {
   assignHalf(assignment) {
     return (assignment.timeSec < this.minutesPerHalf * 60) ? 0 : 1;
   }
+
+  /** @return {number} */
+  gameTimeSec() {
+    return this.gameTimeSec_;
+  }
 }
 
 exports = PlanCalculator;

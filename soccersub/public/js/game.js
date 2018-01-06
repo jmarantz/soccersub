@@ -141,6 +141,7 @@ class Game {
   reset() {
     try {
       this.elapsedTimeMs = 0;
+      this.plan_.updateGameTime(0);
       this.timeOfLastUpdateMs = 0;
       this.rendered = false;
       this.positions = [];
@@ -653,6 +654,7 @@ class Game {
       var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
       if (true /*timeSinceLastUpdate > 0*/) {
         this.elapsedTimeMs += timeSinceLastUpdate;
+        this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
         this.timeOfLastUpdateMs = timeMs;
         for (const position of this.positions) {
           position.addTimeToShift(timeSinceLastUpdate);
@@ -703,6 +705,7 @@ class Game {
       deltaSec = deltaMs / 1000;
     }
     this.elapsedTimeMs += deltaMs;
+    this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
     this.cumulativeAdjustedTimeSec += deltaSec;
     this.showAdjustedTime();
     this.update_(true);

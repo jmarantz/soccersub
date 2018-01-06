@@ -80,10 +80,23 @@ class Plan {
     this.thead_ = googDom.getRequiredElement('player-matrix-head');
     /** @private {!Element} */
     this.tbody_ = googDom.getRequiredElement('player-matrix-body');
+    /** @private {!Element} */
+    this.pastScrim_ = googDom.getRequiredElement('plan-game-past-scrim');
     /** @private {!Array<number>} */
     this.startRows_ = [];       // indexed by half
     /** @private {!Array<!RenderedAssignment>} */
     this.renderedAssignments_ = [];
+    const observer = new IntersectionObserver((entries, observer) => {
+      for (const entry of entries) {
+        if (entry.intersectionRatio > 0) {
+          this.renderGameProgress_();
+          return;
+        }
+      }
+    });
+    observer.observe(this.tbody_);
+    /** @private {number} */
+    this.gameTimeSec_ = 0;
   }
 
   // Resets the player-list from the lineup and randomizes.
@@ -302,6 +315,12 @@ class Plan {
     /** @type {!Array<?Assignment>} */
     let subs = Array(numPositions).fill(null);
 
+    /**
+     * @param {!Assignment} assignment
+     * @return {number}
+     */
+    const timeSec = (assignment) => Math.max(0, Math.ceil(assignment.timeSec));
+
     const renderRow = () => {
       /** @type {?Element} */
       let tr = null;
@@ -310,7 +329,7 @@ class Plan {
         if (assignment) {
           if (!tr) {
             tr = addTextElement(this.tbody_, '', 'tr');
-            const timeMs = 1000 * Math.max(0, assignment.timeSec);
+            const timeMs = 1000 * timeSec(assignment);
             addTextElement(tr, util.formatTime(timeMs), 'td');
             for (let i = 0; i < col; ++i) {
               addTextElement(tr, '', 'td');
@@ -336,7 +355,8 @@ class Plan {
     const halfSec = this.calculator_.minutesPerHalf * 60;
     for (let i = 0; i < assignments.length; ++i) {
       const /** !Assignment */ assignment = assignments[i];
-      if ((half == 0) && (Math.ceil(assignment.timeSec) >= halfSec)) {
+      const assignmentTime = timeSec(assignment);
+      if ((half == 0) && (assignmentTime >= halfSec)) {
         ++half;
         firstRowOfHalf = true;
         renderRow();
@@ -352,8 +372,8 @@ class Plan {
         this.startRows_.push(rowIndex);
       }
 
-      if ((prevAssignment == null) ||
-          (prevAssignment.timeSec != assignment.timeSec)) {
+      if ((prevAssignment == null) || 
+          (timeSec(prevAssignment) != assignmentTime)) {
         renderRow();
       }
       const posIndex = this.calculator_.positionIndex(assignment.positionName);
@@ -720,6 +740,30 @@ class Plan {
     this.calculator_.executeAssignments(assignments, timeSec);
     this.calculator_.computePlan();
     this.render();
+  }
+
+  /**
+   * @param {number} gameTimeSec
+   */
+  updateGameTime(gameTimeSec) {
+    this.gameTimeSec_ = gameTimeSec;
+    this.renderGameProgress_();
+  }
+
+  /** @private */
+  renderGameProgress_() {
+    const rect = this.tbody_.getBoundingClientRect();
+    if ((this.gameTimeSec_ == 0) || !rect) {
+      this.pastScrim_.style.display = 'hidden';
+      return;
+    }
+    this.pastScrim_.style.left = '' + rect.left + 'px';
+    this.pastScrim_.style.top = '' + rect.top + 'px';
+    this.pastScrim_.style.width = '' + rect.width + 'px';
+    const fullGameSec = 2 * this.calculator_.minutesPerHalf * 60;
+    const height = (rect.height * this.gameTimeSec_ / fullGameSec);
+    this.pastScrim_.style.height = '' + height + 'px';
+    this.pastScrim_.style.display = 'block';
   }
 }
 
