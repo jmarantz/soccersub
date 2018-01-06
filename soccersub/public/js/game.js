@@ -597,7 +597,7 @@ class Game {
     for (const [position, player] of subs) {
       this.assignPlayerToPosition(player, position);
     }
-    this.plan_.executeAssignments(assignments);
+    this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
 
     this.completeAssignments();
   }
@@ -651,7 +651,7 @@ class Game {
     if (this.timeRunning) {
       var timeMs = util.currentTimeMs();
       var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
-      if (timeSinceLastUpdate > 0) {
+      if (true /*timeSinceLastUpdate > 0*/) {
         this.elapsedTimeMs += timeSinceLastUpdate;
         this.timeOfLastUpdateMs = timeMs;
         for (const position of this.positions) {
@@ -706,6 +706,11 @@ class Game {
     this.cumulativeAdjustedTimeSec += deltaSec;
     this.showAdjustedTime();
     this.update_(true);
+    for (const position of this.positions) {
+      position.addTimeToShift(deltaMs);
+    }
+    this.computePositionWithLongestShift_();
+    this.computePercentageInGameNotKeeper_();
   }
 
   showAdjustedTime() {

@@ -31,7 +31,7 @@ const makeInitialAssignments = () => {
  * @return {string}
  */
 const assignmentToString = (assignment) => {
-  return util.formatTime(assignment.timeSec * 1000) + ' ' +
+  return util.formatTime(Math.max(0, assignment.timeSec * 1000)) + ' ' +
     assignment.positionName + '=' + assignment.playerName;
 };
 

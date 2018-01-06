@@ -310,7 +310,7 @@ class Plan {
         if (assignment) {
           if (!tr) {
             tr = addTextElement(this.tbody_, '', 'tr');
-            const timeMs = 1000 * assignment.timeSec;
+            const timeMs = 1000 * Math.max(0, assignment.timeSec);
             addTextElement(tr, util.formatTime(timeMs), 'td');
             for (let i = 0; i < col; ++i) {
               addTextElement(tr, '', 'td');
@@ -687,10 +687,10 @@ class Plan {
     const index = util.upperBound(
       assignments, 
       (assignment) => assignment.timeSec < currentTimeSec);
-    if ((index == -1) || (index + 1 >= assignments.length)) {
+    if (index == -1) {
       return null;
     }
-    return assignments[index + 1];
+    return assignments[index];
   }
   
   /**
@@ -714,9 +714,10 @@ class Plan {
 
   /**
    * @param {!Array<!Assignment>} assignments
+   * @param {number} timeSec
    */
-  executeAssignments(assignments) {
-    this.calculator_.executeAssignments(assignments);
+  executeAssignments(assignments, timeSec) {
+    this.calculator_.executeAssignments(assignments, timeSec);
     this.calculator_.computePlan();
     this.render();
   }

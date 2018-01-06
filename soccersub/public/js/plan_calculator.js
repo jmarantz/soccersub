@@ -74,7 +74,7 @@ class PlanCalculator {
     this.playerEventsMap_ = new Map();
 
     /** @private {number} */
-    this.gameTimeSec_ = 0;
+    this.gameTimeSec_ = -1;
 
     /** @type {number} */
     this.minutesPerHalf = 24;
@@ -154,7 +154,7 @@ class PlanCalculator {
       }
       const len = events.length;
       if ((len == 0) || (events[len - 1].type == EventType.UNAVAILABLE)) {
-        events.push({type: EventType.BENCH, timeSec: this.gameTimeSec_ + 0,
+        events.push({type: EventType.BENCH, timeSec: this.gameTimeSec_,
                      assignment: null});
         ++playerDelta;
       }
@@ -166,7 +166,7 @@ class PlanCalculator {
           (events[events.length - 1].type != EventType.UNAVAILABLE)) {
         --playerDelta;
         events.push({type: EventType.UNAVAILABLE, 
-                     timeSec: this.gameTimeSec_ + 0, assignment: null});
+                     timeSec: this.gameTimeSec_, assignment: null});
       }
     });
     this.computeShiftTime_();
@@ -196,14 +196,16 @@ class PlanCalculator {
   /** @private */
   computeShiftTime_() {
     const halfSec = this.minutesPerHalf * 60;
+/*
     let endOfHalfSec = halfSec;
     if (this.gameTimeSec_ == halfSec) {
       endOfHalfSec += halfSec;
     }
 
     const timeLeftSec = endOfHalfSec - this.nextPlayerChangeSec_;
+*/
     const numFieldPlayers = this.lineup_.playerNames.size - 1;
-    this.shiftTimeSec_ = timeLeftSec / numFieldPlayers;
+    this.shiftTimeSec_ = halfSec /*timeLeftSec*/ / numFieldPlayers;
   }
 
   /**
@@ -332,10 +334,6 @@ class PlanCalculator {
    * @return {number}
    */
   playerPriority(player) {
-    if (player == 'Leo') {
-      debugger;
-    }
-
     const timing = this.computeGameTiming_(player);
     let priority = (100 - timing.percentInGame) * 1e6;
     priority += timing.benchTimeSec * 100;
@@ -403,7 +401,8 @@ class PlanCalculator {
       const position = this.positionNames_[i];
       assignments.push(this.makeAssignment(player, position));
     }
-    this.executeAssignments(assignments);
+    this.executeAssignments(assignments, -1);
+    this.gameTimeSec_ = 0;
   }
 
   /**
@@ -432,24 +431,27 @@ class PlanCalculator {
     });
   }
 
-  /** @param {!Array<!Assignment>} assignments */
-  executeAssignments(assignments) {
+  /** 
+   * @param {!Array<!Assignment>} assignments
+   * @param {number} timeSec
+   */
+  executeAssignments(assignments, timeSec) {
+    this.gameTimeSec_ = timeSec;
     this.clearFutureAssignments();
     for (const assignment of assignments) {
       this.addAssignment(assignment);
       ++this.assignmentIndex_;
-      this.gameTimeSec_ = Math.max(this.gameTimeSec_, assignment.timeSec);
     }
 
 
     // If we executed the change late, or no more than 45 seconds early,
     // then just advance our planned next substition time by one shift.
-    if ((this.gameTimeSec_ > this.nextPlayerChangeSec_) ||
-        ((this.gameTimeSec_ - this.nextPlayerChangeSec_) < 45)) {
+    if ((timeSec > this.nextPlayerChangeSec_) || 
+        ((timeSec - this.nextPlayerChangeSec_) < 45)) {
       this.nextPlayerChangeSec_ += this.shiftTimeSec_;
     } else {
       // Otherwise, just move it forward from the current time.
-      this.nextPlayerChangeSec_ = this.gameTimeSec_ + this.shiftTimeSec_;
+      this.nextPlayerChangeSec_ = timeSec + this.shiftTimeSec_;
     }
     
     // TODO(jmarantz): special case being close to the end of the half or game.
@@ -503,14 +505,17 @@ class PlanCalculator {
     // recompute it. Any assignments already made are assumed to be correct.
     // We also have to iterate through the players and remove any future
     // events.
-    this.assignments_.length = this.assignmentIndex_;
-    this.playerEventsMap_.forEach((events, player) => {
-      const index = util.upperBound(
-        events, (event) => event.timeSec <= this.gameTimeSec_);
-      if (index != -1) {
-        events.length = index;
-      }
-    });
+    if (this.assignmentIndex_ < this.assignments_.length) {
+      const removeAssignment = this.assignments_[this.assignmentIndex_];
+      this.assignments_.length = this.assignmentIndex_;
+      this.playerEventsMap_.forEach((events, player) => {
+        const index = util.upperBound(
+          events, (event) => event.timeSec <= removeAssignment.timeSec);
+        if (index != -1) {
+          events.length = index;
+        }
+      });
+    }
     // Note: if we were to add a cache for player timing stats, it would need
     // to be invalidated here.
   }
@@ -525,12 +530,7 @@ class PlanCalculator {
     for (this.gameTimeSec_ = this.nextPlayerChangeSec_; 
          this.gameTimeSec_ < gameSec; 
          this.gameTimeSec_ += this.shiftTimeSec_) {
-      const position = this.pickNextFieldPosition();
-      if (!position) {
-        console.log('no positions defined');
-        return;
-      }
-      const positions = [position];
+      const positions = [];
 
       // Pick a new keeper at halftime.
       if ((half == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
@@ -539,10 +539,17 @@ class PlanCalculator {
         positions.push(Lineup.KEEPER);
       }
 
+      const position = this.pickNextFieldPosition();
+      if (!position) {
+        console.log('no positions defined');
+        break;
+      }
+      positions.push(position);
+
       let players = this.pickNextPlayers(positions.length);
-      if (players.length != positions.length) {
+      if (players.length == 0) {
         console.log('not enough players');
-        return;
+        break;
       }
 
       for (let i = 0; i < players.length; ++i) {
@@ -558,66 +565,6 @@ class PlanCalculator {
     }
     this.gameTimeSec_ = saveGameTime;
   }
-
-  /*
-   * Computes maps of assigned playerTime in seconds for a half, combining any
-   * time already played with projected time based on the current plan.
-   *
-   * param {number} half
-   * return {!Map<string, number>}
-   */
-/*
-  computePlayerTime(half) {
-    const firstHalfTime = new Map();
-    const secondHalfTime = new Map();
-    const playerTimeInHalfSec = [new Map(), new Map()];
-    const currentPlayerAtPosition = new Map();
-    let timeSec = 0;
-    let timeMap = firstHalfTime;
-    for (const assignment of this.assignments_) {
-      if (assignment.timeSec >= this.minutesPerHalf) {
-        if (assignment.timeSec > this.minutesPerHalf) {
-          console.log('all assignments should be reset at half');
-        }
-        half = 1;
-        timeMap = secondHalfTime;
-      }
-      const prevAssignment = positionPlayerMap.get(assignment.positionName);
-      const deltaTimeSec = assignment.timeSec;
-      if (prevAssignment) {
-        deltaTimeSec -= prevAssignment.timeSec;
-      }
-      const currentTime = timeMap.get(prevAssignment.playerName) || 0;
-      timeMap.set(prevAssignment.playerName, currentTime + deltaTime);
-      positionPlayerMap.set(assignment);
-    }
-    return {firstHalfTime, seocndHalfTime};
-  }
-*/
-
-  /*
-   * param {number} timeSec
-   * return {!Array<?Player>}
-   */
-/*
-  addRow(timeSec) {
-    const assignments = Array(this.positionNames_.length).fill(null);
-    this.assignmentMatrix_.push({timeSec, assignments});
-  }
-
-  makeInitialAssignmentsIfNeeded() {
-    const initial = this.assignmentMatrix_.length ? this.assignmentMatrix_
-          : this.addRow(0);
-    for (let i = 0; i < this.positionNames_.length; ++i) {
-      if (initial.length <= i) {
-        initial.push(null);
-      }
-      if (initial[i] == null) {
-        initial[i] = this.findNextPlayer();
-      }
-    }
-  }
-*/
 
   /**
    * @param {string} positionName
