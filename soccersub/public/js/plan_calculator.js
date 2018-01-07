@@ -564,12 +564,12 @@ class PlanCalculator {
     // We also have to iterate through the players and remove any future
     // events.
     if (this.assignmentIndex_ < this.assignments_.length) {
-      const removeAssignment = this.assignments_[this.assignmentIndex_];
       this.assignments_.length = this.assignmentIndex_;
       this.playerEventsMap_.forEach((events, player) => {
         for (let i = 0; i < events.length; ++i) {
           const event = events[i];
-          if (event.assignment && !event.assignment.executed) {
+          if ((event.timeSec > this.gameTimeSec_) ||
+              (event.assignment && !event.assignment.executed)) {
             events.length = i;
             break;
           }

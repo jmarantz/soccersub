@@ -160,7 +160,7 @@ class Game {
       for (const assignment of this.plan_.initialAssignments()) {
         const {player, position} = this.getPlayerAndPosition(assignment);
         if (player && position) {
-          this.assignPlayerToPosition(player, position);
+          this.assignPlayerToPosition_(player, position, false);
         }
       }
       this.completeAssignments();
@@ -274,7 +274,7 @@ class Game {
       if (this.clockStarted) {
         this.addPendingAssignment(player, position);
       } else {
-        this.assignPlayerToPosition(player, position);
+        this.assignPlayerToPosition_(player, position, true);
         this.completeAssignments();
       }
     }
@@ -597,7 +597,7 @@ class Game {
     }
     // Now walk through the collected substitution list and execute them.
     for (const [position, player] of subs) {
-      this.assignPlayerToPosition(player, position);
+      this.assignPlayerToPosition_(player, position, false);
     }
     this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
 
@@ -607,12 +607,23 @@ class Game {
   /**
    * @param {!Player} player
    * @param {!Position} position
+   * @param {boolean} writeToPlan
+   * @private
    */
-  assignPlayerToPosition(player, position) {
+  assignPlayerToPosition_(player, position, writeToPlan) {
     player.setPosition(position, true);
     this.writeStatus(player.status());
     position.setPlayer(player);
     this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
+    if (writeToPlan) {
+      const assignments = [{
+        playerName: player.name,
+        positionName: position.name,
+        timeSec: this.elapsedTimeMs / 1000,
+        executed: false,
+      }];
+      this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
+    }
   }
   
   completeAssignments() {
