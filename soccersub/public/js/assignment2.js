@@ -15,6 +15,7 @@ goog.module('soccersub.Assignment2');
  *   positionName: string,
  *   timeSec: number,
  *   executed: boolean,
+ *   index: number,
  * }}
  */
 let Assignment2;

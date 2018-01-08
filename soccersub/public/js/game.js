@@ -157,16 +157,21 @@ class Game {
       this.showAdjustedTime();
       this.update_(false);
       this.writeLog_('reset');
-      for (const assignment of this.plan_.initialAssignments()) {
-        const {player, position} = this.getPlayerAndPosition(assignment);
-        if (player && position) {
-          this.assignPlayerToPosition_(player, position, false);
-        }
-      }
-      this.completeAssignments();
+      this.makeInitialAssignments_();
     } catch (err) {
       this.writeStatus('ERROR: ' + err + '\n' + err.stack);
     }
+  }
+
+  /** @private */
+  makeInitialAssignments_() {
+    for (const assignment of this.plan_.initialAssignments()) {
+      const {player, position} = this.getPlayerAndPosition(assignment);
+      if (player && position) {
+        this.assignPlayerToPosition_(player, position, false);
+      }
+    }
+    this.completeAssignments();
   }
 
   /**
@@ -456,7 +461,10 @@ class Game {
   }
 
   toggleClock() {
-    this.clockStarted = true;
+    if (!this.clockStarted) {
+      this.clockStarted = true;
+      this.makeInitialAssignments_();
+    }
     this.timeRunning = !this.timeRunning;
     this.timeOfLastUpdateMs = util.currentTimeMs();
     this.update_(true);
@@ -611,17 +619,17 @@ class Game {
    * @private
    */
   assignPlayerToPosition_(player, position, writeToPlan) {
+    if (player.currentPosition == position) {
+      return;
+    }
     player.setPosition(position, true);
     this.writeStatus(player.status());
     position.setPlayer(player);
     this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
     if (writeToPlan) {
-      const assignments = [{
-        playerName: player.name,
-        positionName: position.name,
-        timeSec: this.elapsedTimeMs / 1000,
-        executed: false,
-      }];
+      const assignments = [
+        this.plan_.calculator.makeAssignment(player.name, position.name)
+      ];
       this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
     }
   }

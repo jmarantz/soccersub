@@ -22,7 +22,7 @@ const makeInitialAssignments = () => {
   assertEquals(6, calculator.updatePlayers());
   futsalTwoTwoFormation();
   calculator.setupPositions();
-  calculator.makeInitialAssignments();
+  calculator.reset();
   return calculator;
 };
 
@@ -53,7 +53,8 @@ exports = {
     const calculator = new PlanCalculator(lineup, () => {}, 
                                           TestUtil.consoleLog);
     assertEquals(5, calculator.updatePlayers());
-    assertArrayEquals(['jim', 'joe'], calculator.pickNextPlayers(2));
+    assertArrayEquals(['jim', 'joe'], 
+                      calculator.pickNextPlayers(['a', 'b'], null));
   },
 
   'testComputeShiftTime': () => {
@@ -89,8 +90,8 @@ exports = {
     assertEquals('Right Back', calculator.playerPosition('harvey'));
     assertEquals('Keeper', calculator.playerPosition('frank'));
     assertEquals(null, calculator.playerPosition('unknown'));
-    assertArrayEquals(['bob'], calculator.pickNextPlayers(1));
-    assertArrayEquals([], calculator.pickNextPlayers(0));
+    assertArrayEquals(['bob'], calculator.pickNextPlayers(['a'], null));
+    assertArrayEquals([], calculator.pickNextPlayers([], null));
   },
 
   'testComputePlan': () => {

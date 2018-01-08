@@ -23,6 +23,11 @@ const EventType = {
  */
 let PlayerEvent;
 
+/**
+ * @typedef {!Map<string, string>}
+ */
+let PositionToPlayerMap;
+
 class PlanCalculator {
   /**
    * @param {!Lineup} lineup
@@ -50,6 +55,9 @@ class PlanCalculator {
      */
     this.assignmentIndex_ = 0;
 
+    /** private {!Map<number, !PositionToPlayerMap>} */
+    this.pins_ = new Map();
+
     /**
      * In order to meaningfully decide which people need the most playing
      * time, in a context where players may arrive after the game has started,
@@ -73,6 +81,9 @@ class PlanCalculator {
 
     /** @private {number} */
     this.gameTimeSec_ = 0;
+
+    /** @private {number} */
+    this.half_ = 0;
 
     /** @type {number} */
     this.minutesPerHalf = 24;
@@ -149,9 +160,11 @@ class PlanCalculator {
   save(map) {
     map['plan_assignments'] = this.assignments_;
     map['plan_index'] = this.assignmentIndex_;
+    //map['plan_pins'] = util.saveMap(this.pins_);
     map['plan_player_events'] = util.saveMap(this.playerEventsMap_);
     map['plan_position_names'] = util.saveMap(this.positionNameIndexMap_);
     map['plan_gametime'] = this.gameTimeSec_;
+    map['plan_half'] = this.half_;
     map['plan_positions'] = this.positionNames_;
     map['plan_position_players'] = util.saveMap(this.positionPlayerMap_);
     map['plan_priorities'] = util.saveMap(this.playerPriorityMap_);
@@ -167,10 +180,12 @@ class PlanCalculator {
     this.assignments_ = map['plan_assignments'];
     this.assignmentIndex_ = map['plan_index'];
     this.gameTimeSec_ = map['plan_gametime'];
+    this.half_ = map['plan_half'];
     this.positionNames_ = map['plan_positions'];
     this.shiftTimeSec_ = map['plan_shift_time_sec'];
     this.nextPlayerChangeSec_ = map['plan_next_player_change_sec'];
     return (
+      //util.restoreMap(map['plan_swaps'], this.swaps_) &&
       util.restoreMap(map['plan_player_events'], this.playerEventsMap_) &&
       util.restoreMap(map['plan_position_players'], this.positionPlayerMap_) &&
       util.restoreMap(map['plan_priorities'], this.playerPriorityMap_) &&
@@ -238,7 +253,7 @@ class PlanCalculator {
    */
   makeAssignment(playerName, positionName) {
     return {playerName: playerName, positionName: positionName, 
-            timeSec: this.gameTimeSec_, executed: false};
+            timeSec: this.gameTimeSec_, executed: false, index: -1};
   }
 
   /** @return {number} */
@@ -259,11 +274,13 @@ class PlanCalculator {
 */
     const numFieldPlayers = this.lineup_.playerNames.size - 1;
     this.shiftTimeSec_ = halfSec /*timeLeftSec*/ / numFieldPlayers;
+/*
     const gameTimeSec = this.gameTimeSec_;
     if ((this.nextPlayerChangeSec_ <= gameTimeSec) || 
         (this.nextPlayerChangeSec_ > (gameTimeSec + this.shiftTimeSec_))) {
       this.nextPlayerChangeSec_  = gameTimeSec + this.shiftTimeSec_;
     }
+*/
   }
 
   /**
@@ -375,12 +392,15 @@ class PlanCalculator {
 
   /**
    * @param {string} player
-   * @return {boolean}
+   * @return {!{type: EventType, assignment: ?Assignment}}
    */
-  playerIsAvailable(player) {
+  playerStatus(player) {
     let events = this.playerEventsMap_.get(player);
-    return (events != null) && (events.length > 0) && 
-      (events[events.length - 1].type == EventType.BENCH);
+    if (!events || (events.length == 0)) {
+      return {type: EventType.UNAVAILABLE, assignment: null};
+    }
+    const event = events[events.length - 1];
+    return {type: event.type, assignment: event.assignment};
   }
 
   /**
@@ -418,16 +438,43 @@ class PlanCalculator {
   }
 
   /**
-   * @param {number} numPlayers
+   * @param {!Array<string>} positions
+   * @param {?PositionToPlayerMap} positionToPlayerMap
    * @return {!Array<string>}
    */
-  pickNextPlayers(numPlayers) {
-    const players = Array.from(this.lineup_.playerNames).filter(
-      (player) => this.playerIsAvailable(player));
-    if (numPlayers < players.length) {
-      util.sortTopN(players, numPlayers, (player) => this.playerPriority(player));
+  pickNextPlayers(positions, positionToPlayerMap) {
+    const players = Array(positions.length).fill('');
+    const pinnedPlayers = new Set();
+
+    const isAvailable = (player) => 
+          ((this.playerStatus(player).type == EventType.BENCH) &&
+           !pinnedPlayers.has(player));
+
+    // First see if any of the positions are pinned.
+    if (positionToPlayerMap) {
+      for (let i = 0; i < positions.length; ++i) {
+        const player = positionToPlayerMap.get(positions[i]);
+        if (player && isAvailable(player)) {
+          positionToPlayerMap.delete(positions[i]);
+          if (!pinnedPlayers.has(player)) {
+            players[i] = player;
+            pinnedPlayers.add(player);
+          }
+        }
+      }
     }
-    players.length = Math.min(players.length, numPlayers);
+
+    const pool = Array.from(this.lineup_.playerNames).filter(isAvailable);
+    const needPlayers = positions.length - pinnedPlayers.size;
+    if (needPlayers < pool.length) {
+      util.sortTopN(pool, needPlayers, (player) => this.playerPriority(player));
+    }
+    for (let i = 0, poolIndex = 0; 
+         (i < players.length) && (poolIndex < pool.length); ++i) {
+      if (!players[i]) {
+        players[i] = pool[poolIndex++];
+      }
+    }
     return players;
   }
 
@@ -447,13 +494,18 @@ class PlanCalculator {
     return assignment.positionName;
   }
 
-  makeInitialAssignments() {
+  // Clears the current schedule, rediscovering the set of players and positions from
+  // the lineup.  Does not reset any pinned players.
+  reset() {
     this.assignments_ = [];
     this.assignmentIndex_ = 0;
     this.playerEventsMap_.clear();
     this.gameTimeSec_ = 0;
     this.updatePlayers();
-    const nextPlayers = this.pickNextPlayers(this.positionNames_.length);
+/*
+    let positionToPlayerMap = this.pins_.get(0);
+    const nextPlayers = this.pickNextPlayers(
+      this.positionNames_, positionToPlayerMap);
     const assignments = [];
     for (let i = 0; i < nextPlayers.length; ++i) {
       const player = nextPlayers[i];
@@ -461,14 +513,16 @@ class PlanCalculator {
       assignments.push(this.makeAssignment(player, position));
     }
     this.executeAssignments(assignments, 0);
+*/
     this.gameTimeSec_ = 0;
-    this.nextPlayerChangeSec_ = this.shiftTimeSec_;
+    this.nextPlayerChangeSec_ = 0;
   }
 
   /**
    * @param {!Assignment} assignment
    */
   addAssignment(assignment) {
+    assignment.index = this.assignments_.length;
     this.assignments_.push(assignment);
     const previousPlayer = this.positionPlayerMap_.get(assignment.positionName);
     if (previousPlayer) {
@@ -507,7 +561,9 @@ class PlanCalculator {
     // If executed change more than 30 seconds early, probably due to an injury,
     // don't change the next player timing at all.
     if ((this.nextPlayerChangeSec_ - timeSec) <= 30) {
-      this.nextPlayerChangeSec_ += this.shiftTimeSec_;
+      while (this.nextPlayerChangeSec_ <= this.gameTimeSec_) {
+        this.nextPlayerChangeSec_ += this.shiftTimeSec_;
+      }
     }
     // For late assignments we could move it forward, but punt for now.
     // this.nextPlayerChangeSec_ = timeSec + this.shiftTimeSec_;
@@ -580,6 +636,76 @@ class PlanCalculator {
     // to be invalidated here.
   }
 
+  /**
+     
+   * @param {!Assignment} source
+   * @param {!Assignment} target
+   */
+  pinPlayerPosition(source, target) {
+    if ((source == target.index) || (source.timeSec < target.timeSec)) {
+      return;
+    }
+
+    // We can swap initial assignments if the game hasn't started yet.  In this
+    // case we will not be recomputing these assignments, so we do them directly.
+    // We will also need to add them to the persisted map so if we start a new 
+    // game, the assignment preferences are remembered.
+    if ((target.index < this.assignmentIndex_) && (this.gameTimeSec_ > 0)) {
+      console.log('attempted to do an initial swap after game started');
+      return;
+    }
+
+    let /** ?PositionToPlayerMap */ positionPlayerMap = 
+        this.pins_.get(target.timeSec);
+    if (!positionPlayerMap) {
+      positionPlayerMap = new Map();
+      this.pins_.set(target.timeSec, positionPlayerMap);
+    } else {
+      // O(# positions) walk through existing positionPlayerMap at this time,
+      // looking for other mappings for this player, which must be eliminated.
+      for (const [position, player] of positionPlayerMap) {
+        if (player == source.playerName) {
+          positionPlayerMap.delete(position);
+          break;     // There should be no other mappings for this player.
+        }
+      }
+    }
+    positionPlayerMap.set(target.positionName, source.playerName);
+
+    if (target.index < this.assignmentIndex_) {
+      this.reset();
+    }
+    this.computePlan();
+  }
+
+  /** 
+   * @private
+   * @return {!Array<string>} 
+   */
+  findPositionsToFill_() {
+    // Figure out what positions to fill.
+    if (this.gameTimeSec_ == 0) {
+      return this.positionNames_;
+    }
+    const positions = [];
+
+    // Pick a new keeper at halftime.
+    const halfSec = this.minutesPerHalf * 60;
+    if ((this.half_ == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
+      this.gameTimeSec_ = halfSec;
+      this.half_ = 1;
+      positions.push(Lineup.KEEPER);
+    }
+    const position = this.pickNextFieldPosition();
+    if (position) {
+      positions.push(position);
+    } else {
+      console.log('no positions defined at ' + this.gameTimeSec_ + 'sec');
+    }
+    return positions;
+  }
+    
+
   computePlan() {
     this.clearFutureAssignments();
 
@@ -587,47 +713,69 @@ class PlanCalculator {
     const halfSec = this.minutesPerHalf * 60;
     const gameSec = 2 * halfSec;
     const saveGameTime = this.gameTimeSec_;
+    const saveHalf = this.half_;
     const savePositionPlayerMap = new Map(this.positionPlayerMap_);
+
+    const /** PositionToPlayerMap */ positionToPinnedPlayerMap = new Map();
+    const pinTimes = Array.from(this.pins_.keys()).sort();
+    let pinIndex = 0;
+
     for (this.gameTimeSec_ = this.nextPlayerChangeSec_; 
          this.gameTimeSec_ < gameSec; 
          this.gameTimeSec_ += this.shiftTimeSec_) {
-      const positions = [];
+      let positions = this.findPositionsToFill_();
 
-      // Pick a new keeper at halftime.
-      if ((half == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
-        this.gameTimeSec_ = halfSec;
-        half = 1;
-        positions.push(Lineup.KEEPER);
+      for (; (pinIndex < pinTimes.length) &&  
+           (pinTimes[pinIndex] <= this.gameTimeSec_); ++pinIndex) {
+        for (const [position, player] of this.pins_.get(pinTimes[pinIndex])) {
+          positionToPinnedPlayerMap.set(position, player);
+        }
       }
 
-      const position = this.pickNextFieldPosition();
-      if (!position) {
-        console.log('no positions defined');
-        break;
-      }
-      positions.push(position);
-
-      let players = this.pickNextPlayers(positions.length);
+      let players = this.pickNextPlayers(positions, positionToPinnedPlayerMap);
       if (players.length == 0) {
         console.log('not enough players');
         break;
       }
 
       for (let i = 0; i < players.length; ++i) {
-        // pick a new keeper.
-        //if (this.secondHalfKeeper_) {
-          //players = [this.secondHalfKeeper_];
-        //} else {
-          //this.secondHalfKeeper_ = players[0];
-        //}
-        //position = Lineup.KEEPER;
+/*
+        let pinnedPlayer = positionToPinnedPlayerMap.get(positions[i]);
+        if (pinnedPlayer) {
+          const {type, assignment} = this.playerStatus(pinnedPlayer)
+          switch (type) {
+          case EventType.UNAVAILABLE:
+            // If the pinned player is not currently an active player (eg sick), just
+            // ignore the pin.  Leave the player pinned for when he recovers.
+            break;
+          case EventType.FIELD:
+          case EventType.KEEPER:
+            console.log('assigning player that is busy: ' + pinnedPlayer + ' at ' + 
+                        this.gameTimeSec_);
+            break;
+          case EventType.BENCH:
+            if (i + 1 < players.length) {
+              players[i + 1] = players[i];
+            }
+            players[i] = pinnedPlayer;
+            break;
+          }
+        }
+*/
+
         this.addAssignment(this.makeAssignment(players[i], positions[i]));
       }
+/*
+      if (this.gameTimeSec_ == 0) {
+        this.executeAssignments(assignments, 0);
+      }
+*/
     }
 
     // We have mutated some structures while computing the plan, but now restore
     // them to the current executed state.
     this.gameTimeSec_ = saveGameTime;
+    this.half_ = saveHalf;
     this.positionPlayerMap_ = savePositionPlayerMap;
   }
 
@@ -658,3 +806,16 @@ class PlanCalculator {
 }
 
 exports = PlanCalculator;
+
+
+
+/*
+        // pick a new keeper.
+        //if (this.secondHalfKeeper_) {
+          //players = [this.secondHalfKeeper_];
+        //} else {
+          //this.secondHalfKeeper_ = players[0];
+        //}
+        //position = Lineup.KEEPER;
+
+*/

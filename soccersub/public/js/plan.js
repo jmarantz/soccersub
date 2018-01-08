@@ -31,8 +31,7 @@ let RenderedAssignment;
  * tweaked independently.
  *
  * @typedef {!{
- *   playerName: string,
- *   positionName: string,
+ *   assignment: !Assignment,
  *   half: number,
  *   row: number,
  * }}
@@ -47,9 +46,8 @@ let DragSource;
  * half. We'll call this a timing-drop.
  *
  * @typedef {!{
- *   playerName: string,
+ *   assignment: ?Assignment,
  *   rowIndex: number,
- *   positionName: string,
  * }}
  */
 let DragTarget;
@@ -66,7 +64,7 @@ class Plan {
     /** @type {!Lineup} lineup */
     this.lineup = lineup;
     /** @type {!PlanCalculator} */
-    this.calculator_ = new PlanCalculator(lineup, save, log);
+    this.calculator = new PlanCalculator(lineup, save, log);
     /** @private {function()} */
     this.save_ = save;
     /** @private {function(string)} */
@@ -110,11 +108,12 @@ class Plan {
    * Resets the player-list from the lineup and randomizes.
    */
   reset() {
-    this.calculator_ = new PlanCalculator(this.lineup, this.save_, this.log_);
-    this.calculator_.updatePlayers();
-    this.calculator_.setupPositions();
-    this.calculator_.makeInitialAssignments();
-    this.calculator_.computePlan();
+    this.calculator = new PlanCalculator(this.lineup, this.save_, this.log_);
+    this.calculator.updatePlayers();
+    this.calculator.setupPositions();
+    //this.calculator.makeInitialAssignments();
+    this.calculator.reset();
+    this.calculator.computePlan();
     this.save_();
     this.startRows_ = [];
   }
@@ -124,7 +123,7 @@ class Plan {
     if (!this.checkOrder()) {
       console.log('saving invalid playerOrder');
     }
-    this.calculator_.save(map);
+    this.calculator.save(map);
     //map['player_order'] = this.playerOrder_;
     //map['position_order'] = this.positionOrder_;
   }
@@ -141,7 +140,7 @@ class Plan {
     //this.players_ = [...this.lineup.playerNames];
     this.log_('plan checking order...');
 
-    if (!this.calculator_.restore(map)) {
+    if (!this.calculator.restore(map)) {
       this.log_('Malformed calculator');
       this.reset();
       return true;
@@ -154,8 +153,8 @@ class Plan {
       return true;
     }
     this.log_('plan rendering...');
-    this.calculator_.updatePlayers();
-    this.calculator_.setupPositions();
+    this.calculator.updatePlayers();
+    this.calculator.setupPositions();
     this.render();
     return true;
   }
@@ -201,7 +200,7 @@ class Plan {
   // of existing players, updating this.playerOrder_ to minimize
   // assignment changes if the number of players remains the same.
   freshenPlayers() {
-    if (this.calculator_.updatePlayers() != 0) {
+    if (this.calculator.updatePlayers() != 0) {
     }
 
     /*
@@ -352,8 +351,8 @@ class Plan {
 
     this.startRows_ = [];
     const /** !Array<!Assignment> */ assignments = 
-          this.calculator_.assignments();
-    const halfSec = this.calculator_.minutesPerHalf * 60;
+          this.calculator.assignments();
+    const halfSec = this.calculator.minutesPerHalf * 60;
     for (let i = 0; i < assignments.length; ++i) {
       const /** !Assignment */ assignment = assignments[i];
       const assignmentTime = Math.ceil(assignment.timeSec);
@@ -377,7 +376,7 @@ class Plan {
         renderRow();
         prevAssignmentTime = assignmentTime;
       }
-      const posIndex = this.calculator_.positionIndex(assignment.positionName);
+      const posIndex = this.calculator.positionIndex(assignment.positionName);
       subs[posIndex] = assignment;
     }
     renderRow();
@@ -478,7 +477,7 @@ class Plan {
    * @private
    */
   assignHalf_(renderedAssignment) {
-    return this.calculator_.assignHalf(renderedAssignment.assignment);
+    return this.calculator.assignHalf(renderedAssignment.assignment);
   }
 
   /**
@@ -488,14 +487,14 @@ class Plan {
   findDragSource(event) {
     const renderedAssignment = this.findRenderedAssignment(
       event.clientX, event.clientY);
-    if (!renderedAssignment) {
+    if (!renderedAssignment || 
+        (renderedAssignment.assignment.timeSec < this.gameTimeSec_)) {
       return null;
     }
     const assignment = renderedAssignment.assignment;
     const half = this.assignHalf_(renderedAssignment);
     const source = {
-      playerName: assignment.playerName, 
-      positionName: assignment.positionName, 
+      assignment: assignment,
       half: half,
       row: renderedAssignment.rowIndex,
     };
@@ -511,14 +510,21 @@ class Plan {
     const x = event.clientX;
     const y = event.clientY;
     let renderedAssignment = this.findRenderedAssignment(x, y);
+
+    // Can't drag something into the past.
+    if (renderedAssignment &&
+        (renderedAssignment.assignment.timeSec < this.gameTimeSec_)) {
+      return null;
+    }
+
     let targetElements = {
-      target: {playerName: '', rowIndex: -1, positionName: ''},
+      target: {assignment: null, rowIndex: -1},
       elements: []
     };
     if (!renderedAssignment || 
         (this.assignHalf_(renderedAssignment) != source.half)) {
       // Keepers are not eligiable.
-      if (source.positionName == Lineup.KEEPER) {
+      if (source.assignment.positionName == Lineup.KEEPER) {
         return null;
       }
 
@@ -546,7 +552,6 @@ class Plan {
       }
 
       targetElements.target.rowIndex = row;
-      targetElements.target.positionName = renderedAssignment.assignment.positionName;
       targetElements.elements.push(element);
       targetElements.elements.push(renderedAssignment.element);
     } else {
@@ -559,7 +564,9 @@ class Plan {
         }
       }
     }
-    targetElements.target.playerName = renderedAssignment.assignment.playerName;
+    targetElements.target.assignment = renderedAssignment.assignment;
+    //targetElements.target.timeSec = renderedAssignment.assignment.timeSec;
+    //targetElements.target.playerName = renderedAssignment.assignment.playerName;
     return targetElements;
   }
 
@@ -605,10 +612,17 @@ class Plan {
    * @private
    */
   drop_(source, target) {
-/*
-    if (!target || (target.playerName == source.playerName)) {
+    if (!target || 
+        (target.assignment && 
+         target.assignment.playerName == source.assignment.playerName)) {
       return;
     }
+    if (target.assignment) {
+      this.calculator.pinPlayerPosition(source.assignment, target.assignment);
+      this.render();
+    }
+
+/*
     if (target.positionName != '') {
       const positionOrder = this.positionOrder_[source.half];
       Plan.swap_(source.positionIndex, target.positionIndex, positionOrder);
@@ -633,14 +647,16 @@ class Plan {
         console.log('initialPlayers.length == ' + initialPlayers.length);
       }
     }
+
     const playerOrder = this.playerOrder_[source.half];
     Plan.swap_(source.playerIndex, target.playerIndex, playerOrder);
     this.log_('plan swap players ' +  
               this.players_[playerOrder[target.playerIndex]] + ' & ' + 
               this.players_[playerOrder[source.playerIndex]]);
+*/
+
     this.render();
     this.save_();
-*/
   }
 
   /**
@@ -703,7 +719,7 @@ class Plan {
    * @return {?Assignment}
    */
   nextAssignment(currentTimeSec) {
-    const assignments = this.calculator_.assignments();
+    const assignments = this.calculator.assignments();
     const index = util.upperBound(
       assignments, 
       (assignment) => assignment.timeSec < currentTimeSec);
@@ -717,8 +733,8 @@ class Plan {
    * @return {!Array<!Assignment>}
    */
   initialAssignments() {
-    this.calculator_.makeInitialAssignments();
-    this.calculator_.computePlan();
+    //this.calculator.makeInitialAssignments();
+    this.calculator.computePlan();
     this.render();
     // save?
 
@@ -737,8 +753,8 @@ class Plan {
    * @param {number} timeSec
    */
   executeAssignments(assignments, timeSec) {
-    this.calculator_.executeAssignments(assignments, timeSec);
-    this.calculator_.computePlan();
+    this.calculator.executeAssignments(assignments, timeSec);
+    this.calculator.computePlan();
     this.render();
   }
 
@@ -760,7 +776,7 @@ class Plan {
     this.pastScrim_.style.left = '' + rect.left + 'px';
     this.pastScrim_.style.top = '' + rect.top + 'px';
     this.pastScrim_.style.width = '' + rect.width + 'px';
-    const fullGameSec = 2 * this.calculator_.minutesPerHalf * 60;
+    const fullGameSec = 2 * this.calculator.minutesPerHalf * 60;
     const height = (rect.height * this.gameTimeSec_ / fullGameSec);
     this.pastScrim_.style.height = '' + height + 'px';
     this.pastScrim_.style.display = 'block';
