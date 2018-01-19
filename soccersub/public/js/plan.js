@@ -511,10 +511,17 @@ class Plan {
     const y = event.clientY;
     let renderedAssignment = this.findRenderedAssignment(x, y);
 
-    // Can't drag something into the past.
-    if (renderedAssignment &&
-        (renderedAssignment.assignment.timeSec < this.gameTimeSec_)) {
-      return null;
+    if (renderedAssignment) {
+      // Can't change what's already occurred in the game.
+      const timeSec = renderedAssignment.assignment.timeSec;
+      if (timeSec < this.gameTimeSec_) {
+        return null;
+      }
+
+      // Can't drag an assignment forward, only back.
+      if (timeSec > source.assignment.timeSec) {
+        return null;
+      }
     }
 
     let targetElements = {
@@ -613,7 +620,8 @@ class Plan {
   drop_(source, target) {
     if (!target || 
         (target.assignment && 
-         target.assignment.playerName == source.assignment.playerName)) {
+         (target.assignment.playerName == source.assignment.playerName) ||
+         (target.assignment.timeSec > source.assignment.timeSec))) {
       return;
     }
     if (target.assignment) {
