@@ -439,34 +439,37 @@ class PlanCalculator {
 
   /**
    * @param {!Array<string>} positions
-   * @param {?PositionToPlayerMap} positionToPlayerMap
+   * @param {?PositionToPlayerMap} positionToPinnedPlayerMap
+   * @param {!Set<string>} pinnedPlayers
    * @return {!Array<string>}
    */
-  pickNextPlayers(positions, positionToPlayerMap) {
+  pickNextPlayers(positions, positionToPinnedPlayerMap, pinnedPlayers) {
     const players = Array(positions.length).fill('');
-    const pinnedPlayers = new Set();
 
-    const isAvailable = (player) => 
-          ((this.playerStatus(player).type == EventType.BENCH) &&
-           !pinnedPlayers.has(player));
+    const isAvailable = (player) => {
+      const status = this.playerStatus(player).type;
+      return ((status == EventType.BENCH) && !pinnedPlayers.has(player));
+    };
 
     // First see if any of the positions are pinned.
-    if (positionToPlayerMap) {
+    let numAssigned = 0;
+    if (positionToPinnedPlayerMap) {
       for (let i = 0; i < positions.length; ++i) {
-        const player = positionToPlayerMap.get(positions[i]);
-        if (player && isAvailable(player)) {
-          positionToPlayerMap.delete(positions[i]);
-          if (!pinnedPlayers.has(player)) {
-            players[i] = player;
-            pinnedPlayers.add(player);
+        const pinnedPlayer = positionToPinnedPlayerMap.get(positions[i]);
+        if (pinnedPlayer) {
+          positionToPinnedPlayerMap.delete(positions[i]);
+          if (!pinnedPlayers.has(pinnedPlayer)) {
+            players[i] = pinnedPlayer;
+            pinnedPlayers.add(pinnedPlayer);
+            ++numAssigned;
           }
         }
       }
     }
 
     const pool = Array.from(this.lineup_.playerNames).filter(isAvailable);
-    const needPlayers = positions.length - pinnedPlayers.size;
-    if (needPlayers < pool.length) {
+    const needPlayers = positions.length - numAssigned;
+    if ((needPlayers > 0) && (needPlayers < pool.length)) {
       util.sortTopN(pool, needPlayers, (player) => this.playerPriority(player));
     }
     for (let i = 0, poolIndex = 0; 
@@ -519,7 +522,13 @@ class PlanCalculator {
   }
 
   /**
+   * Records an assignment, updating all the maps and the assignment array.
+   * If the player being assigned was already in a position, the caller may
+   * want to assign a new player.  The empty position is returned, or null
+   * if the player was previously on the bench.
+   *
    * @param {!Assignment} assignment
+   * @return {?string}
    */
   addAssignment(assignment) {
     assignment.index = this.assignments_.length;
@@ -537,12 +546,18 @@ class PlanCalculator {
       this.positionPlayerMap_.delete(previousPosition);
     }
     this.positionPlayerMap_.set(assignment.positionName, assignment.playerName);
-    this.playerEventsMap_.get(assignment.playerName).push({
+    let events = this.playerEventsMap_.get(assignment.playerName);
+    if (!events) {
+      events = [];
+      this.playerEventsMap_.set(assignment.playerName, events);
+    }
+    events.push({
       type: (assignment.positionName == Lineup.KEEPER) ? 
         EventType.KEEPER : EventType.FIELD,
       timeSec: assignment.timeSec,
       assignment: assignment,
     });
+    return previousPosition;
   }
 
   /** 
@@ -642,7 +657,7 @@ class PlanCalculator {
    * @param {!Assignment} target
    */
   pinPlayerPosition(source, target) {
-    if ((source == target.index) || (source.timeSec < target.timeSec)) {
+    if (source.playerName == target.playerName) {
       return;
     }
 
@@ -690,23 +705,45 @@ class PlanCalculator {
     const positions = [];
 
     // Pick a new keeper at halftime.
+    let numPlayersOnBench = 0;
+    this.playerEventsMap_.forEach((events, player) => {
+      if (this.playerStatus(player).type == EventType.BENCH) {
+        ++numPlayersOnBench;
+      }
+    });
+
     const halfSec = this.minutesPerHalf * 60;
     if ((this.half_ == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
       this.gameTimeSec_ = halfSec;
       this.half_ = 1;
       positions.push(Lineup.KEEPER);
+      --numPlayersOnBench;
     }
-    const position = this.pickNextFieldPosition();
-    if (position) {
-      positions.push(position);
-    } else {
-      console.log('no positions defined at ' + this.gameTimeSec_ + 'sec');
+
+    if (numPlayersOnBench >= 1) {
+      const position = this.pickNextFieldPosition();
+      if (position) {
+        positions.push(position);
+      } else {
+        console.log('no positions defined at ' + this.gameTimeSec_ + 'sec');
+      }
     }
     return positions;
   }
     
-
   computePlan() {
+    this.computePlan_(false);
+  }
+
+  makeInitialAssignments() {
+    this.computePlan_(true);
+  }
+
+  /** 
+   * @param {boolean} initialOnly
+   * @private
+   */
+  computePlan_(initialOnly) {
     this.clearFutureAssignments();
 
     let half = 0;
@@ -732,7 +769,9 @@ class PlanCalculator {
         }
       }
 
-      let players = this.pickNextPlayers(positions, positionToPinnedPlayerMap);
+      const pinnedPlayers = new Set();
+      let players = this.pickNextPlayers(
+        positions, positionToPinnedPlayerMap, pinnedPlayers);
       if (players.length == 0) {
         console.log('not enough players');
         break;
@@ -763,13 +802,25 @@ class PlanCalculator {
         }
 */
 
-        this.addAssignment(this.makeAssignment(players[i], positions[i]));
+        const positionNeedingPlayer = 
+              this.addAssignment(this.makeAssignment(players[i], positions[i]));
+        if (positionNeedingPlayer) {
+          const replacementPlayers = this.pickNextPlayers(
+            [positionNeedingPlayer], positionToPinnedPlayerMap, pinnedPlayers);
+          if (replacementPlayers.length) {
+            positions.push(positionNeedingPlayer);
+            players.push(replacementPlayers[0]);
+          }
+        }
       }
 /*
       if (this.gameTimeSec_ == 0) {
         this.executeAssignments(assignments, 0);
       }
 */
+      if (initialOnly) {
+        break;
+      }
     }
 
     // We have mutated some structures while computing the plan, but now restore

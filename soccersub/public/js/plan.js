@@ -521,17 +521,16 @@ class Plan {
       target: {assignment: null, rowIndex: -1},
       elements: []
     };
-    if (!renderedAssignment || 
-        (this.assignHalf_(renderedAssignment) != source.half)) {
+    if (!renderedAssignment) {
       // Keepers are not eligiable.
-      if (source.assignment.positionName == Lineup.KEEPER) {
-        return null;
-      }
+      //if (source.assignment.positionName == Lineup.KEEPER) {
+      //  return null;
+      //}
 
       // You can't adjust the time of the first assignment in the half.
-      if (this.startRows_.indexOf(source.row) != -1) {
-        return null;
-      }
+      //if (this.startRows_.indexOf(source.row) != -1) {
+      //  return null;
+      //}
 
       const rowCol = this.findRowColumn(x, y);
       if (!rowCol) {
