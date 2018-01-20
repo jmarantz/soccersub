@@ -48,6 +48,7 @@ let DragSource;
  * @typedef {!{
  *   assignment: ?Assignment,
  *   rowIndex: number,
+ *   colIndex: number,
  * }}
  */
 let DragTarget;
@@ -510,7 +511,6 @@ class Plan {
     const x = event.clientX;
     const y = event.clientY;
     let renderedAssignment = this.findRenderedAssignment(x, y);
-
     if (renderedAssignment) {
       // Can't change what's already occurred in the game.
       const timeSec = renderedAssignment.assignment.timeSec;
@@ -522,58 +522,26 @@ class Plan {
       if (timeSec > source.assignment.timeSec) {
         return null;
       }
+      return {
+        target: {
+          assignment: renderedAssignment.assignment, 
+          rowIndex: -1,
+          colIndex: -1,
+        },
+        elements: [renderedAssignment.element]
+      };
     }
 
-    let targetElements = {
-      target: {assignment: null, rowIndex: -1},
-      elements: []
+    const rowCol = this.findRowColumn(x, y);
+    if (!rowCol) {
+      return null;
+    }
+    const {row, column, element} = rowCol;
+    console.log('row=' + row + ' col=' + column);
+    return {
+      target: {assignment: null, rowIndex: row, colIndex: column},
+      elements: [element],
     };
-    if (!renderedAssignment) {
-      // Keepers are not eligiable.
-      //if (source.assignment.positionName == Lineup.KEEPER) {
-      //  return null;
-      //}
-
-      // You can't adjust the time of the first assignment in the half.
-      //if (this.startRows_.indexOf(source.row) != -1) {
-      //  return null;
-      //}
-
-      const rowCol = this.findRowColumn(x, y);
-      if (!rowCol) {
-        return null;
-      }
-      const {row, column, element} = rowCol;
-      console.log('col=' + column);
-      if ((row == source.row) /*|| (column - 1 != source.positionIndex)*/) {
-        return null;
-      }
-
-      // Now find the assignment that matches the row for this y-position.
-      renderedAssignment = this.renderedAssignments_.find(
-        (a) => (a.rowIndex == row) && 
-          (a.assignment.positionName != Lineup.KEEPER));
-      if (!renderedAssignment) {
-        return null;
-      }
-
-      targetElements.target.rowIndex = row;
-      targetElements.elements.push(element);
-      targetElements.elements.push(renderedAssignment.element);
-    } else {
-      for (const a of this.renderedAssignments_) {
-        const aHalf = this.assignHalf_(a) ;
-        if ((renderedAssignment.assignment.playerName == 
-             a.assignment.playerName) &&
-            (aHalf == source.half)) {
-          targetElements.elements.push(renderedAssignment.element);
-        }
-      }
-    }
-    targetElements.target.assignment = renderedAssignment.assignment;
-    //targetElements.target.timeSec = renderedAssignment.assignment.timeSec;
-    //targetElements.target.playerName = renderedAssignment.assignment.playerName;
-    return targetElements;
   }
 
   /**
@@ -618,50 +586,33 @@ class Plan {
    * @private
    */
   drop_(source, target) {
-    if (!target || 
-        (target.assignment && 
-         (target.assignment.playerName == source.assignment.playerName) ||
-         (target.assignment.timeSec > source.assignment.timeSec))) {
+    if (!target) {
       return;
     }
     if (target.assignment) {
-      this.calculator.pinPlayerPosition(source.assignment, target.assignment);
-      this.render();
-    }
-
-/*
-    if (target.positionName != '') {
-      const positionOrder = this.positionOrder_[source.half];
-      Plan.swap_(source.positionIndex, target.positionIndex, positionOrder);
-      this.log_('plan swap positions ' + 
-                this.positionNames_[positionOrder[source.positionIndex]] + ' & ' +
-                this.positionNames_[positionOrder[target.positionIndex]]);
-
-      // Also swap the players that were at these positions initially.
-      const initialPlayers = [];
-      for (const a of this.assignments_) {
-        if ((a.row == this.startRows_[source.half]) &&
-            ((a.positionIndex == source.positionIndex) ||
-             (a.positionIndex == target.positionIndex)) &&
-            (a.playerIndex != source.playerIndex) &&
-            (a.playerIndex != target.playerIndex)) {
-          initialPlayers.push(a.playerIndex);
-        }
+      if ((target.assignment.playerName == source.assignment.playerName) ||
+          (target.assignment.timeSec > source.assignment.timeSec)) {
+        return;
       }
-      if (initialPlayers.length == 2) {
-        Plan.swap_(initialPlayers[0], initialPlayers[1], this.playerOrder_[source.half]);
-      } else {
-        console.log('initialPlayers.length == ' + initialPlayers.length);
+      this.calculator.pinPlayerPosition(source.assignment.playerName,
+                                        target.assignment.positionName,
+                                        target.assignment.index,
+                                        target.assignment.timeSec);
+    } else if ((target.rowIndex != -1) && (target.colIndex != -1)) {
+      // Find some renderedAssignment matching the row.
+      const assignmentInRow = this.renderedAssignments_.find(
+        (a) => a.rowIndex == target.rowIndex - 1);
+      if (!assignmentInRow) {
+        return;
       }
+      // The column within the table is one off from the positions, because
+      // the time is in column 0.
+      const positionName = this.calculator.positionNames[target.colIndex - 1];
+      this.calculator.pinPlayerPosition(source.assignment.playerName,
+                                        positionName,
+                                        assignmentInRow.assignment.index,
+                                        assignmentInRow.assignment.timeSec);
     }
-
-    const playerOrder = this.playerOrder_[source.half];
-    Plan.swap_(source.playerIndex, target.playerIndex, playerOrder);
-    this.log_('plan swap players ' +  
-              this.players_[playerOrder[target.playerIndex]] + ' & ' + 
-              this.players_[playerOrder[source.playerIndex]]);
-*/
-
     this.render();
     this.save_();
   }

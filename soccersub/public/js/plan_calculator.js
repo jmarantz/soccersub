@@ -88,8 +88,8 @@ class PlanCalculator {
     /** @type {number} */
     this.minutesPerHalf = 24;
 
-    /** @private {!Array<string>} */
-    this.positionNames_ = [];
+    /** @type {!Array<string>} */
+    this.positionNames = [];
 
     /** @private {!Map<string, number>} */
     this.positionNameIndexMap_ = new Map();
@@ -151,7 +151,7 @@ class PlanCalculator {
             'assignments vs index');
     checkLe(this.playerEventsMap_.size, this.playerPriorityMap_.size, 
             'player events vs priority');
-    checkEq(this.positionNames_.length, this.positionNameIndexMap_.size, 
+    checkEq(this.positionNames.length, this.positionNameIndexMap_.size, 
             'positionNames');
     return ret;
   }
@@ -165,7 +165,7 @@ class PlanCalculator {
     map['plan_position_names'] = util.saveMap(this.positionNameIndexMap_);
     map['plan_gametime'] = this.gameTimeSec_;
     map['plan_half'] = this.half_;
-    map['plan_positions'] = this.positionNames_;
+    map['plan_positions'] = this.positionNames;
     map['plan_position_players'] = util.saveMap(this.positionPlayerMap_);
     map['plan_priorities'] = util.saveMap(this.playerPriorityMap_);
     map['plan_shift_time_sec'] = this.shiftTimeSec_;
@@ -181,7 +181,7 @@ class PlanCalculator {
     this.assignmentIndex_ = map['plan_index'];
     this.gameTimeSec_ = map['plan_gametime'];
     this.half_ = map['plan_half'];
-    this.positionNames_ = map['plan_positions'];
+    this.positionNames = map['plan_positions'];
     this.shiftTimeSec_ = map['plan_shift_time_sec'];
     this.nextPlayerChangeSec_ = map['plan_next_player_change_sec'];
     return (
@@ -424,7 +424,7 @@ class PlanCalculator {
   pickNextFieldPosition() {
     // Determine which position has been in the longest, by iterating backward
     // through assignments, eliminating positions from the candidate list
-    const positions = new Set(this.positionNames_);
+    const positions = new Set(this.positionNames);
     positions.delete(Lineup.KEEPER);
     
     for (let i = this.assignments_.length - 1; i >= 0; --i) {
@@ -508,11 +508,11 @@ class PlanCalculator {
 /*
     let positionToPlayerMap = this.pins_.get(0);
     const nextPlayers = this.pickNextPlayers(
-      this.positionNames_, positionToPlayerMap);
+      this.positionNames, positionToPlayerMap);
     const assignments = [];
     for (let i = 0; i < nextPlayers.length; ++i) {
       const player = nextPlayers[i];
-      const position = this.positionNames_[i];
+      const position = this.positionNames[i];
       assignments.push(this.makeAssignment(player, position));
     }
     this.executeAssignments(assignments, 0);
@@ -531,16 +531,21 @@ class PlanCalculator {
    * @return {?string}
    */
   addAssignment(assignment) {
-    assignment.index = this.assignments_.length;
-    this.assignments_.push(assignment);
     const previousPlayer = this.positionPlayerMap_.get(assignment.positionName);
     if (previousPlayer) {
+      // In some cases, an old pin can result in an assignment of a player
+      // to the position he/she's already in, so we can early-exit.
+      if (previousPlayer == assignment.playerName) {
+        return null;
+      }
       this.playerEventsMap_.get(previousPlayer).push({
         type: EventType.BENCH,
         timeSec: assignment.timeSec,
         assignment: null,
       });
     }
+    assignment.index = this.assignments_.length;
+    this.assignments_.push(assignment);
     const previousPosition = this.playerPosition(assignment.playerName);
     if (previousPosition) {
       this.positionPlayerMap_.delete(previousPosition);
@@ -616,14 +621,14 @@ class PlanCalculator {
   }
 
   setupPositions() {
-    this.positionNames_ = [];
+    this.positionNames = [];
     for (const row of this.lineup_.getActivePositionNames()) {
       for (const positionName of row) {
         if (positionName) {
           //addTextElement(this.thead_, Lineup.abbrev(positionName), 'th');
           this.positionNameIndexMap_.set(positionName, 
-                                         this.positionNames_.length);
-          this.positionNames_.push(positionName);
+                                         this.positionNames.length);
+          this.positionNames.push(positionName);
         }
       }
     }
@@ -653,54 +658,53 @@ class PlanCalculator {
 
   /**
      
-   * @param {!Assignment} source
-   * @param {!Assignment} target
+   * @param {string} playerName
+   * @param {string} positionName
+   * @param {number} assignmentIndex
+   * @param {number} timeSec
    */
-  pinPlayerPosition(source, target) {
-    if (source.playerName == target.playerName) {
-      return;
-    }
-
+  pinPlayerPosition(playerName, positionName, assignmentIndex, timeSec) {
     // We can swap initial assignments if the game hasn't started yet.  In this
     // case we will not be recomputing these assignments, so we do them directly.
     // We will also need to add them to the persisted map so if we start a new 
     // game, the assignment preferences are remembered.
-    if ((target.index < this.assignmentIndex_) && (this.gameTimeSec_ > 0)) {
+    if ((assignmentIndex < this.assignmentIndex_) && (this.gameTimeSec_ > 0)) {
       console.log('attempted to do an initial swap after game started');
       return;
     }
 
     let /** ?PositionToPlayerMap */ positionPlayerMap = 
-        this.pins_.get(target.timeSec);
+        this.pins_.get(timeSec);
     if (!positionPlayerMap) {
       positionPlayerMap = new Map();
-      this.pins_.set(target.timeSec, positionPlayerMap);
+      this.pins_.set(timeSec, positionPlayerMap);
     } else {
       // O(# positions) walk through existing positionPlayerMap at this time,
       // looking for other mappings for this player, which must be eliminated.
       for (const [position, player] of positionPlayerMap) {
-        if (player == source.playerName) {
+        if (player == playerName) {
           positionPlayerMap.delete(position);
           break;     // There should be no other mappings for this player.
         }
       }
     }
-    positionPlayerMap.set(target.positionName, source.playerName);
+    positionPlayerMap.set(positionName, playerName);
 
-    if (target.index < this.assignmentIndex_) {
+    if (assignmentIndex < this.assignmentIndex_) {
       this.reset();
     }
     this.computePlan();
   }
 
   /** 
-   * @private
+   * @param {!Map<string, string>} positionToPinnedPlayerMap
    * @return {!Array<string>} 
+   * @private
    */
-  findPositionsToFill_() {
+  findPositionsToFill_(positionToPinnedPlayerMap) {
     // Figure out what positions to fill.
     if (this.gameTimeSec_ == 0) {
-      return this.positionNames_;
+      return this.positionNames;
     }
     const positions = [];
 
@@ -720,7 +724,11 @@ class PlanCalculator {
       --numPlayersOnBench;
     }
 
-    if (numPlayersOnBench >= 1) {
+    if (positionToPinnedPlayerMap.size > 0) {
+      for (const [position, player] of positionToPinnedPlayerMap) {
+        positions.push(position);
+      }
+    } else if (numPlayersOnBench >= 1) {
       const position = this.pickNextFieldPosition();
       if (position) {
         positions.push(position);
@@ -760,14 +768,14 @@ class PlanCalculator {
     for (this.gameTimeSec_ = this.nextPlayerChangeSec_; 
          this.gameTimeSec_ < gameSec; 
          this.gameTimeSec_ += this.shiftTimeSec_) {
-      let positions = this.findPositionsToFill_();
-
       for (; (pinIndex < pinTimes.length) &&  
            (pinTimes[pinIndex] <= this.gameTimeSec_); ++pinIndex) {
         for (const [position, player] of this.pins_.get(pinTimes[pinIndex])) {
           positionToPinnedPlayerMap.set(position, player);
         }
       }
+
+      let positions = this.findPositionsToFill_(positionToPinnedPlayerMap);
 
       const pinnedPlayers = new Set();
       let players = this.pickNextPlayers(
