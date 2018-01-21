@@ -717,16 +717,20 @@ class PlanCalculator {
     });
 
     const halfSec = this.minutesPerHalf * 60;
+    let addedKeeper = false;
     if ((this.half_ == 0) && (Math.ceil(this.gameTimeSec_) >= halfSec)) {
       this.gameTimeSec_ = halfSec;
       this.half_ = 1;
       positions.push(Lineup.KEEPER);
+      addedKeeper = true;
       --numPlayersOnBench;
     }
 
     if (positionToPinnedPlayerMap.size > 0) {
       for (const [position, player] of positionToPinnedPlayerMap) {
-        positions.push(position);
+        if ((position != Lineup.KEEPER) || !addedKeeper) {
+          positions.push(position);
+        }
       }
     } else if (numPlayersOnBench >= 1) {
       const position = this.pickNextFieldPosition();
