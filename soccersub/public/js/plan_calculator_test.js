@@ -37,6 +37,21 @@ const assignmentToString = (assignment) => {
     (assignment.executed ? ' (executed)' : ' (pending)');
 };
 
+const assertAssignsEqual = (expectedAssignStrings, assigns) => {
+  const assignStrings = assigns.map(assignmentToString);
+  const minLength = Math.min(assignStrings.length, 
+                             expectedAssignStrings.length);
+  // If the arrays are the same length then it's nicer to compare string
+  // by string and point out which ones are different.
+  for (let i = 0; i < minLength; ++i) {
+    if (expectedAssignStrings[i] != assignStrings[i]) {
+      console.log('[' + i + '] EXPECTED: ' + expectedAssignStrings[i]
+                  + ' ACTUAL: ' + assignStrings[i]);
+    }
+  }
+  assertArrayEquals(expectedAssignStrings, assignStrings);
+};
+
 exports = {
   'getTestName': () => {
     return 'PlanCalculatorTest';
@@ -175,5 +190,32 @@ exports = {
       '40:00 Right Forward=joe (pending)',
       '44:00 Left Back=fred (pending)',
     ], assigns);
+  },
+
+  'testPinKeeper': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    calculator.pinPlayerPosition('jim', 'Keeper', 0, 0);
+    
+    assertAssignsEqual([
+      '0:00 Left Forward=joe (pending)',
+      '0:00 Right Forward=fred (pending)',
+      '0:00 Left Back=harvey (pending)',
+      '0:00 Right Back=frank (pending)',
+      '0:00 Keeper=jim (pending)',
+      '4:00 Left Forward=bob (pending)',
+      '8:00 Right Forward=lance (pending)',
+      '12:00 Left Back=joe (pending)',
+      '16:00 Right Back=fred (pending)',
+      '20:00 Left Forward=harvey (pending)',
+      '24:00 Keeper=frank (pending)',
+      '24:00 Right Forward=bob (pending)',
+      '28:00 Left Back=jim (pending)',
+      '32:00 Right Back=lance (pending)',
+      '36:00 Left Forward=joe (pending)',
+      '40:00 Right Forward=fred (pending)',
+      '44:00 Left Back=harvey (pending)',
+    ], calculator.assignments());
   },
 };
