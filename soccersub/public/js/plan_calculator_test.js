@@ -227,13 +227,13 @@ exports = {
       '44:00 Left Back=harvey (pending)',
     ], calculator.assignments());
     assertEquals(
-      'jim: {"percentInGame":-66.66666666666667,"benchTimeSec":-2400}\n' +
-      'joe: {"percentInGame":50,"benchTimeSec":960}\n' +
-      'fred: {"percentInGame":50,"benchTimeSec":960}\n' +
-      'harvey: {"percentInGame":50,"benchTimeSec":960}\n' +
-      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
-      'bob: {"percentInGame":50,"benchTimeSec":-1920}\n' +
-      'lance: {"percentInGame":50,"benchTimeSec":960}\n',
+      'jim: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
+        'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
+        'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
+        'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
+        'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
+        'bob: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
+        'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n',
       playerTimeToString(
         calculator.computeGameTimingForAllPlayers()));
   },

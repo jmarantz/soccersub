@@ -293,10 +293,11 @@ class PlanCalculator {
 
   /**
    * @param {string} player
+   * @param {number} timeSec
    * @return {!PlayerTiming}
    * @private
    */
-  computeGameTiming_(player) {
+  computeGameTiming_(player, timeSec) {
     const events = this.playerEventsMap_.get(player);
     let percentInGame = 50;
     let benchTimeSec = 0;
@@ -357,8 +358,8 @@ class PlanCalculator {
       accumulateTime(lastTimeSec, event.type);
       previousType = event.type;
     }
-    if (this.gameTimeSec_ != lastTimeSec) {
-      accumulateTime(this.gameTimeSec_, EventType.UNAVAILABLE);
+    if (timeSec != lastTimeSec) {
+      accumulateTime(timeSec, EventType.UNAVAILABLE);
     }
 
     if (availableSec == 0) {
@@ -380,8 +381,8 @@ class PlanCalculator {
    */
   comparePlayers(player1, player2) {
     // TODO(jmarantz): cache these timings somehow.
-    const timing1 = this.computeGameTiming_(player1);
-    const timing2 = this.computeGameTiming_(player2);
+    const timing1 = this.computeGameTiming_(player1, this.gameTimeSec_);
+    const timing2 = this.computeGameTiming_(player2, this.gameTimeSec_);
     let cmp = timing1.percentInGame - timing2.percentInGame;
     if (cmp != 0) {
       return cmp < 0;
@@ -420,7 +421,7 @@ class PlanCalculator {
    * @return {number}
    */
   playerPriority(player) {
-    const timing = this.computeGameTiming_(player);
+    const timing = this.computeGameTiming_(player, this.gameTimeSec_);
     let priority = (100 - timing.percentInGame) * 1e6;
     priority += timing.benchTimeSec * 100;
     priority += this.playerPriorityMap_.size - 
@@ -435,8 +436,9 @@ class PlanCalculator {
    */
   computeGameTimingForAllPlayers() {
     let map = new Map();
+    const fullTimeSec = 2 * this.minutesPerHalf * 60;
     for (const player of this.lineup_.playerNames) {
-      map.set(player, this.computeGameTiming_(player));
+      map.set(player, this.computeGameTiming_(player, fullTimeSec));
     }
     return map;
   }
