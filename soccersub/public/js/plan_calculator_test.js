@@ -15,11 +15,10 @@ const futsalTwoTwoFormation = () => {
 };
 
 /** @return {!PlanCalculator} */
-const makeInitialAssignments = () => {
-  const lineup = new Lineup(5, [
-    'jim', 'joe', 'fred', 'harvey', 'frank', 'bob']);
+const makeInitialAssignments = (...players) => {
+  const lineup = new Lineup(5, players);
   const calculator = new PlanCalculator(lineup, () => {}, TestUtil.consoleLog);
-  assertEquals(6, calculator.updatePlayers());
+  assertEquals(players.length, calculator.updatePlayers());
   futsalTwoTwoFormation();
   calculator.setupPositions();
   calculator.reset();
@@ -34,7 +33,8 @@ const makeInitialAssignments = () => {
  */
 const assignmentToString = (assignment) => {
   return util.formatTime(Math.max(0, assignment.timeSec * 1000)) + ' ' +
-    assignment.positionName + '=' + assignment.playerName;
+    assignment.positionName + '=' + assignment.playerName + 
+    (assignment.executed ? ' (executed)' : ' (pending)');
 };
 
 exports = {
@@ -82,7 +82,8 @@ exports = {
 
 
   'testInitialAssignments': () => {
-    const calculator = makeInitialAssignments();
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob');
     // This order corresponds to the configurations structure in lineup.js,
     // for a 5v5 game, as well as the order of the default player-set passed
     // in above to the lineup ctor.
@@ -98,25 +99,81 @@ exports = {
     assertArrayEquals([], calculator.pickNextPlayers([], null, pinnedPlayers));
   },
 
-  'testComputePlan': () => {
-    const calculator = makeInitialAssignments();
+  'testComputePlan6': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob');
     calculator.computePlan();
     const assigns = calculator.assignments().map(assignmentToString);
     assertArrayEquals([
-      '0:00 Left Forward=jim',
-      '0:00 Right Forward=joe',
-      '0:00 Left Back=fred',
-      '0:00 Right Back=harvey',
-      '0:00 Keeper=frank',
-      '4:48 Left Forward=bob',
-      '9:36 Right Forward=jim',
-      '14:24 Left Back=joe',
-      '19:12 Right Back=fred',
-      '24:00 Keeper=harvey',
-      '28:48 Left Forward=frank',
-      '33:36 Right Forward=bob',
-      '38:24 Left Back=jim',
-      '43:12 Right Back=joe',
+      '0:00 Left Forward=jim (pending)',
+      '0:00 Right Forward=joe (pending)',
+      '0:00 Left Back=fred (pending)',
+      '0:00 Right Back=harvey (pending)',
+      '0:00 Keeper=frank (pending)',
+      '4:48 Left Forward=bob (pending)',
+      '9:36 Right Forward=jim (pending)',
+      '14:24 Left Back=joe (pending)',
+      '19:12 Right Back=fred (pending)',
+      '24:00 Keeper=harvey (pending)',    // With 6 players, only keeper is subbed at half
+      '28:48 Left Forward=frank (pending)',
+      '33:36 Right Forward=bob (pending)',
+      '38:24 Left Back=jim (pending)',
+      '43:12 Right Back=joe (pending)',
+    ], assigns);
+  },
+
+  'testComputePlan7': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim (pending)',
+      '0:00 Right Forward=joe (pending)',
+      '0:00 Left Back=fred (pending)',
+      '0:00 Right Back=harvey (pending)',
+      '0:00 Keeper=frank (pending)',
+      '4:00 Left Forward=bob (pending)',
+      '8:00 Right Forward=lance (pending)',
+      '12:00 Left Back=jim (pending)',
+      '16:00 Right Back=joe (pending)',
+      '20:00 Left Forward=fred (pending)',
+      '24:00 Keeper=harvey (pending)',
+      '24:00 Right Forward=bob (pending)', // With 7, keeper + one other subbed at half
+      '28:00 Left Back=frank (pending)',
+      '32:00 Right Back=lance (pending)',
+      '36:00 Left Forward=jim (pending)',
+      '40:00 Right Forward=joe (pending)',
+      '44:00 Left Back=fred (pending)',
+    ], assigns);
+  },
+
+  'testExecute7OneSecondOff': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    const assignments = [calculator.makeAssignment('bob', 'Left Forward')];
+    calculator.executeAssignments(assignments, 4*60 + 1);
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim (executed)',
+      '0:00 Right Forward=joe (executed)',
+      '0:00 Left Back=fred (executed)',
+      '0:00 Right Back=harvey (executed)',
+      '0:00 Keeper=frank (executed)',
+      '4:01 Left Forward=bob (executed)',
+      '8:00 Right Forward=lance (pending)',
+      '12:00 Left Back=jim (pending)',
+      '16:00 Right Back=joe (pending)',
+      '20:00 Left Forward=fred (pending)',
+      '24:00 Keeper=harvey (pending)',
+      '24:00 Right Forward=bob (pending)', // With 7, keeper + one other subbed at half
+      '28:00 Left Back=frank (pending)',
+      '32:00 Right Back=lance (pending)',
+      '36:00 Left Forward=jim (pending)',
+      '40:00 Right Forward=joe (pending)',
+      '44:00 Left Back=fred (pending)',
     ], assigns);
   },
 };

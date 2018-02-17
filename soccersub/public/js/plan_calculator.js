@@ -571,9 +571,29 @@ class PlanCalculator {
    */
   executeAssignments(assignments, timeSec) {
     this.gameTimeSec_ = timeSec;
+
+    // The first time we execute assignments, we'll just follow the plan up
+    // until timeSec. Thereafter, executeAssignments must be called explicitly
+    // as the assignments actually occur, because generally the timing in the
+    // game will vary.
+    if ((this.assignmentIndex_ == 0) && (timeSec > 0)) {
+      for (let i = 0; i < this.assignments_.length; ++i) {
+        const assignment = this.assignments_[i];
+        if (assignment.timeSec > 0) {
+          this.assignmentIndex_ = i;
+          break;
+        } else {
+          assignment.executed = true;
+          this.positionPlayerMap_.set(assignment.positionName, 
+                                      assignment.playerName);
+        }
+      }
+    }
+
     this.clearFutureAssignments();
     for (const assignment of assignments) {
       assignment.executed = true;
+      assignment.timeSec = timeSec;
       this.addAssignment(assignment);
       ++this.assignmentIndex_;
     }
