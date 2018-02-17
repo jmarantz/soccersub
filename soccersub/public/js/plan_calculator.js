@@ -24,6 +24,14 @@ const EventType = {
 let PlayerEvent;
 
 /**
+ * @typedef {!{
+ *   percentInGame: number,
+ *   benchTimeSec: number,
+ * }}
+ */
+let PlayerTiming;
+
+/**
  * @typedef {!Map<string, string>}
  */
 let PositionToPlayerMap;
@@ -285,7 +293,7 @@ class PlanCalculator {
 
   /**
    * @param {string} player
-   * @return {!{percentInGame: number, benchTimeSec: number}}
+   * @return {!PlayerTiming}
    * @private
    */
   computeGameTiming_(player) {
@@ -418,6 +426,19 @@ class PlanCalculator {
     priority += this.playerPriorityMap_.size - 
       this.playerPriorityMap_.get(player);
     return priority;
+  }
+
+  /**
+   * Computes and returns a map of player names to how much time
+   * they've spent in the game playing.
+   * @return {!Map<string, !PlayerTiming>}
+   */
+  computeGameTimingForAllPlayers() {
+    let map = new Map();
+    for (const player of this.lineup_.playerNames) {
+      map.set(player, this.computeGameTiming_(player));
+    }
+    return map;
   }
 
   /** @return {?string} */
@@ -888,6 +909,7 @@ class PlanCalculator {
   }
 }
 
+PlanCalculator.PlayerTiming = PlayerTiming;
 exports = PlanCalculator;
 
 

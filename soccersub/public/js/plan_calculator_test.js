@@ -37,6 +37,15 @@ const assignmentToString = (assignment) => {
     (assignment.executed ? ' (executed)' : ' (pending)');
 };
 
+const playerTimeToString = (playerTimeMap) => {
+  let out = '';
+  playerTimeMap.forEach((/** !PlanCalculator.PlayerTiming */ timing,
+    /** string */ player) => {
+    out += player + ': ' + JSON.stringify(timing) + '\n';
+  });
+  return out;
+};
+
 const assertAssignsEqual = (expectedAssignStrings, assigns) => {
   const assignStrings = assigns.map(assignmentToString);
   const minLength = Math.min(assignStrings.length, 
@@ -217,5 +226,15 @@ exports = {
       '40:00 Right Forward=fred (pending)',
       '44:00 Left Back=harvey (pending)',
     ], calculator.assignments());
+    assertEquals(
+      'jim: {"percentInGame":-66.66666666666667,"benchTimeSec":-2400}\n' +
+      'joe: {"percentInGame":50,"benchTimeSec":960}\n' +
+      'fred: {"percentInGame":50,"benchTimeSec":960}\n' +
+      'harvey: {"percentInGame":50,"benchTimeSec":960}\n' +
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
+      'bob: {"percentInGame":50,"benchTimeSec":-1920}\n' +
+      'lance: {"percentInGame":50,"benchTimeSec":960}\n',
+      playerTimeToString(
+        calculator.computeGameTimingForAllPlayers()));
   },
 };
