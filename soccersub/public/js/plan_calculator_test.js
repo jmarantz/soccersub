@@ -37,15 +37,6 @@ const assignmentToString = (assignment) => {
     (assignment.executed ? ' (executed)' : ' (pending)');
 };
 
-const playerTimeToString = (playerTimeMap) => {
-  let out = '';
-  playerTimeMap.forEach((/** !PlanCalculator.PlayerTiming */ timing,
-    /** string */ player) => {
-    out += player + ': ' + JSON.stringify(timing) + '\n';
-  });
-  return out;
-};
-
 const assertAssignsEqual = (expectedAssignStrings, assigns) => {
   const assignStrings = assigns.map(assignmentToString);
   const minLength = Math.min(assignStrings.length, 
@@ -59,6 +50,26 @@ const assertAssignsEqual = (expectedAssignStrings, assigns) => {
     }
   }
   assertArrayEquals(expectedAssignStrings, assignStrings);
+};
+
+const assertTimingEqual = (expectedTimingStrings, timingMap) => {
+  const timingArray = [];
+  timingMap.forEach((/** !PlanCalculator.PlayerTiming */ timing,
+    /** string */ player) => {
+      timingArray.push(player + ': ' + JSON.stringify(timing));
+    });
+  const minLength = Math.min(expectedTimingStrings.length, 
+                             timingArray.length);
+
+  // If the arrays are the same length then it's nicer to compare string
+  // by string and point out which ones are different.
+  for (let i = 0; i < minLength; ++i) {
+    if (expectedTimingStrings[i] != timingArray[i]) {
+      console.log('[' + i + '] EXPECTED: ' + expectedTimingStrings[i]
+                  + ' ACTUAL: ' + timingArray[i]);
+    }
+  }
+  assertArrayEquals(expectedTimingStrings, timingArray);
 };
 
 exports = {
@@ -226,15 +237,14 @@ exports = {
       '40:00 Right Forward=fred (pending)',
       '44:00 Left Back=harvey (pending)',
     ], calculator.assignments());
-    assertEquals(
-      'jim: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
-        'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
-        'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
-        'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
-        'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}\n' +
-        'bob: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n' +
-        'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}\n',
-      playerTimeToString(
-        calculator.computeGameTimingForAllPlayers()));
+    assertTimingEqual([
+      'jim: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'bob: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+    ], calculator.computeGameTimingForAllPlayers());
   },
 };
