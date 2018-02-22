@@ -259,6 +259,82 @@ exports = {
     ], calculator.computeGameTimingForAllPlayers());
   },
 
+  'testExecute7OneSecondLateDifferentSub': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    const assignments = [calculator.makeAssignment('lance', 'Left Forward')];
+    calculator.executeAssignments(assignments, 4*60 + 1);
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim (executed)',
+      '0:00 Right Forward=joe (executed)',
+      '0:00 Left Back=fred (executed)',
+      '0:00 Right Back=harvey (executed)',
+      '0:00 Keeper=frank (executed)',
+      '4:01 Left Forward=lance (executed)',
+      '8:00 Right Forward=bob (pending)',
+      '12:00 Left Back=jim (pending)',
+      '16:00 Right Back=joe (pending)',
+      '20:00 Left Forward=fred (pending)',
+      '24:00 Keeper=harvey (pending)',
+      '24:00 Right Forward=lance (pending)', // With 7, keeper + one other subbed at half
+      '28:00 Left Back=frank (pending)',
+      '32:00 Right Back=bob (pending)',
+      '36:00 Left Forward=jim (pending)',
+      '40:00 Right Forward=joe (pending)',
+      '44:00 Left Back=fred (pending)',
+    ], assigns);
+    assertTimingEqual([
+      'jim: {"percentInGame":66.70138888888889,"benchTimeSec":959}',
+      'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'bob: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'lance: {"percentInGame":66.63194444444444,"benchTimeSec":961}',
+    ], calculator.computeGameTimingForAllPlayers());
+  },
+
+  'testExecute7OneSecondLateDifferentSubDifferentPos': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    const assignments = [calculator.makeAssignment('lance', 'Right Forward')];
+    calculator.executeAssignments(assignments, 4*60 + 1);
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim (executed)',
+      '0:00 Right Forward=joe (executed)',
+      '0:00 Left Back=fred (executed)',
+      '0:00 Right Back=harvey (executed)',
+      '0:00 Keeper=frank (executed)',
+      '4:01 Right Forward=lance (executed)',
+      '8:00 Left Forward=bob (pending)',
+      '12:00 Left Back=joe (pending)',
+      '16:00 Right Back=jim (pending)',
+      '20:00 Right Forward=fred (pending)',
+      '24:00 Keeper=harvey (pending)',
+      '24:00 Left Forward=lance (pending)', // With 7, keeper + one other subbed at half
+      '28:00 Left Back=frank (pending)',
+      '32:00 Right Back=bob (pending)',
+      '36:00 Right Forward=joe (pending)',
+      '40:00 Left Forward=jim (pending)',
+      '44:00 Left Back=fred (pending)',
+    ], assigns);
+    assertTimingEqual([
+      'jim: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'joe: {"percentInGame":66.70138888888889,"benchTimeSec":959}',
+      'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'bob: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'lance: {"percentInGame":66.63194444444444,"benchTimeSec":961}',
+    ], calculator.computeGameTimingForAllPlayers());
+  },
+
   'testPinKeeper': () => {
     const calculator = makeInitialAssignments(
       'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
