@@ -627,10 +627,8 @@ class PlanCalculator {
 
     // If executed change more than 30 seconds early, probably due to an injury,
     // don't change the next player timing at all.
-    if ((this.nextPlayerChangeSec_ - timeSec) <= 30) {
-      while (this.nextPlayerChangeSec_ <= this.gameTimeSec_) {
-        this.nextPlayerChangeSec_ += this.shiftTimeSec_;
-      }
+    while (this.nextPlayerChangeSec_ <= this.gameTimeSec_ + 30) {
+      this.nextPlayerChangeSec_ += this.shiftTimeSec_;
     }
     // For late assignments we could move it forward, but punt for now.
     // this.nextPlayerChangeSec_ = timeSec + this.shiftTimeSec_;

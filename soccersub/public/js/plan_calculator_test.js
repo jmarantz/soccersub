@@ -183,7 +183,7 @@ exports = {
     ], assigns);
   },
 
-  'testExecute7OneSecondOff': () => {
+  'testExecute7OneSecondLate': () => {
     const calculator = makeInitialAssignments(
       'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
     calculator.computePlan();
@@ -217,6 +217,44 @@ exports = {
       'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
       'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
       'bob: {"percentInGame":66.63194444444444,"benchTimeSec":961}',
+      'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+    ], calculator.computeGameTimingForAllPlayers());
+  },
+
+  'testExecute7OneSecondEarly': () => {
+    const calculator = makeInitialAssignments(
+      'jim', 'joe', 'fred', 'harvey', 'frank', 'bob', 'lance');
+    calculator.computePlan();
+    const assignments = [calculator.makeAssignment('bob', 'Left Forward')];
+    calculator.executeAssignments(assignments, 4*60 - 1);
+    calculator.computePlan();
+    const assigns = calculator.assignments().map(assignmentToString);
+    assertArrayEquals([
+      '0:00 Left Forward=jim (executed)',
+      '0:00 Right Forward=joe (executed)',
+      '0:00 Left Back=fred (executed)',
+      '0:00 Right Back=harvey (executed)',
+      '0:00 Keeper=frank (executed)',
+      '3:59 Left Forward=bob (executed)',
+      '8:00 Right Forward=lance (pending)',
+      '12:00 Left Back=jim (pending)',
+      '16:00 Right Back=joe (pending)',
+      '20:00 Left Forward=fred (pending)',
+      '24:00 Keeper=harvey (pending)',
+      '24:00 Right Forward=bob (pending)', // With 7, keeper + one other subbed at half
+      '28:00 Left Back=frank (pending)',
+      '32:00 Right Back=lance (pending)',
+      '36:00 Left Forward=jim (pending)',
+      '40:00 Right Forward=joe (pending)',
+      '44:00 Left Back=fred (pending)',
+    ], assigns);
+    assertTimingEqual([
+      'jim: {"percentInGame":66.63194444444444,"benchTimeSec":961}',
+      'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'bob: {"percentInGame":66.70138888888889,"benchTimeSec":959}',
       'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
     ], calculator.computeGameTimingForAllPlayers());
   },
