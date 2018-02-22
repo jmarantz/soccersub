@@ -210,6 +210,15 @@ exports = {
       '40:00 Right Forward=joe (pending)',
       '44:00 Left Back=fred (pending)',
     ], assigns);
+    assertTimingEqual([
+      'jim: {"percentInGame":66.70138888888889,"benchTimeSec":959}',
+      'joe: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'fred: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+      'harvey: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'frank: {"percentInGame":66.66666666666667,"benchTimeSec":480}',
+      'bob: {"percentInGame":66.63194444444444,"benchTimeSec":961}',
+      'lance: {"percentInGame":66.66666666666667,"benchTimeSec":960}',
+    ], calculator.computeGameTimingForAllPlayers());
   },
 
   'testPinKeeper': () => {

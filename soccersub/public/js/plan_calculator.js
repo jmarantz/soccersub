@@ -599,10 +599,14 @@ class PlanCalculator {
     // until timeSec. Thereafter, executeAssignments must be called explicitly
     // as the assignments actually occur, because generally the timing in the
     // game will vary.
+    let clearTimePredicate = (timeSec) => timeSec > this.gameTimeSec_;
+    let clearTimeSec;
     if ((this.assignmentIndex_ == 0) && (timeSec > 0)) {
       for (let i = 0; i < this.assignments_.length; ++i) {
         const assignment = this.assignments_[i];
         if (assignment.timeSec > 0) {
+          clearTimeSec = assignment.timeSec;
+          clearTimePredicate = (timeSec) => timeSec >= clearTimeSec;
           this.assignmentIndex_ = i;
           break;
         } else {
@@ -613,7 +617,7 @@ class PlanCalculator {
       }
     }
 
-    this.clearFutureAssignments();
+    this.clearAssignmentsAfter_(clearTimePredicate);
     for (const assignment of assignments) {
       assignment.executed = true;
       assignment.timeSec = timeSec;
@@ -677,7 +681,11 @@ class PlanCalculator {
     }
   }
 
-  clearFutureAssignments() {
+  /**
+   * @param {function(number):boolean} predicate
+   * @private
+   */
+  clearAssignmentsAfter_(predicate) {
     // Override any existing plan for the future, because we are going to
     // recompute it. Any assignments already made are assumed to be correct.
     // We also have to iterate through the players and remove any future
@@ -687,7 +695,7 @@ class PlanCalculator {
       this.playerEventsMap_.forEach((events, player) => {
         for (let i = 0; i < events.length; ++i) {
           const event = events[i];
-          if ((event.timeSec > this.gameTimeSec_) ||
+          if (predicate(event.timeSec) ||
               (event.assignment && !event.assignment.executed)) {
             events.length = i;
             break;
@@ -799,7 +807,7 @@ class PlanCalculator {
    * @private
    */
   computePlan_(initialOnly) {
-    this.clearFutureAssignments();
+    this.clearAssignmentsAfter_((timeSec) => timeSec > this.gameTimeSec_);
 
     let half = 0;
     const halfSec = this.minutesPerHalf * 60;
