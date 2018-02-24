@@ -105,7 +105,7 @@ class PlanCalculator {
     // private {!Map<string, number>}
     // this.playerTimeMap_ = new Map();
     
-    /** private {!Map<string, string>} */
+    /** @private {!Map<string, string>} */
     this.positionPlayerMap_ = new Map();
     
     /** 
