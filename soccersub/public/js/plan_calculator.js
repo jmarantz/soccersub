@@ -824,7 +824,9 @@ class PlanCalculator {
       for (; (pinIndex < pinTimes.length) &&  
            (pinTimes[pinIndex] <= this.gameTimeSec_); ++pinIndex) {
         for (const [position, player] of this.pins_.get(pinTimes[pinIndex])) {
-          positionToPinnedPlayerMap.set(position, player);
+          if (this.positionPlayerMap_.get(position) != player) {
+            positionToPinnedPlayerMap.set(position, player);
+          }
         }
       }
 
