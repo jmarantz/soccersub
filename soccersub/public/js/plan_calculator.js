@@ -4,6 +4,27 @@ const Assignment = goog.require('soccersub.Assignment2');
 const Lineup = goog.require('soccersub.Lineup');
 const util = goog.require('soccersub.util');
 
+const ENABLE_LOGGING = false;
+
+const logCall = (name, ...args) => {
+  if (!ENABLE_LOGGING) {
+    return;
+  }
+/*
+  const toString = (x) => {
+    if ((typeof x) == 'string') {
+      return '"' + x + '"';
+    } else if ((typeof x) == 'number') {
+      return '' + x;
+    }
+    return json
+    return '???';
+  };
+*/
+  const argStr = args.map((s) => JSON.stringify(s)).join(', ');
+  console.log('plan: ' + name + '(' + argStr + ');');
+};
+
 /**
  * @enum {string}
  */
@@ -523,6 +544,7 @@ class PlanCalculator {
   // Clears the current schedule, rediscovering the set of players and positions from
   // the lineup.  Does not reset any pinned players.
   reset() {
+    logCall('reset');
     this.assignments_ = [];
     this.assignmentIndex_ = 0;
     this.playerEventsMap_.clear();
@@ -552,8 +574,9 @@ class PlanCalculator {
    *
    * @param {!Assignment} assignment
    * @return {?string}
+   * @private
    */
-  addAssignment(assignment) {
+  addAssignment_(assignment) {
     const previousPlayer = this.positionPlayerMap_.get(assignment.positionName);
     if (previousPlayer) {
       // In some cases, an old pin can result in an assignment of a player
@@ -593,6 +616,7 @@ class PlanCalculator {
    * @param {number} timeSec
    */
   executeAssignments(assignments, timeSec) {
+    logCall('executeAssignments', assignments, timeSec);
     this.gameTimeSec_ = timeSec;
 
     // The first time we execute assignments, we'll just follow the plan up
@@ -621,7 +645,7 @@ class PlanCalculator {
     for (const assignment of assignments) {
       assignment.executed = true;
       assignment.timeSec = timeSec;
-      this.addAssignment(assignment);
+      this.addAssignment_(assignment);
       ++this.assignmentIndex_;
     }
 
@@ -651,7 +675,7 @@ class PlanCalculator {
         }
       }
       hasNewAssignment = true;
-      this.addAssignment(assignment);
+      this.addAssignment_(assignment);
       ++this.assignmentIndex_;
     }
 
@@ -713,6 +737,9 @@ class PlanCalculator {
    * @param {number} timeSec
    */
   pinPlayerPosition(playerName, positionName, assignmentIndex, timeSec) {
+    logCall('pinPlayerPosition', playerName, positionName, assignmentIndex, 
+            timeSec);
+
     // We can swap initial assignments if the game hasn't started yet.  In this
     // case we will not be recomputing these assignments, so we do them directly.
     // We will also need to add them to the persisted map so if we start a new 
@@ -793,6 +820,7 @@ class PlanCalculator {
   }
     
   computePlan() {
+    logCall('computePlan');
     this.computePlan_(false);
   }
 
@@ -865,8 +893,8 @@ class PlanCalculator {
         }
 */
 
-        const positionNeedingPlayer = 
-              this.addAssignment(this.makeAssignment(players[i], positions[i]));
+        const positionNeedingPlayer = this.addAssignment_(
+          this.makeAssignment(players[i], positions[i]));
         if (positionNeedingPlayer) {
           const replacementPlayers = this.pickNextPlayers(
             [positionNeedingPlayer], positionToPinnedPlayerMap, pinnedPlayers);
