@@ -42,6 +42,8 @@ class SoccerSub {
     ];
     this.logText = goog.dom.getRequiredElement('log-text');
     this.started = false;
+    /** @private {string} */
+    this.currentPanel_ = 'help';
 
     util.setupButton('show-help', () => this.showPanel_('help'));
     util.setupButton('show-game', () => this.showPanel_('game'));
@@ -102,6 +104,8 @@ class SoccerSub {
     }
     const buttonId = 'show-' + name;
     goog.dom.getRequiredElement(buttonId).className += ' active';
+    this.currentPanel_ = name;
+    this.save();
   }
 
   /** @private */
@@ -129,6 +133,7 @@ class SoccerSub {
     var map = {};
     this.game.save(map);
     this.plan_.save(map);
+    map['currentPanel'] = this.currentPanel_;
     window.localStorage['game'] = JSON.stringify(map);
   }
 
@@ -156,6 +161,7 @@ class SoccerSub {
       if (!this.plan_.restore(map)) {
         return false;
       }
+      this.showPanel_(map['currentPanel'] || 'help');
       this.log('done');
       return true;
     } catch (err) {
