@@ -8,4 +8,4 @@
 **/*.testmin.js
 deploy.timestamp
 **/closure-library
-**/opt.html
+**/index.html
