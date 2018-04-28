@@ -9,3 +9,5 @@
 deploy.timestamp
 **/closure-library
 **/index.html
+**/test.html
+**/test_opt.html
