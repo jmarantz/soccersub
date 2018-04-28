@@ -87,6 +87,7 @@ class Lineup {
     /** @type {number} */
     this.numberOfPlayers;
     util.setupButton('5v5', () => this.setNumberOfPlayers_(5));
+    util.setupButton('7v7', () => this.setNumberOfPlayers_(7));
     util.setupButton('9v9', () => this.setNumberOfPlayers_(9));
     util.setupButton('11v11', () => this.setNumberOfPlayers_(11));
     util.setupButton('add-players', () => this.addPlayers_());
