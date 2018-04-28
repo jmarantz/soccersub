@@ -33,6 +33,7 @@ class SoccerSub {
     
     /** @private {!Array<!Element>} */
     this.panels_ = [
+      goog.dom.getRequiredElement('help-panel'),
       this.game.gameDiv,
       goog.dom.getRequiredElement('log-panel'),
       goog.dom.getRequiredElement('positions-panel'),
@@ -42,6 +43,7 @@ class SoccerSub {
     this.logText = goog.dom.getRequiredElement('log-text');
     this.started = false;
 
+    util.setupButton('show-help', () => this.showPanel_('help'));
     util.setupButton('show-game', () => this.showPanel_('game'));
     util.setupButton('show-roster', () => this.showPanel_('roster'));
     util.setupButton('show-positions', () => this.showPanel_('positions'));

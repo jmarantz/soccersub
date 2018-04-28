@@ -172,3 +172,7 @@ span.tab button.active {
     z-index: 100;
     position: absolute;
 }
+
+.inline-image {
+    height: 1em;
+}
