@@ -3,66 +3,21 @@ goog.module('soccersubMain');
 const SoccerSub = goog.require('soccersub.SoccerSub');
 const Lineup = goog.require('soccersub.Lineup');
 
-var cosmosPlayerNames = [
-  'ander',
-  'andrew',
-  'dylan',
-  'fredrik',
-  'jonas',
-  'josh',
-  'kenneth',
-  'ryan',
-  'spencer',
-  'tommy',
-  'will',
+var famousPlayerNames = [
+  'Messi',
+  'Ronaldo',
+  'Pelé',
+  'Chinaglia',
+  'Beckenbauer',
+  'Marcelo',
+  'Ronaldino',
+  'Willian',
+  'Rooney',
+  'Kane',
+  'Pogba',
 ];
 
-var bencosnersPlayerNames = [
-  'ryan',
-  'ellis',
-  'fredrik',
-  'teddy',
-  'will',
-  'brandon',
-  'elias',
-  'owen',
-  'hunter',
-  'luca',
-  'tommy',
-  'josh'
-];
-
-var chscPlayerNames = [
-  'Elizabeth F',
-  'Gwyneth M',
-  'Hannah K',
-  'Hannah S',
-  'India S',
-  'Kaesha M',
-  'Magdalena G',
-  'Netta',
-  'Rossella G',
-  'Sarah S',
-  'Sophia F',
-  'Sophie N'
-];
-
-var santosRedPlayerNames = [
-  'Levi',
-  'Eli G',
-  'Jeremy',
-  'Griffen',
-  'Ethan',
-  'Declan',
-  'Eli T',
-  'Dante',
-  'Goalie'
-];
-
-//var defaultPlayerNames = santosRedPlayerNames;
-//var defaultPlayerNames = bencosnersPlayerNames;
-//var defaultPlayerNames = chscPlayerNames;
-var defaultPlayerNames = cosmosPlayerNames;
+var defaultPlayerNames = famousPlayerNames;
 
 const soccersubMain = () => {
   const lineup = new Lineup(5, defaultPlayerNames);
