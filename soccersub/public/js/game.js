@@ -13,6 +13,12 @@ const util = goog.require('soccersub.util');
 
 let deployTimestamp = window['deployTimestamp'] || 'dev';
 
+// For now, the planning feature seems broken enough it's best to disable it until
+// I can spend more time to re-think it.  The only useful thing it does is come up
+// with initial random assignments, which is a better starting state than having no
+// assignments.
+const ENABLE_PLAN = false;
+
 /** Maintains the state of a single game. */
 class Game {
   /**
@@ -607,7 +613,9 @@ class Game {
     for (const [position, player] of subs) {
       this.assignPlayerToPosition_(player, position, false);
     }
-    this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
+    if (ENABLE_PLAN) {
+      this.plan_.executeAssignments(assignments, this.elapsedTimeMs / 1000);
+    }
 
     this.completeAssignments();
   }
@@ -626,7 +634,7 @@ class Game {
     this.writeStatus(player.status());
     position.setPlayer(player);
     this.writeLog_(player.name + ' --> ' + (position ? position.name : 'null'));
-    if (writeToPlan) {
+    if (writeToPlan && ENABLE_PLAN) {
       const assignments = [
         this.plan_.calculator.makeAssignment(player.name, position.name)
       ];
@@ -674,7 +682,9 @@ class Game {
       var timeSinceLastUpdate = timeMs - this.timeOfLastUpdateMs;
       if (true /*timeSinceLastUpdate > 0*/) {
         this.elapsedTimeMs += timeSinceLastUpdate;
-        this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
+        if (ENABLE_PLAN) {
+          this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
+        }
         this.timeOfLastUpdateMs = timeMs;
         for (const position of this.positions) {
           position.addTimeToShift(timeSinceLastUpdate);
@@ -689,21 +699,23 @@ class Game {
       }
 
       const timeSec = this.elapsedTimeMs / 1000;
-      const nextAssignment = this.plan_.nextAssignment(timeSec);
-      if (nextAssignment) {
-        const {player, position} = this.getPlayerAndPosition(nextAssignment);
-        if (player && position) {
-          const deltaSec = nextAssignment.timeSec - timeSec;
-          this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
-                           nextAssignment.playerName + ' at ' + 
-                           nextAssignment.positionName);
-          if ((deltaSec < 30) && 
-              (this.queuedAssignmentTimeSec < nextAssignment.timeSec)) {
-            navigator.vibrate([500]);
-            this.addPendingAssignment(player, position);
-            this.queuedAssignmentTimeSec = nextAssignment.timeSec;
-          } else if ((5 < deltaSec) && (deltaSec <= 7)) {
-            navigator.vibrate([500]);
+      if (ENABLE_PLAN) {
+        const nextAssignment = this.plan_.nextAssignment(timeSec);
+        if (nextAssignment) {
+          const {player, position} = this.getPlayerAndPosition(nextAssignment);
+          if (player && position) {
+            const deltaSec = nextAssignment.timeSec - timeSec;
+            this.writeStatus('In ' + Math.round(deltaSec) + 's: ' +
+                             nextAssignment.playerName + ' at ' + 
+                             nextAssignment.positionName);
+            if ((deltaSec < 30) && 
+                (this.queuedAssignmentTimeSec < nextAssignment.timeSec)) {
+              navigator.vibrate([500]);
+              this.addPendingAssignment(player, position);
+              this.queuedAssignmentTimeSec = nextAssignment.timeSec;
+            } else if ((5 < deltaSec) && (deltaSec <= 7)) {
+              navigator.vibrate([500]);
+            }
           }
         }
       }
@@ -725,7 +737,9 @@ class Game {
       deltaSec = deltaMs / 1000;
     }
     this.elapsedTimeMs += deltaMs;
-    this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
+    if (ENABLE_PLAN) {
+      this.plan_.updateGameTime(this.elapsedTimeMs / 1000);
+    }
     this.cumulativeAdjustedTimeSec += deltaSec;
     this.showAdjustedTime();
     this.update_(true);
@@ -741,5 +755,7 @@ class Game {
       Math.round(this.cumulativeAdjustedTimeSec) + 'sec';
   }
 }
+
+Game.ENABLE_PLAN = ENABLE_PLAN; 
 
 exports = Game;

@@ -46,7 +46,9 @@ class SoccerSub {
     util.setupButton('show-roster', () => this.showPanel_('roster'));
     util.setupButton('show-positions', () => this.showPanel_('positions'));
     util.setupButton('show-log', () => this.showLog_());
-    util.setupButton('show-plan', () => this.showPanel_('plan'));
+    if (Game.ENABLE_PLAN) {
+      util.setupButton('show-plan', () => this.showPanel_('plan'));
+    }
     
     /** @type {!Lineup} */
     this.lineup = lineup;
