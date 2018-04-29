@@ -51,13 +51,12 @@ const configurations = {
 };
 // TODO(jmarantz): add more positions to 9v9 configuration.
 
-// Abbreviations used for terse display on the game field.\
+// Abbreviations used for terse display on the game field.
 const abbrevs = {
   'Center Attacking Mid': 'CAM',
   'Center Back': 'CB',
   'Center Defensive Mid': 'CDM',
   'Center Mid': 'CM',
-  KEEPER: 'GK',
   'Left Back': 'LB',
   'Left Center Back': 'LCB',
   'Left Forward': 'LF',
@@ -70,6 +69,7 @@ const abbrevs = {
   'Striker': 'Str',
   'Sweeper': 'Swp',
 };
+abbrevs[KEEPER] = 'GK';
 
 class Lineup {
   /**
