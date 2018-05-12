@@ -27,8 +27,9 @@ class Game {
    * @param {function(string)} writeLog
    * @param {function()} save
    * @param {!Plan} plan
+   * @param {function(string, string, Object):void} gtag
    */
-  constructor(lineup, writeStatus, writeLog, save, plan) {
+  constructor(lineup, writeStatus, writeLog, save, plan, gtag) {
     /** @type {function(string)} */
     this.writeStatus = writeStatus;
     /** @private {function(string)} */
@@ -39,6 +40,8 @@ class Game {
     this.plan_ = plan;
     /** @type {boolean} */
     this.showTimesAtPosition = false;
+    /** @type {function(string, string, Object):void} */
+    this.gtag_ = gtag;
 
     // Set up HTML element connections & handlers.
     this.gameClockElement = util.setupButton(
@@ -68,7 +71,7 @@ class Game {
     /** @type {number} */
     this.queuedAssignmentTimeSec = -1;
     /** @type {!Element} */
-    this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs());
+    this.makeSubsButton = util.setupButton('make-subs', () => this.makeSubs_());
     this.makeSubsButton.style.backgroundColor = 'lightgray';
     /** @type {!Element} */
     this.cancelSubsButton = util.setupButton('cancel-subs', 
@@ -588,7 +591,8 @@ class Game {
     }
   }
 
-  makeSubs() {
+  /** @private */
+  makeSubs_() {
     // Make a first-pass over the planned substitutions, where we
     // collect all the subs we intend to make in a local array.  This
     // is becasue if you make the subs in the first pass, and you are
@@ -618,6 +622,8 @@ class Game {
     }
 
     this.completeAssignments();
+
+    this.gtag_('event', 'MakeSubs', {'hit': 1});
   }
 
   /**

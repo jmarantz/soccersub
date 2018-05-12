@@ -7,6 +7,16 @@
   <link rel=stylesheet href=soccersub.css />
   <link rel="stylesheet" href="closure-library/closure/goog/css/dialog.css"/>
   <script src="closure-library/closure/goog/base.js"></script>
+
+  <!-- Global site tag (gtag.js) - Google Analytics -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=UA-118364181-1"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'UA-118364181-1');
+  </script>
+
   <!--
     <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase.js"></script>
     <script src="https://www.gstatic.com/firebasejs/3.6.1/firebase-app.js"></script>
@@ -185,7 +195,7 @@
   </script>
   <script src="deps.js"></script>
   <script>
-    soccersubMain();
+    soccersubMain(gtag);
   </script>
   </body>
 </html>

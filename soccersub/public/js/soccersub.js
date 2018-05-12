@@ -18,8 +18,9 @@ let deployTimestamp = window['deployTimestamp'] || 'dev';
 class SoccerSub {
   /**
    * @param {!Lineup} lineup
+   * @param {function(string, string, Object):void} gtag
    */
-  constructor(lineup) {
+  constructor(lineup, gtag) {
     /** @type {!Element} */
     this.statusBar = goog.dom.getRequiredElement('status_bar');
 
@@ -28,7 +29,7 @@ class SoccerSub {
     /** @type {!Plan} */
     this.plan_ = new Plan(lineup, saver, logger);
     this.game = new Game(lineup, (text) => this.writeStatus(text),
-                         logger, saver, this.plan_);
+                         logger, saver, this.plan_, gtag);
     setTimeout(SoccerSub.clearVersionDisplay, 2000);
     
     /** @private {!Array<!Element>} */

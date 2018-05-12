@@ -19,9 +19,10 @@ var famousPlayerNames = [
 
 var defaultPlayerNames = famousPlayerNames;
 
-const soccersubMain = () => {
+/** @param {function(string, string, Object):void} gtag */
+const soccersubMain = (gtag) => {
   const lineup = new Lineup(5, defaultPlayerNames);
-  new SoccerSub(lineup);
+  new SoccerSub(lineup, gtag);
 };
 goog.exportSymbol('soccersubMain', soccersubMain);
 window['soccersubMain'] = soccersubMain;
